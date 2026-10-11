@@ -67,11 +67,14 @@ async function createNote(parentNotePath: string | undefined, options: CreateNot
         options
     );
 
-    // if isProtected isn't available (user didn't enter password yet), then note is created as unencrypted,
-    // but this is quite weird since the user doesn't see WHERE the note is being created, so it shouldn't occur often
-    if (!options.isProtected || !protectedSessionHolder.isProtectedSessionAvailable()) {
-        options.isProtected = false;
+    // Explicitly protected requests must never create an unprotected note.
+    // Reject before reading editor selection or making a write request.
+    if (options.isProtected && !protectedSessionHolder.isProtectedSessionAvailable()) {
+        const message = t("note_create.protected_session_required");
+        toastService.showError(message);
+        throw new Error(message);
     }
+    options.isProtected = !!options.isProtected;
 
     // Whether there is a selection to save is the editor's answer, not the tab manager's: the editor
     // handing us the selection is not necessarily the active tab's (a split, the quick editor, an
