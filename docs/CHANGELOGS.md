@@ -20,4 +20,7 @@
 
 - Prioritized everyday Notebook features and Glaze UI over further Evernote migration work. Added quick-search clear and retry controls, localized offline/error feedback, protection against late responses to cleared searches, responsive focus styling and focused UI interaction tests. This source improvement requires exact-head qualification, not just a successful build.
 
+- Added one-click Inbox capture beside Quick Search, with query clearing and stale-result cancellation; the development PR UI gate passed 23 Quick Search interactions on head `1c7821d75a`.
+- Added a searchable command-palette Inbox capture action with aliases and localized text. On head `8dba9e745e`, six CI jobs passed, including 51 Quick Search and Command Palette interaction tests (run 38105989431).
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.
