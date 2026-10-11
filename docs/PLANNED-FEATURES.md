@@ -19,4 +19,8 @@
 | NB-013 | P2 | Performance optimization for large notebooks | Reproducible 10k/100k-note benchmarks |
 | NB-014 | P2 | Optional future AI assistance with consent and data isolation | Separate privacy and provider-boundary acceptance |
 
+## Full vision versus committed execution
+
+The [Complete Features and Capabilities](COMPLETE-FEATURES-AND-CAPABILITIES.md) document defines the broader 20-domain product vision (including databases, visual canvases, collaboration, publishing and integrations). This table contains only the current bounded rebuild obligations, **not** an exhaustive implementation schedule for every proposed capability. Expand milestones and tests through governed planning before claiming delivery; sensitive capabilities such as zero-knowledge storage, shared permissions, AI access, and cross-platform clients require explicit security, architecture and consumer acceptance.
+
 Keep this repository roadmap in Git, with operational follow-up tracked in GoreeCloud's canonical task manager. An item must not be transferred to the implemented file without evidence.
