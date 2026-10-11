@@ -1,0 +1,123 @@
+"use strict";
+
+import type { HighlightedTokenInfo } from "@triliumnext/commons";
+
+import hoistedNoteService from "../hoisted_note.js";
+import optionService from "../options.js";
+import { betterQuality, type ContentMatchQuality } from "./match_quality.js";
+import type { SearchParams } from "./services/types.js";
+
+class SearchContext {
+    fastSearch: boolean;
+    includeArchivedNotes: boolean;
+    includeHiddenNotes: boolean;
+    ignoreHoistedNote: boolean;
+    /** Whether to ignore certain attributes from the search such as ~internalLink. */
+    ignoreInternalAttributes: boolean;
+    ancestorNoteId?: string;
+    ancestorDepth?: string;
+    orderBy?: string;
+    orderDirection?: string;
+    limit?: number | null;
+    debug?: boolean;
+    debugInfo: {} | null;
+    fuzzyAttributeSearch: boolean;
+    enableFuzzyMatching: boolean; // Controls whether fuzzy matching is enabled for this search phase
+    /** When true, a single-token flat-text search resolves each match's best note path directly. */
+    autocomplete: boolean;
+    rankInTwoPasses: boolean;
+    highlightedTokens: string[];
+    /**
+     * Subset of {@link highlightedTokens} that came from the `%=` (regex) operator
+     * and must be matched as regular expressions rather than literal text.
+     */
+    regexTokens: Set<string>;
+    originalQuery: string;
+    fulltextQuery: string;
+    dbLoadNeeded: boolean;
+    error: string | null;
+    /**
+     * Per-note content match quality recorded during expression evaluation and
+     * consumed by scoring. Bounded memory: one small record per matched note.
+     * Cleared at the start of each progressive search phase.
+     */
+    contentMatches: Map<string, ContentMatchQuality>;
+
+    constructor(params: SearchParams = {}) {
+        this.fastSearch = !!params.fastSearch;
+        this.includeArchivedNotes = !!params.includeArchivedNotes;
+        this.includeHiddenNotes = !!params.includeHiddenNotes;
+        this.ignoreHoistedNote = !!params.ignoreHoistedNote;
+        this.ignoreInternalAttributes = !!params.ignoreInternalAttributes;
+        this.ancestorNoteId = params.ancestorNoteId;
+
+        if (!this.ancestorNoteId && !this.ignoreHoistedNote) {
+            this.ancestorNoteId = hoistedNoteService.getHoistedNoteId();
+        }
+
+        this.ancestorDepth = params.ancestorDepth;
+        this.orderBy = params.orderBy;
+        this.orderDirection = params.orderDirection;
+        this.limit = params.limit;
+        this.debug = params.debug;
+        this.debugInfo = null;
+        this.fuzzyAttributeSearch = !!params.fuzzyAttributeSearch;
+        this.autocomplete = !!params.autocomplete;
+        this.rankInTwoPasses = !!params.rankInTwoPasses;
+        let fuzzyMatchingEnabled: boolean;
+        try {
+            fuzzyMatchingEnabled = optionService.getOptionBool("searchEnableFuzzyMatching");
+        } catch {
+            fuzzyMatchingEnabled = true; // Default to true if option not yet initialized
+        }
+        // A caller can only narrow the option, so a surface that opts out stays out whatever the
+        // option says, and one that says nothing follows it.
+        this.enableFuzzyMatching = fuzzyMatchingEnabled && (params.enableFuzzyMatching ?? true);
+        this.highlightedTokens = [];
+        this.regexTokens = new Set();
+        this.originalQuery = "";
+        this.fulltextQuery = ""; // complete fulltext part
+        // if true, becca does not have (up-to-date) information needed to process the query
+        // and some extra data needs to be loaded before executing
+        this.dbLoadNeeded = false;
+        this.error = null;
+        this.contentMatches = new Map();
+    }
+
+    /**
+     * Records how well a note's content matched, merging with any existing record
+     * for that note so the best quality wins (higher tier, then more tokens).
+     */
+    recordContentMatch(noteId: string, quality: ContentMatchQuality) {
+        const existing = this.contentMatches.get(noteId);
+        this.contentMatches.set(noteId, existing ? betterQuality(existing, quality) : quality);
+    }
+
+    /**
+     * Maps {@link highlightedTokens} to structured token infos, tagging each token
+     * as `regex` when it was collected from a `%=` operator and `plain` otherwise.
+     */
+    getHighlightedTokenInfos(): HighlightedTokenInfo[] {
+        return this.highlightedTokens.map((token) => ({
+            token,
+            type: this.regexTokens.has(token) ? "regex" : "plain"
+        }));
+    }
+
+    addError(error: string) {
+        // we record only the first error, subsequent ones are usually a consequence of the first
+        if (!this.error) {
+            this.error = error;
+        }
+    }
+
+    hasError() {
+        return !!this.error;
+    }
+
+    getError() {
+        return this.error;
+    }
+}
+
+export default SearchContext;

@@ -1,0 +1,17 @@
+import { test, expect } from "@playwright/test";
+import App from "./support/app";
+
+test("Can duplicate note with broken links", async ({ page, context }) => {
+    const app = new App(page, context);
+    await app.goto({
+        url: "/#root/Q5abPvymDH6C/2VammGGdG6Ie"
+    });
+
+    // An inexact match also finds the CSS-hidden "Note Map" rows of `_hidden`, which render first.
+    await app.noteTree.getByText("Note map", { exact: true }).first().click({ button: "right" });
+    await page.locator("#context-menu-container").getByText("Duplicate").click();
+    await expect(page.locator(".toast-body", {
+        hasText: `Note "Note map" has been`
+    })).toBeHidden();
+    await expect(app.noteTree.getByText("Note map (dup)").first()).toBeVisible();
+});

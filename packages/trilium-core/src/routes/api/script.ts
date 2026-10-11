@@ -1,0 +1,148 @@
+
+
+import type { Request } from "../../http_interface";
+
+import becca from "../../becca/becca.js";
+import attributeService from "../../services/attributes.js";
+import { getLog } from "../../services/log.js";
+import { getPlatform } from "../../services/platform.js";
+import scriptService, { type Bundle, describeScriptFailure } from "../../services/script.js";
+import syncService from "../../services/sync.js";
+import { assertScriptingEnabled } from "../../services/scripting_guard.js";
+import { getSql } from "../../services/sql/index.js";
+import { safeExtractMessageAndStackFromError } from "../../services/utils/index.js";
+
+interface ScriptBody {
+    script: string;
+    params: any[];
+    startNoteId: string;
+    currentNoteId: string;
+    originEntityName: string;
+    originEntityId: string;
+    transactional: boolean;
+}
+
+// The async/await here is very confusing, because the body.script may, but may not be async. If it is async, then we
+// need to await it and make the complete response including metadata available in a Promise, so that the route detects
+// this and does result.then().
+async function exec(req: Request) {
+    assertScriptingEnabled();
+    try {
+        const body = req.body as ScriptBody;
+
+        const execute = (body: ScriptBody) => scriptService.executeScript(body.script, body.params, body.startNoteId, body.currentNoteId, body.originEntityName, body.originEntityId, becca);
+
+        const result = body.transactional ? getSql().transactional(() => execute(body)) : await execute(body);
+
+        return {
+            success: true,
+            executionResult: result,
+            maxEntityChangeId: syncService.getMaxEntityChangeId()
+        };
+    } catch (e: unknown) {
+        const [errMessage] = safeExtractMessageAndStackFromError(e);
+        return {
+            success: false,
+            error: errMessage
+        };
+    }
+}
+
+function run(req: Request<{ noteId: string }>) {
+    const note = becca.getNoteOrThrow(req.params.noteId);
+
+    try {
+        assertScriptingEnabled();
+        // A nested `transactional()` is a savepoint, so a script that throws leaves nothing it
+        // wrote behind even though the route returns rather than throws.
+        const executionResult = getSql().transactional(
+            () => scriptService.executeNote(note, { originEntity: note }));
+        return { executionResult };
+    } catch (e) {
+        const [ message, stack ] = safeExtractMessageAndStackFromError(e);
+        getLog().error(`Script note ${note.noteId} failed: '${message}', stack: ${stack}`);
+
+        // The client reads the failing note from the body, as the cause chain is not serialized.
+        const failure = describeScriptFailure(e);
+        return [ 500, { ...failure, noteId: failure.noteId ?? note.noteId } ];
+    }
+}
+
+function getBundlesWithLabel(label: string, value?: string) {
+    const notes = attributeService.getNotesWithLabel(label, value);
+
+    const bundles: Bundle[] = [];
+
+    for (const note of notes) {
+        const bundle = scriptService.getScriptBundleForFrontend(note);
+
+        if (bundle) {
+            bundles.push(bundle);
+        }
+    }
+
+    return bundles;
+}
+
+function getStartupBundles(req: Request) {
+    if (!getPlatform().getEnv("TRILIUM_SAFE_MODE")) {
+        if (req.query.mobile === "true") {
+            return getBundlesWithLabel("run", "mobileStartup");
+        }
+        return getBundlesWithLabel("run", "frontendStartup");
+
+    }
+    return [];
+}
+
+function getWidgetBundles() {
+    if (!getPlatform().getEnv("TRILIUM_SAFE_MODE")) {
+        return getBundlesWithLabel("widget");
+    }
+    return [];
+}
+
+function getRelationBundles(req: Request<{ noteId: string, relationName: string }>) {
+    const noteId = req.params.noteId;
+    const note = becca.getNoteOrThrow(noteId);
+    const relationName = req.params.relationName;
+
+    const attributes = note.getAttributes();
+    const filtered = attributes.filter((attr) => attr.type === "relation" && attr.name === relationName);
+    const targetNoteIds = filtered.map((relation) => relation.value);
+    const uniqueNoteIds = Array.from(new Set(targetNoteIds));
+
+    const bundles: Bundle[] = [];
+
+    for (const noteId of uniqueNoteIds) {
+        const note = becca.getNoteOrThrow(noteId);
+
+        if (!note.isJavaScript() || note.getScriptEnv() !== "frontend") {
+            continue;
+        }
+
+        const bundle = scriptService.getScriptBundleForFrontend(note);
+
+        if (bundle) {
+            bundles.push(bundle);
+        }
+    }
+
+    return bundles;
+}
+
+function getBundle(req: Request<{ noteId: string }>) {
+    const note = becca.getNoteOrThrow(req.params.noteId);
+    const { script, params } = req.body ?? {};
+
+    return scriptService.getScriptBundleForFrontend(note, script, params);
+}
+
+export default {
+    exec,
+    run,
+    getStartupBundles,
+    getWidgetBundles,
+    getRelationBundles,
+    getBundle
+};

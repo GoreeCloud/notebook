@@ -1,0 +1,62 @@
+import becca from "../../becca/becca";
+
+import { RenderMarkdownResponse, ToMarkdownResponse } from "@triliumnext/commons";
+import type { Request } from "../../http_interface";
+
+import { ValidationError } from "../../errors.js";
+import markdown from "../../services/export/markdown.js";
+import markdownImportService from "../../services/import/markdown.js";
+
+function renderMarkdown(req: Request) {
+    const { markdownContent } = req.body;
+    if (typeof markdownContent !== 'string') {
+        throw new ValidationError('markdownContent parameter is required and must be a string');
+    }
+    return {
+        htmlContent: markdownImportService.renderToHtml(markdownContent, "")
+    } satisfies RenderMarkdownResponse;
+}
+
+function toMarkdown(req: Request) {
+    const { htmlContent, headerlessTables } = req.body;
+    if (typeof htmlContent !== 'string') {
+        throw new ValidationError('htmlContent parameter is required and must be a string');
+    }
+    if (headerlessTables !== undefined && headerlessTables !== "keepHtml"
+            && headerlessTables !== "emptyHeader") {
+        throw new ValidationError('headerlessTables must be "keepHtml" or "emptyHeader"');
+    }
+    return {
+        markdownContent: markdown.toMarkdown(htmlContent, { headerlessTables })
+    } satisfies ToMarkdownResponse;
+}
+
+function getIconUsage() {
+    const iconClassToCountMap: Record<string, number> = {};
+
+    for (const { value: iconClass, noteId } of becca.findAttributes("label", "iconClass")) {
+        if (noteId.startsWith("_")) {
+            continue; // ignore icons of "system" notes since they were not set by the user
+        }
+
+        if (!iconClass?.trim()) {
+            continue;
+        }
+
+        for (const clazz of iconClass.trim().split(/\s+/)) {
+            if (clazz === "bx") {
+                continue;
+            }
+
+            iconClassToCountMap[clazz] = (iconClassToCountMap[clazz] || 0) + 1;
+        }
+    }
+
+    return { iconClassToCountMap };
+}
+
+export default {
+    getIconUsage,
+    renderMarkdown,
+    toMarkdown
+}

@@ -1,0 +1,55 @@
+/* #region Read-only code */
+.note-detail-readonly-code {
+    min-height: 50px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fills the wrapper in the full-height layout so the editor's own scroller can scroll; resolves
+   to auto in the flowing layout, where the wrapper has no set height. */
+.note-detail-readonly-code .note-detail-readonly-code-content {
+    height: 100%;
+    min-height: 0;
+}
+/* #endregion */
+
+/* #region Editable code */
+.note-detail-code {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.note-detail-code-editor {
+    min-height: 50px;
+    height: 100%;
+    padding: 0 !important;
+}
+/* #endregion */
+
+/* #region Backend log */
+.backend-log-editor-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .cm-editor {
+        font-size: 0.85em;
+    }
+}
+/* #endregion */
+
+.note-split.type-code .note-list {
+    margin-top: 1em;
+}
+
+.note-detail:not(.full-height) {
+    > .note-detail-code .note-detail-code-editor,
+    > .note-detail-readonly-code .note-detail-readonly-code-content {
+        border-end-start-radius: var(--center-pane-border-radius);
+        border-end-end-radius: var(--center-pane-border-radius);
+        overflow: hidden;
+    }
+}
