@@ -145,3 +145,22 @@
         max-height: 60vh;
     }
 }
+
+.tn-backlinks-widget .backlinks-sort-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    margin-bottom: 8px;
+    color: var(--muted-text-color, currentColor);
+    cursor: pointer;
+
+    > input {
+        accent-color: var(--glaze-semantic-accent, currentColor);
+    }
+
+    > input:focus-visible {
+        outline: 2px solid var(--glaze-semantic-focus, currentColor);
+        outline-offset: 2px;
+    }
+}
