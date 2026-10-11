@@ -268,6 +268,67 @@ describe("createNote", () => {
         expect(removeSelection).toHaveBeenCalled();
     });
 
+    it("does not remove a different selection when the save completes late", async () => {
+        setActiveContext(true);
+        let selectedHtml = "<p>Original selection</p>";
+        const removeSelection = vi.fn();
+        const textEditor = {
+            getSelectedHtml: vi.fn(() => selectedHtml),
+            removeSelection
+        } as any;
+        let finishSave!: (value: { note: { noteId: string }; branch: { branchId: string } }) => void;
+        server.post = vi.fn(() => new Promise(resolve => { finishSave = resolve; })) as typeof server.post;
+
+        const pending = noteCreateService.createNote("root", { saveSelection: true, textEditor });
+        expect(server.post).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ content: "<p>Original selection</p>" }),
+            undefined
+        );
+        expect(removeSelection).not.toHaveBeenCalled();
+
+        selectedHtml = "<p>Different selection</p>";
+        finishSave({ note: { noteId: NOTE_ID }, branch: { branchId: BRANCH_ID } });
+        await pending;
+        expect(removeSelection).not.toHaveBeenCalled();
+        expect(textEditor.getSelectedHtml).toHaveBeenCalledTimes(2);
+    });
+
+    it("leaves the source intact if the note save fails", async () => {
+        setActiveContext(true);
+        const removeSelection = vi.fn();
+        const textEditor = {
+            getSelectedHtml: vi.fn(() => "<p>Draft selection</p>"),
+            removeSelection
+        } as any;
+        server.post = vi.fn(async () => { throw new Error("save failed"); }) as typeof server.post;
+
+        await expect(noteCreateService.createNote("root", { saveSelection: true, textEditor }))
+            .rejects.toThrow("save failed");
+        expect(removeSelection).not.toHaveBeenCalled();
+        expect(textEditor.getSelectedHtml).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the source if an editor becomes unavailable after the save", async () => {
+        setActiveContext(true);
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const removeSelection = vi.fn();
+        const textEditor = {
+            getSelectedHtml: vi.fn()
+                .mockReturnValueOnce("<p>Draft selection</p>")
+                .mockImplementationOnce(() => { throw new Error("editor detached"); }),
+            removeSelection
+        } as any;
+
+        await expect(noteCreateService.createNote("root", { saveSelection: true, textEditor }))
+            .resolves.toBeDefined();
+        expect(removeSelection).not.toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith(
+            "Saved note, but could not safely remove its source selection."
+        );
+        warn.mockRestore();
+    });
+
     it("creates a plain empty note without touching the source when there is nothing selected", async () => {
         setActiveContext(true);
         const removeSelection = vi.fn();
