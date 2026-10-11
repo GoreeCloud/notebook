@@ -40,6 +40,8 @@ class VisionTraceabilityTests(unittest.TestCase):
         self.assertIn("@triliumnext/pdfjs-viewer", workflow)
         self.assertIn("@triliumnext/web-clipper", workflow)
         self.assertIn("exec wxt prepare", workflow)
+        self.assertIn("client-ux-interactions:", workflow)
+        self.assertIn("quick_search.spec.tsx", workflow)
 
     def test_mapped_workstreams_exist_and_claim_boundaries_are_explicit(self):
         trace = MATRIX.read_text(encoding="utf-8")

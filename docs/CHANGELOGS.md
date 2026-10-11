@@ -18,4 +18,6 @@
 
 - The Evernote file review now blocks repeated selections of the same export within one batch; it uses only local file identity and metadata, shows a descriptive warning and has regression coverage. This does not detect duplicates in an existing notebook.
 
+- Prioritized everyday Notebook features and Glaze UI over further Evernote migration work. Added quick-search clear and retry controls, localized offline/error feedback, protection against late responses to cleared searches, responsive focus styling and focused UI interaction tests. This source improvement requires exact-head qualification, not just a successful build.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

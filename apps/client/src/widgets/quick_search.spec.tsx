@@ -120,6 +120,45 @@ describe("QuickSearch", () => {
         expect(resultItems()).toHaveLength(0);
     });
 
+    it("offers a visible retry after a failed network search", async () => {
+        const get = vi.spyOn(server, "get")
+            .mockRejectedValueOnce(new Error("offline"))
+            .mockResolvedValueOnce(response(2, []));
+        const { editor } = await mount();
+
+        typeQuery(editor, "notes");
+        pressEnter(editor);
+        await vi.waitFor(() => expect(menu()?.querySelector(".quick-search-retry")).not.toBeNull());
+        expect(menu()?.textContent).toContain("quick-search.unavailable");
+        expect(placeholderItems()).toHaveLength(0);
+
+        await act(async () => menu()?.querySelector<HTMLButtonElement>(".quick-search-retry")?.click());
+        await waitForResults(2);
+        expect(get).toHaveBeenCalledTimes(2);
+        expect(menu()?.querySelector(".quick-search-retry")).toBeNull();
+    });
+
+    it("clears the query and ignores a late result from a discarded search", async () => {
+        const pending = deferred<QuickSearchResponse>();
+        vi.spyOn(server, "get").mockReturnValue(pending.promise as never);
+        const { container, editor } = await mount();
+
+        typeQuery(editor, "discard this");
+        pressEnter(editor);
+        await vi.waitFor(() => expect(placeholderItems()).toHaveLength(1));
+        const clear = container.querySelector<HTMLButtonElement>(".quick-search-clear");
+        expect(clear).not.toBeNull();
+        await act(async () => clear?.click());
+
+        expect(editor.state.doc.toString()).toBe("");
+        expect(editor.hasFocus).toBe(true);
+        expect(menu()).toBeNull();
+        expect(container.querySelector(".quick-search-clear")).toBeNull();
+
+        await act(async () => pending.resolve(response(3, [])));
+        expect(menu()).toBeNull();
+    });
+
     it("shows the error the search ran into, above whatever it still found", async () => {
         const failed = { ...response(0, []), error: "Note content can be searched only with operators" };
         const get = vi.spyOn(server, "get").mockResolvedValue(failed);

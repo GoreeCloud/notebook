@@ -111,3 +111,27 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/desktop...' --filter '@triliumnext/server...' --filter '@triliumnext/client...' --filter '@triliumnext/pdfjs-viewer...' --filter '@triliumnext/share-theme...' --filter .
       - name: Build desktop source bundle without installer
         run: pnpm --filter @triliumnext/desktop build
+
+  client-ux-interactions:
+    # Run real UI interaction tests with a disposable DOM; no browser secrets,
+    # deployment, persistent user data or release publishing.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install client, theme and config dependency graphs
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter '@triliumnext/web-clipper...' --filter .
+      - name: Prepare web-clipper TypeScript context for the shared test config
+        run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
+      - name: Test Notebook quick-search interactions
+        run: pnpm --filter @triliumnext/client exec vitest run src/widgets/quick_search.spec.tsx --reporter=dot

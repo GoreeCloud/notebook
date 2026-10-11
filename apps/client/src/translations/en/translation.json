@@ -2736,6 +2736,9 @@
     "placeholder": "Quick search",
     "searching": "Searching...",
     "no-results": "No results found",
+    "unavailable": "Could not load search results. Check your connection and try again.",
+    "retry": "Retry search",
+    "clear": "Clear search",
     "show-in-full-search": "Show in full search",
     "hints": {
       "title": "Quick search results",

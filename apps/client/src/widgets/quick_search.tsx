@@ -49,6 +49,7 @@ type SearchState =
         results: SearchResultDetails[];
         viewScope: ViewScope | undefined;
         error: string | null;
+        requestFailed?: boolean;
     };
 
 export default function QuickSearch() {
@@ -84,22 +85,45 @@ export default function QuickSearch() {
         const requestId = ++requestIdRef.current;
         setSearchState({ status: "searching" });
         try {
-        const { searchResults, highlightedTokens, error } = await server.get<QuickSearchResponse>(
+            const { searchResults, highlightedTokens, error } = await server.get<QuickSearchResponse>(
                 `quick-search?searchString=${encodeURIComponent(query)}`
             );
             if (requestId !== requestIdRef.current) return;
-    
+
             setSearchState({
                 status: "done",
                 results: searchResults,
                 // Opens the note at its first match; with nothing highlighted, at the plain path.
                 viewScope: highlightedTokens.length ? { searchTerms: highlightedTokens } : undefined,
-                error
+                error,
+                requestFailed: false
             });
-            } catch {
+        } catch {
+            // Network and server failures must not leave the popup spinning.
+            // Pressing Enter or selecting Retry starts a fresh request.
             if (requestId !== requestIdRef.current) return;
-            setSearchState({ status: "done", results: [], viewScope: undefined, error: t("quick-search.unavailable") });
+            setSearchState({
+                status: "done",
+                results: [],
+                viewScope: undefined,
+                error: t("quick-search.unavailable"),
+                requestFailed: true
+            });
         }
+    }
+
+    function clearSearch() {
+        // Ignore any pending response from the previous query.
+        requestIdRef.current++;
+        const editor = editorRef.current;
+        if (editor) {
+            editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: "" } });
+            editor.focus();
+        }
+        searchStringRef.current = "";
+        setHasQuery(false);
+        setSearchState(undefined);
+        close();
     }
 
     function showInFullSearch() {
@@ -162,6 +186,15 @@ export default function QuickSearch() {
                         return true;
                     }}
                 />
+                {hasQuery && (
+                    <ActionButton
+                        className="quick-search-clear"
+                        icon="bx bx-x"
+                        text={t("quick-search.clear")}
+                        noIconActionClass
+                        onClick={clearSearch}
+                    />
+                )}
             </div>
 
             {open && boxRef.current && (
@@ -192,6 +225,14 @@ export default function QuickSearch() {
                         <QuickSearchResults searchState={searchState} onOpenResult={close} />
                     </div>
                     <div className="quick-search-footer">
+                        {searchState?.status === "done" && searchState.requestFailed && (
+                            <Button
+                                className="quick-search-retry"
+                                text={t("quick-search.retry")}
+                                size="small"
+                                onClick={() => void search()}
+                            />
+                        )}
                         {!isMobile() && (
                             <OverlayControlGroup>
                                 <ShortcutHintOverlayButton />
