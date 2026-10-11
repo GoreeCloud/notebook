@@ -9,6 +9,19 @@ import noteCreate from "./note_create.js";
 import toast from "./toast.js";
 import utils from "./utils.js";
 
+/**
+ * Duplicates a selected note beside its current branch. Never pass the root,
+ * external links, or a stale note-id/path pair to the mutating duplication API.
+ */
+function duplicateActiveNote(withChildren: boolean) {
+    const path = appContext.tabManager.getActiveContextNotePath();
+    const noteId = appContext.tabManager.getActiveContextNoteId();
+    if (!path || !noteId || !/^root(?:\/[A-Za-z0-9_]+)+$/.test(path)) return;
+    const parentEnd = path.lastIndexOf("/");
+    if (path.slice(parentEnd + 1) !== noteId) return;
+    return noteCreate.duplicateSubtree(noteId, path.slice(0, parentEnd), { withChildren });
+}
+
 /** A clickable Notebook reference whose visible label remains valid Markdown. */
 export function formatMarkdownNoteLink(title: string, notePath: string): string {
     const label = title.replace(/\s+/g, " ").trim()
@@ -94,6 +107,25 @@ export class CommandRegistry {
                     return noteCreate.createNoteWithTypePrompt(notePath);
                 }
             }
+        });
+
+        // The source already has an atomic server-side duplicate endpoint.
+        // Expose full-tree and note-only copies without inventing another format.
+        this.register({
+            id: "duplicate-current-note",
+            name: t("command_palette.duplicate_note_title"),
+            description: t("command_palette.duplicate_note_description"),
+            icon: "bx bx-copy",
+            aliases: ["duplicate note", "copy note with children", "clone current note"],
+            handler: () => duplicateActiveNote(true)
+        });
+        this.register({
+            id: "duplicate-current-note-only",
+            name: t("command_palette.duplicate_note_only_title"),
+            description: t("command_palette.duplicate_note_only_description"),
+            icon: "bx bx-copy",
+            aliases: ["duplicate without children", "copy note only", "clone note without subtree"],
+            handler: () => duplicateActiveNote(false)
         });
 
         // Direct routes to inherited editing and navigation tools. Neither needs new persistence.
@@ -309,7 +341,7 @@ export class CommandRegistry {
     }
 
     searchCommands(query: string): CommandDefinition[] {
-        const normalizedQuery = query.toLowerCase();
+        const normalizedQuery = query.trim().replace(/\s+/g, " ").toLowerCase();
         const results: { command: CommandDefinition; score: number }[] = [];
 
         for (const command of this.commands.values()) {
@@ -334,6 +366,15 @@ export class CommandRegistry {
             // Check aliases
             else if (command.aliases?.some(alias => alias.toLowerCase().includes(normalizedQuery))) {
                 score = 50;
+            }
+            // Match reordered multi-word queries across names, descriptions and
+            // aliases without displacing stronger contiguous matches.
+            else if (normalizedQuery.includes(" ")) {
+                const haystack = [command.name, command.description ?? "", ...(command.aliases ?? [])]
+                    .join(" ").toLowerCase();
+                if (normalizedQuery.split(" ").every(token => haystack.includes(token))) {
+                    score = 25;
+                }
             }
 
             if (score > 0) {

@@ -17,6 +17,8 @@
 - **NOTE-REVISION-NAV-001:** Command Palette offers View Note Revisions for the selected note using the existing revision dialog, with a guard for no active note; installed-app acceptance remains pending.
 - **NOTE-LINK-COPY-001:** Command Palette offers Copy Link to Current Note using the existing clipboard helper and note path, without copying if no note is selected; installed-app acceptance remains pending.
 - **MARKDOWN-LINK-COPY-001:** Command Palette can copy a titled Markdown link to the current Notebook note, escaping special label characters and discarding stale title lookups after navigation. Tests cover formatting, dispatch, invalid selection, lookup-error feedback and race cancellation; installed-runtime acceptance remains pending.
+- **NOTE-DUPLICATION-PALETTE-001:** The Command Palette provides full-subtree and note-only duplication using the inherited server operation; invalid, root or stale note selections are rejected. Source and regression coverage added; exact-head CI and installed-app acceptance remain pending.
+- **COMMAND-DISCOVERY-001:** Palette searches trim repeated whitespace and support reordered multiword discovery across commands, descriptions and aliases while preserving contiguous-match ranking. Automated checks and installed-app acceptance remain pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)

@@ -35,4 +35,7 @@
 
 - Added accessible client-side backlink filtering across source-note titles and relation names, with clear and no-match states and reset on note navigation. Filtering uses prefetched source metadata and does not trigger extra network requests; new UI regressions cover filtering and note switching.
 
+- Added command-palette duplication for the active note with or without its descendants. Operations reuse the existing duplication endpoint and reject invalid/root/stale note paths; source regressions cover both variants and fail-closed guards.
+- Improved command-palette discovery for excessive spacing and reordered search terms across names, descriptions and aliases; stronger exact and contiguous matches retain their ranking.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

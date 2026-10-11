@@ -14,6 +14,7 @@ const {
     getActions,
     isElectron,
     createNoteWithTypePrompt,
+    duplicateSubtree,
     copyTextWithToast,
     showError,
     getNote
@@ -27,6 +28,7 @@ const {
     getActions: vi.fn<() => Promise<ActionKeyboardShortcut[]>>(async () => []),
     isElectron: vi.fn(() => false),
     createNoteWithTypePrompt: vi.fn(async (_parentPath: string) => undefined),
+    duplicateSubtree: vi.fn(async (_id: string, _path: string, _options: { withChildren: boolean }) => undefined),
     copyTextWithToast: vi.fn(),
     showError: vi.fn(),
     getNote: vi.fn(async (_noteId: string) => ({ title: "Draft [idea]" }))
@@ -71,7 +73,7 @@ vi.mock("./froca.js", () => ({ default: { getNote } }));
 vi.mock("./toast.js", () => ({ default: { showError } }));
 
 vi.mock("./note_create.js", () => ({
-    default: { createNoteWithTypePrompt }
+    default: { createNoteWithTypePrompt, duplicateSubtree }
 }));
 
 vi.mock("./utils.js", () => ({
@@ -212,6 +214,35 @@ describe("GoreeCloud note type and template creation", () => {
         getActiveContextNotePath.mockImplementation(() => null);
         await registry.executeCommand("create-note-from-template");
         expect(createNoteWithTypePrompt).not.toHaveBeenCalled();
+    });
+});
+
+describe("GoreeCloud note duplication", () => {
+    it("exposes both full and note-only duplication through existing server behavior", async () => {
+        const registry = await freshRegistry();
+        expect(registry.searchCommands("duplicate note").map(c => c.id))
+            .toContain("duplicate-current-note");
+        expect(registry.searchCommands("without duplicate").map(c => c.id))
+            .toContain("duplicate-current-note-only");
+
+        await registry.executeCommand("duplicate-current-note");
+        expect(duplicateSubtree).toHaveBeenCalledWith("abc", "root", { withChildren: true });
+
+        await registry.executeCommand("duplicate-current-note-only");
+        expect(duplicateSubtree).toHaveBeenCalledWith("abc", "root", { withChildren: false });
+    });
+
+    it("does not duplicate root, malformed paths or a stale note ID", async () => {
+        const registry = await freshRegistry();
+        for (const path of ["root", "#external", "root/abc?query=1", "root/other"]) {
+            getActiveContextNotePath.mockImplementation(() => path);
+            await registry.executeCommand("duplicate-current-note");
+            await registry.executeCommand("duplicate-current-note-only");
+        }
+        getActiveContextNotePath.mockImplementation(() => "root/abc");
+        getActiveContextNoteId.mockImplementation(() => null);
+        await registry.executeCommand("duplicate-current-note");
+        expect(duplicateSubtree).not.toHaveBeenCalled();
     });
 });
 
@@ -432,6 +463,15 @@ describe("CommandRegistry searchCommands scoring", () => {
         registry.register({ id: "mid", name: "xxAlphaxx" });
         const ids = registry.searchCommands("alpha").map((c) => c.id);
         expect(ids.indexOf("mid")).toBeLessThan(ids.indexOf("zeta"));
+    });
+
+    it("normalizes whitespace and finds reordered words across aliases and names", () => {
+        const templates = registry.searchCommands("  NOTE    TEMPLATE  ").map(c => c.id);
+        expect(templates).toContain("create-note-from-template");
+        registry.register({
+            id: "reordered", name: "Review Later", description: "Task board", aliases: ["capture queue"]
+        });
+        expect(registry.searchCommands("queue review").map(c => c.id)).toContain("reordered");
     });
 
     it("returns empty for a query that matches nothing", () => {
