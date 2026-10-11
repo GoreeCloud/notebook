@@ -163,6 +163,16 @@ describe("CommandRegistry default commands", () => {
     });
 });
 
+describe("GoreeCloud Inbox capture command", () => {
+    it("supports aliases and works without an active note", async () => {
+        const registry = await freshRegistry();
+        expect(registry.searchCommands("quick capture").map((c) => c.id)).toContain("create-inbox-note");
+        getActiveContextNotePath.mockImplementation(() => null);
+        await registry.executeCommand("create-inbox-note");
+        expect(triggerCommand).toHaveBeenCalledWith("createNoteIntoInbox", {});
+    });
+});
+
 describe("CommandRegistry keyboard actions", () => {
     it("registers eligible keyboard actions, with their primary shortcut and tree-scoped names", async () => {
         getActions.mockImplementation(async () => [

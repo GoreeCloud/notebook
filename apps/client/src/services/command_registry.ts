@@ -59,6 +59,15 @@ export class CommandRegistry {
             handler: () => appContext.triggerCommand("showAttachments")
         });
 
+        // Inbox capture works without a selected note.
+        this.register({
+            id: "create-inbox-note",
+            name: t("command_palette.create_inbox_note_title"),
+            description: t("command_palette.create_inbox_note_description"),
+            icon: "bx bx-plus-circle",
+            aliases: ["quick capture", "new note", "inbox note", "capture note"],
+            handler: () => appContext.triggerCommand("createNoteIntoInbox", {})
+        });
         // Special search commands with custom logic
         this.register({
             id: "search-notes",

@@ -3723,6 +3723,8 @@
     "export_note_description": "Export current note",
     "show_attachments_title": "Show Attachments",
     "show_attachments_description": "View note attachments",
+    "create_inbox_note_title": "Capture Note in Inbox",
+    "create_inbox_note_description": "Create a text note in your Inbox",
     "search_notes_title": "Search Notes",
     "search_notes_description": "Open advanced search",
     "search_subtree_title": "Search in Subtree",
