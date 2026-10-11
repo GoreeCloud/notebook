@@ -15,6 +15,7 @@
 - **BACKLINKS-RELIABILITY-001:** Backlinks and their count indicator are scoped to the active note, ignoring responses from abandoned requests and unmounted views. Failure shows a localized retry action. Dedicated regression coverage tests note-switch races and retry recovery; installed-app acceptance remains pending.
 - **NOTE-REVISION-NAV-001:** Command Palette offers View Note Revisions for the selected note using the existing revision dialog, with a guard for no active note; installed-app acceptance remains pending.
 - **NOTE-LINK-COPY-001:** Command Palette offers Copy Link to Current Note using the existing clipboard helper and note path, without copying if no note is selected; installed-app acceptance remains pending.
+- **MARKDOWN-LINK-COPY-001:** Command Palette can copy a titled Markdown link to the current Notebook note, escaping special label characters and discarding stale title lookups after navigation. Tests cover formatting, dispatch, invalid selection, lookup-error feedback and race cancellation; installed-runtime acceptance remains pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)

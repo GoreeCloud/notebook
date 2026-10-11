@@ -31,4 +31,6 @@
 
 - Exposed View Note Revisions and Copy Link to Current Note via searchable Command Palette actions, reusing the existing revision dialog and clipboard helper. Added four regressions for command lookup, dispatch and no-note guards.
 
+- Added Copy Markdown Link to Current Note in the Command Palette, creating titled, escaped internal Markdown links and avoiding wrong-note copies when title lookups finish after navigation. Added focused regressions for formatting, copying, invalid selections, lookup-error feedback and stale asynchronous results.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

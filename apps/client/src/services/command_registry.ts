@@ -3,9 +3,20 @@ import appContext, { type CommandNames } from "../components/app_context.js";
 import type NoteTreeWidget from "../widgets/note_tree.js";
 import { t, translationsInitializedPromise } from "./i18n.js";
 import { copyTextWithToast } from "./clipboard_ext.js";
+import froca from "./froca.js";
 import keyboardActions from "./keyboard_actions.js";
 import noteCreate from "./note_create.js";
+import toast from "./toast.js";
 import utils from "./utils.js";
+
+/** A clickable Notebook reference whose visible label remains valid Markdown. */
+export function formatMarkdownNoteLink(title: string, notePath: string): string {
+    const label = title.replace(/\s+/g, " ").trim()
+        .replace(/\\/g, "\\\\")
+        .replace(/\[/g, "\\[")
+        .replace(/\]/g, "\\]");
+    return `[${label}](#${notePath})`;
+}
 
 export interface CommandDefinition {
     id: string;
@@ -110,6 +121,36 @@ export class CommandRegistry {
                 const notePath = appContext.tabManager.getActiveContextNotePath();
                 if (notePath) {
                     copyTextWithToast(`#${notePath}`);
+                }
+            }
+        });
+
+        this.register({
+            id: "copy-current-note-markdown-link",
+            name: t("command_palette.copy_markdown_link_title"),
+            description: t("command_palette.copy_markdown_link_description"),
+            icon: "bx bx-link-alt",
+            aliases: ["markdown note link", "copy markdown link", "linked note reference"],
+            handler: async () => {
+                const notePath = appContext.tabManager.getActiveContextNotePath();
+                const noteId = appContext.tabManager.getActiveContextNoteId();
+                if (!notePath || !noteId || !/^root[A-Za-z0-9_/-]*$/.test(notePath)) return;
+                try {
+                    const note = await froca.getNote(noteId);
+                    // A slow lookup must not copy a reference to a note we have since left.
+                    if (appContext.tabManager.getActiveContextNotePath() !== notePath
+                        || appContext.tabManager.getActiveContextNoteId() !== noteId) return;
+                    if (!note) {
+                        toast.showError(t("command_palette.copy_markdown_link_failed"));
+                        return;
+                    }
+                    const title = note.title.trim() || t("command_palette.untitled_note");
+                    copyTextWithToast(formatMarkdownNoteLink(title, notePath));
+                } catch {
+                    if (appContext.tabManager.getActiveContextNotePath() === notePath
+                        && appContext.tabManager.getActiveContextNoteId() === noteId) {
+                        toast.showError(t("command_palette.copy_markdown_link_failed"));
+                    }
                 }
             }
         });

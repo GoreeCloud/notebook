@@ -14,7 +14,9 @@ const {
     getActions,
     isElectron,
     createNoteWithTypePrompt,
-    copyTextWithToast
+    copyTextWithToast,
+    showError,
+    getNote
 } = vi.hoisted(() => ({
     triggerCommand: vi.fn(),
     getComponentByEl: vi.fn(),
@@ -25,7 +27,9 @@ const {
     getActions: vi.fn<() => Promise<ActionKeyboardShortcut[]>>(async () => []),
     isElectron: vi.fn(() => false),
     createNoteWithTypePrompt: vi.fn(async (_parentPath: string) => undefined),
-    copyTextWithToast: vi.fn()
+    copyTextWithToast: vi.fn(),
+    showError: vi.fn(),
+    getNote: vi.fn(async (_noteId: string) => ({ title: "Draft [idea]" }))
 }));
 
 // translationsInitializedPromise must be already-resolved so the registry's
@@ -63,6 +67,8 @@ vi.mock("./keyboard_actions.js", () => ({
 }));
 
 vi.mock("./clipboard_ext.js", () => ({ copyTextWithToast }));
+vi.mock("./froca.js", () => ({ default: { getNote } }));
+vi.mock("./toast.js", () => ({ default: { showError } }));
 
 vi.mock("./note_create.js", () => ({
     default: { createNoteWithTypePrompt }
@@ -75,7 +81,7 @@ vi.mock("./utils.js", () => ({
 }));
 
 // Imported AFTER the mocks (vi.mock is hoisted).
-import { CommandRegistry } from "./command_registry.js";
+import { CommandRegistry, formatMarkdownNoteLink } from "./command_registry.js";
 
 /** Build a fresh registry and wait for its async loadCommands() to settle. */
 async function freshRegistry() {
@@ -101,6 +107,7 @@ afterEach(() => {
     isElectron.mockImplementation(() => false);
     getActiveContextNotePath.mockImplementation(() => "root/abc");
     getActiveContextNoteId.mockImplementation(() => "abc");
+    getNote.mockImplementation(async () => ({ title: "Draft [idea]" }));
     getActiveMainContext.mockImplementation(() => ({ ntxId: "ntx-main" }));
 });
 
@@ -251,6 +258,55 @@ describe("GoreeCloud note revisions and linking", () => {
         const registry = await freshRegistry();
         getActiveContextNotePath.mockImplementation(() => null);
         await registry.executeCommand("copy-current-note-link");
+        expect(copyTextWithToast).not.toHaveBeenCalled();
+    });
+});
+
+describe("GoreeCloud Markdown note link capture", () => {
+    it("escapes markdown labels while retaining the Notebook link target", () => {
+        expect(formatMarkdownNoteLink("  Project [2026] \\ Guide  ", "root/abc"))
+            .toBe("[Project \\[2026\\] \\\\ Guide](#root/abc)");
+        expect(formatMarkdownNoteLink("First\nSecond", "root/abc"))
+            .toBe("[First Second](#root/abc)");
+    });
+
+    it("copies a titled markdown link from the current note", async () => {
+        const registry = await freshRegistry();
+        expect(registry.searchCommands("markdown note link").map(c => c.id))
+            .toContain("copy-current-note-markdown-link");
+        await registry.executeCommand("copy-current-note-markdown-link");
+        expect(getNote).toHaveBeenCalledWith("abc");
+        expect(copyTextWithToast).toHaveBeenCalledWith("[Draft \\[idea\\]](#root/abc)");
+    });
+
+    it("does not copy when the active note is missing or its path is invalid", async () => {
+        const registry = await freshRegistry();
+        getActiveContextNoteId.mockImplementation(() => null);
+        await registry.executeCommand("copy-current-note-markdown-link");
+        getActiveContextNoteId.mockImplementation(() => "abc");
+        getActiveContextNotePath.mockImplementation(() => "#external");
+        await registry.executeCommand("copy-current-note-markdown-link");
+        expect(getNote).not.toHaveBeenCalled();
+        expect(copyTextWithToast).not.toHaveBeenCalled();
+    });
+
+    it("reports a title-lookup error without touching the clipboard", async () => {
+        getNote.mockRejectedValueOnce(new Error("disconnected"));
+        const registry = await freshRegistry();
+        await registry.executeCommand("copy-current-note-markdown-link");
+        expect(showError).toHaveBeenCalledWith("command_palette.copy_markdown_link_failed");
+        expect(copyTextWithToast).not.toHaveBeenCalled();
+    });
+
+    it("discards a late title lookup after navigation", async () => {
+        let resolveNote!: (note: { title: string }) => void;
+        getNote.mockImplementation(() => new Promise(resolve => { resolveNote = resolve; }));
+        const registry = await freshRegistry();
+        const pending = registry.executeCommand("copy-current-note-markdown-link");
+        getActiveContextNotePath.mockImplementation(() => "root/other");
+        getActiveContextNoteId.mockImplementation(() => "other");
+        resolveNote({ title: "Previous note" });
+        await pending;
         expect(copyTextWithToast).not.toHaveBeenCalled();
     });
 });
