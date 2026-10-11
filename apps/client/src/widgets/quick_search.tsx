@@ -160,6 +160,15 @@ export default function QuickSearch() {
                     active={open}
                     onClick={() => (open ? close() : void search())}
                 />
+                {hasQuery && (
+                    <ActionButton
+                        className="quick-search-clear"
+                        icon="bx bx-x"
+                        text={t("quick-search.clear")}
+                        noIconActionClass
+                        onClick={clearSearch}
+                    />
+                )}
 
                 <SearchStringEditor
                     className="search-string"
@@ -186,15 +195,6 @@ export default function QuickSearch() {
                         return true;
                     }}
                 />
-                {hasQuery && (
-                    <ActionButton
-                        className="quick-search-clear"
-                        icon="bx bx-x"
-                        text={t("quick-search.clear")}
-                        noIconActionClass
-                        onClick={clearSearch}
-                    />
-                )}
             </div>
 
             {open && boxRef.current && (

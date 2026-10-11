@@ -27,9 +27,9 @@
 
 ## Qualification order
 
-1. **Trustworthy foundation (P0):** reproducible source builds, restore tests, Evernote conversion fidelity, access controls and sync reliability. Never use the original notebook as the only test database.
-2. **Everyday work (P1):** fast capture, reliable rich editing, hierarchy, search, references and Glaze-based keyboard/touch accessibility.
-3. **Advanced vision (P2 until separately scoped):** database views, calendars, visual canvases, team collaboration, publication, integrations and optional AI.
+1. **Everyday product (P0):** Glaze-first navigation, fast capture, rich editing, search, linking, templates and accessible keyboard/touch workflows. Validate real interactions rather than just package builds.
+2. **Product integrity (P0 release gates, parallel development):** reproducible source builds, backup/restore tests, access controls and synchronization recovery. Never use the only copy of a notebook for testing.
+3. **Expanded capabilities (P1/P2):** specialized note types, knowledge views and performance first; scope collaborative and AI features separately. Evernote-specific enhancements stay deferred P2 unless an existing importer defect threatens data.
 
 ## Evidence rules
 
