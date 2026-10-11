@@ -134,7 +134,10 @@ describe("Backlinks filtering", () => {
 
         const clear = container.querySelector<HTMLButtonElement>(".backlinks-filter-clear")!;
         expect(clear.type).toBe("button");
+        clear.focus();
+        expect(document.activeElement).toBe(clear);
         act(() => clear.click());
+        expect(document.activeElement).toBe(input);
         expect(input.value).toBe("");
         expect(items()).toHaveLength(2);
         expect(get).toHaveBeenCalledTimes(1);
