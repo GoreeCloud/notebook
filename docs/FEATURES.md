@@ -15,4 +15,6 @@ GoreeCloud Notebook targets an Evernote-style capture-to-knowledge workflow whil
 | Glaze visual and interaction semantics | First stylesheet adapter in development | Nonconforming until consumer acceptance |
 | Mobile/adaptive experience | Imported upstream support | Needs representative-device tests |
 
+The owner's [complete feature and capability vision](COMPLETE-FEATURES-AND-CAPABILITIES.md) covers 20 product domains, spanning capture, editing, organization, knowledge graphs, search, databases, tasks, calendar, visual planning, collaboration, optional AI, privacy, sync, publishing, automation, personalization, portability, specialized content, projects and hosting. **That full catalogue is proposed product scope and does not change the unverified acceptance statuses above.**
+
 See [implemented-source record](IMPLEMENTED-FEATURES.md) and [planned work](PLANNED-FEATURES.md).
