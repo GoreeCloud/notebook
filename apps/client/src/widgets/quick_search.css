@@ -100,7 +100,7 @@
         }
     }
 
-    .quick-search-clear {
+    :is(.quick-search-clear, .quick-search-new-note) {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -113,12 +113,12 @@
         color: var(--quick-search-color, var(--muted-text-color));
     }
 
-    .quick-search-clear:hover {
+    :is(.quick-search-clear, .quick-search-new-note):hover {
         color: var(--main-text-color);
         background: var(--active-item-background-color);
     }
 
-    .quick-search-clear:focus-visible {
+    :is(.quick-search-clear, .quick-search-new-note):focus-visible {
         outline: 2px solid var(--glaze-semantic-focus, currentColor);
         outline-offset: 2px;
     }

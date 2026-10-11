@@ -159,6 +159,33 @@ describe("QuickSearch", () => {
         expect(menu()).toBeNull();
     });
 
+    it("creates an Inbox note without searching", async () => {
+        const trigger = vi.spyOn(appContext, "triggerCommand").mockResolvedValue(undefined);
+        const searchRequest = vi.spyOn(server, "get");
+        const { container, editor } = await mount();
+        const create = container.querySelector<HTMLButtonElement>(".quick-search-new-note");
+        expect(create?.type).toBe("button");
+        typeQuery(editor, "draft");
+        await act(async () => create?.click());
+        expect(trigger).toHaveBeenCalledWith("createNoteIntoInbox", {});
+        expect(searchRequest).not.toHaveBeenCalled();
+        expect(editor.state.doc.toString()).toBe("");
+    });
+
+    it("ignores pending search results after creating an Inbox note", async () => {
+        const pending = deferred<QuickSearchResponse>();
+        vi.spyOn(server, "get").mockReturnValue(pending.promise as never);
+        vi.spyOn(appContext, "triggerCommand").mockResolvedValue(undefined);
+        const { container, editor } = await mount();
+        typeQuery(editor, "discard this");
+        pressEnter(editor);
+        await vi.waitFor(() => expect(placeholderItems()).toHaveLength(1));
+        await act(async () => container.querySelector<HTMLButtonElement>(".quick-search-new-note")?.click());
+        expect(menu()).toBeNull();
+        await act(async () => pending.resolve(response(3, [])));
+        expect(menu()).toBeNull();
+    });
+
     it("shows the error the search ran into, above whatever it still found", async () => {
         const failed = { ...response(0, []), error: "Note content can be searched only with operators" };
         const get = vi.spyOn(server, "get").mockResolvedValue(failed);

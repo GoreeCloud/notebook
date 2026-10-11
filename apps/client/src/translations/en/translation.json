@@ -2739,6 +2739,7 @@
     "unavailable": "Could not load search results. Check your connection and try again.",
     "retry": "Retry search",
     "clear": "Clear search",
+    "new_note": "Create note in Inbox",
     "show-in-full-search": "Show in full search",
     "hints": {
       "title": "Quick search results",

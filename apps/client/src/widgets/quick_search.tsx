@@ -170,6 +170,16 @@ export default function QuickSearch() {
                     />
                 )}
 
+                <ActionButton
+                    className="quick-search-new-note"
+                    icon="bx bx-plus-circle"
+                    text={t("quick-search.new_note")}
+                    noIconActionClass
+                    onClick={() => {
+                        clearSearch();
+                        void appContext.triggerCommand("createNoteIntoInbox", {});
+                    }}
+                />
                 <SearchStringEditor
                     className="search-string"
                     placeholder={t("quick-search.placeholder")}
