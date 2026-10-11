@@ -49,3 +49,43 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter .
       - name: Check client build without publishing
         run: pnpm --filter @triliumnext/client build
+
+  server-build-qualification:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install server, client, PDF and shared dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter '@triliumnext/client...' --filter '@triliumnext/pdfjs-viewer...' --filter '@triliumnext/share-theme...' --filter .
+      - name: Build server and packaged web assets without publication
+        run: pnpm --filter @triliumnext/server build
+
+  enex-import-fixtures:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install importer test dependency graph
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter .
+      - name: Test Evernote importer using isolated fixture database
+        run: pnpm --filter @triliumnext/server exec vitest run ../../packages/trilium-core/src/services/import/enex.spec.ts --reporter=dot

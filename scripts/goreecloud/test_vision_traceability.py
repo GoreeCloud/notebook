@@ -35,6 +35,9 @@ class VisionTraceabilityTests(unittest.TestCase):
         self.assertIn("--filter '@triliumnext/share-theme...'", workflow)
         self.assertIn("--frozen-lockfile --ignore-scripts", workflow)
         self.assertNotIn("secrets.", workflow)
+        self.assertIn("server-build-qualification:", workflow)
+        self.assertIn("enex-import-fixtures:", workflow)
+        self.assertIn("@triliumnext/pdfjs-viewer", workflow)
 
     def test_mapped_workstreams_exist_and_claim_boundaries_are_explicit(self):
         trace = MATRIX.read_text(encoding="utf-8")
