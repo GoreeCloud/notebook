@@ -83,18 +83,23 @@ export default function QuickSearch() {
         setOpen(true);
         const requestId = ++requestIdRef.current;
         setSearchState({ status: "searching" });
+        try {
         const { searchResults, highlightedTokens, error } = await server.get<QuickSearchResponse>(
-            `quick-search?searchString=${encodeURIComponent(query)}`
-        );
-        if (requestId !== requestIdRef.current) return;
-
-        setSearchState({
-            status: "done",
-            results: searchResults,
-            // Opens the note at its first match; with nothing highlighted, at the plain path.
-            viewScope: highlightedTokens.length ? { searchTerms: highlightedTokens } : undefined,
-            error
-        });
+                `quick-search?searchString=${encodeURIComponent(query)}`
+            );
+            if (requestId !== requestIdRef.current) return;
+    
+            setSearchState({
+                status: "done",
+                results: searchResults,
+                // Opens the note at its first match; with nothing highlighted, at the plain path.
+                viewScope: highlightedTokens.length ? { searchTerms: highlightedTokens } : undefined,
+                error
+            });
+            } catch {
+            if (requestId !== requestIdRef.current) return;
+            setSearchState({ status: "done", results: [], viewScope: undefined, error: t("quick-search.unavailable") });
+        }
     }
 
     function showInFullSearch() {
