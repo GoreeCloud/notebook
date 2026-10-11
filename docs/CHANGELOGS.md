@@ -14,4 +14,6 @@
 - Added a 20-domain capability-to-roadmap traceability matrix and automated structural checks; tightened Evernote local header review to ignore XML-like declarations inside actual note content.
 - Added an independent pull-request client build-qualification job without deployment steps using the pinned package-manager and frozen lockfile. The first build detected an incomplete filtered install (share-theme's separate Fuse dependency); the qualification job now installs both client and share-theme dependency closures. The corrected build requires fresh exact-head verification.
 
+- Verified both client and server packaged-source builds on draft-PR head `058be388e345c4bc6c8e1e605d2a4261446cf67e` in CI; server qualification builds its bundled web assets and PDF viewer without deploying. The independent importer fixture test hit a missing generated web-clipper TypeScript configuration before tests started, so the test job now explicitly prepares WXT before running; exact-head requalification is required.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

@@ -38,6 +38,8 @@ class VisionTraceabilityTests(unittest.TestCase):
         self.assertIn("server-build-qualification:", workflow)
         self.assertIn("enex-import-fixtures:", workflow)
         self.assertIn("@triliumnext/pdfjs-viewer", workflow)
+        self.assertIn("@triliumnext/web-clipper", workflow)
+        self.assertIn("exec wxt prepare", workflow)
 
     def test_mapped_workstreams_exist_and_claim_boundaries_are_explicit(self):
         trace = MATRIX.read_text(encoding="utf-8")

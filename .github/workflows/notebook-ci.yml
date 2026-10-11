@@ -85,7 +85,9 @@ jobs:
           node-version: '24'
       - name: Activate pinned workspace package manager
         run: corepack enable
-      - name: Install importer test dependency graph
-        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter .
+      - name: Install importer and web-clipper build-time dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter '@triliumnext/web-clipper...' --filter .
+      - name: Generate upstream web-clipper TypeScript configuration
+        run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
       - name: Test Evernote importer using isolated fixture database
         run: pnpm --filter @triliumnext/server exec vitest run ../../packages/trilium-core/src/services/import/enex.spec.ts --reporter=dot
