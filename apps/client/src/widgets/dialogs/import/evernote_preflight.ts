@@ -69,7 +69,7 @@ export async function inspectEvernoteSelection(files: readonly EvernotePreflight
         const repeated = seen.has(file) || (identity !== undefined && identities.has(identity));
         seen.add(file);
         if (identity !== undefined) identities.add(identity);
-        return check.ready && repeated ? { ...check, code: "duplicate", ready: false } : check;
+        return check.ready && repeated ? { ...check, code: "duplicate" as const, ready: false } : check;
     });
 }
 
