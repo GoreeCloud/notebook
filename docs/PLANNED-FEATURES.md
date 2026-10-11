@@ -8,7 +8,7 @@
 | NB-002 | P0 | Glaze 1.7 complete design-system adapter and product UI overhaul | Functional visual/a11y/interaction tests on web, desktop and mobile |
 | NB-003 | P0 | Storage, backup, restore and upgrade safety | Realistic copy-based restore and negative tests |
 | NB-004 | P0 | Authentication, permission and network threat model | End-to-end access-control and transport tests |
-| NB-005 | P2 | Evernote importer integrity and full note-level preview (limited CLI and browser preflight are implemented; acceptance pending) | Fixture suite preserving resources, links, timestamps, failure handling |
+| NB-005 | P2 | Maintain existing ENEX compatibility and safeguards; defer further migration features | Fixture suite preserving resources, links, timestamps, failure handling |
 | NB-006 | P0 | Capture inbox, quick add, templates, bulk tag actions and saved search | UX tests plus keyboard and touch acceptance |
 | NB-007 | P0 | Note linking, tasks, calendar-oriented notes and attachment management | Data-integrity and portable export tests |
 | NB-008 | P1 | Offline and cross-device synchronization robustness | Conflict, reconnect, data-recovery and degraded-state tests |
