@@ -72,7 +72,7 @@ export function BacklinksWidget({ note }: { note: FNote }) {
                     checked={sortByTitle}
                     onChange={event => setSortByTitle(event.currentTarget.checked)}
                 />
-                {t("zpetne_odkazy.sort_by_title")}
+                {t("content_manager.sort_order")}: {t("content_manager.sort_by_title")}
             </label>
             <ul class="backlinks-items">
                 <BacklinksList note={note} filterQuery={filterQuery} sortByTitle={sortByTitle} />
