@@ -42,7 +42,7 @@ It streams a local export and prints aggregate note, resource, tag, and possible
 
 This codebase is a pnpm monorepo (Node and toolchain versions are inherited from upstream). Read the upstream installation notes and `package.json` before installing dependencies or running build scripts. Never point Development builds at real notebooks without tested backup, restore, and migration procedures.
 
-See [specifications](docs/SPECIFICATIONS.md), [implemented source baseline](docs/IMPLEMENTED-FEATURES.md), [remaining rebuild work](docs/PLANNED-FEATURES.md), [privacy](docs/PRIVACY.md), [manual](docs/USER-MANUAL.md), and [security](.github/SECURITY.md).
+See the [complete 20-domain product vision](docs/COMPLETE-FEATURES-AND-CAPABILITIES.md) (**proposed scope, not implemented-feature evidence**), [specifications](docs/SPECIFICATIONS.md), [implemented source baseline](docs/IMPLEMENTED-FEATURES.md), [remaining rebuild work](docs/PLANNED-FEATURES.md), [privacy](docs/PRIVACY.md), [manual](docs/USER-MANUAL.md), and [security](.github/SECURITY.md).
 
 ## Safety and legal
 
