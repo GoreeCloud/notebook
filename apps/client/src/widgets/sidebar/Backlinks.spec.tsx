@@ -97,8 +97,8 @@ describe("Backlinks filtering", () => {
         ] });
         const target = froca.getNoteFromCache("filter-target")!;
         const get = vi.spyOn(server, "get").mockResolvedValue([
-            { noteId: "filter-alpha", excerpts: ["<p>Alpha reference</p>"] },
-            { noteId: "filter-beta", relationName: "supports" }
+            { noteId: "filter-beta", relationName: "supports" },
+            { noteId: "filter-alpha", excerpts: ["<p>Alpha reference</p>"] }
         ]);
         container = document.createElement("div");
         document.body.appendChild(container);
@@ -109,6 +109,12 @@ describe("Backlinks filtering", () => {
         const items = () => container.querySelectorAll(".backlinks-items > li");
         expect(input.getAttribute("aria-label")).toBeTruthy();
         expect(items()).toHaveLength(2);
+        expect(items()[0].textContent).toContain("supports");
+        const sorter = container.querySelector<HTMLInputElement>(".backlinks-sort-label input")!;
+        act(() => sorter.click());
+        expect(items()[0].textContent).toContain("Alpha reference");
+        act(() => sorter.click());
+        expect(items()[0].textContent).toContain("supports");
 
         act(() => {
             input.value = "ALPHA";
