@@ -176,9 +176,9 @@ describe("createNote", () => {
             isProtected: true,
             saveSelection: true,
             textEditor: { getSelectedHtml, removeSelection } as any
-        })).rejects.toThrow("note_create.protected_session_required");
+        })).rejects.toThrow("protected_session_password.form_label");
 
-        expect(showError).toHaveBeenCalledWith("note_create.protected_session_required:{}");
+        expect(showError).toHaveBeenCalledWith("protected_session_password.form_label:{}");
         expect(server.post).not.toHaveBeenCalled();
         expect(getSelectedHtml).not.toHaveBeenCalled();
         expect(removeSelection).not.toHaveBeenCalled();
