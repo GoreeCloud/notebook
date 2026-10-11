@@ -101,6 +101,28 @@
     }
 }
 
+.tn-backlinks-widget .backlinks-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 8px;
+
+    > input {
+        min-width: 0;
+        flex: 1;
+    }
+
+    > input:focus-visible {
+        outline: 2px solid var(--glaze-semantic-focus, currentColor);
+        outline-offset: 2px;
+    }
+
+    > button {
+        flex-shrink: 0;
+        min-height: 32px;
+    }
+}
+
 .tn-backlinks-widget .backlinks-retry {
     margin-inline-start: 8px;
     min-height: 30px;

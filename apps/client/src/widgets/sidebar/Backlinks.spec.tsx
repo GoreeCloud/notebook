@@ -9,7 +9,7 @@ import type FNote from "../../entities/fnote.js";
 import froca from "../../services/froca.js";
 import server from "../../services/server.js";
 import { buildNote } from "../../test/easy-froca.js";
-import { BacklinksList, useBacklinkCount } from "./Backlinks.js";
+import { BacklinksList, BacklinksWidget, useBacklinkCount } from "./Backlinks.js";
 
 let container: HTMLDivElement;
 
@@ -85,6 +85,91 @@ describe("Backlink count", () => {
         act(() => render(<BacklinkCountHarness note={target} enabled={false} />, container));
         expect(get).not.toHaveBeenCalled();
         expect(container.textContent).toBe("0");
+    });
+});
+
+describe("Backlinks filtering", () => {
+    it("filters cached source titles and relation names without more network requests", async () => {
+        buildNote({ id: "root", title: "Root", children: [
+            { id: "filter-alpha", title: "Project Alpha" },
+            { id: "filter-beta", title: "Team Beta" },
+            { id: "filter-target", title: "Target" }
+        ] });
+        const target = froca.getNoteFromCache("filter-target")!;
+        const get = vi.spyOn(server, "get").mockResolvedValue([
+            { noteId: "filter-alpha", excerpts: ["<p>Alpha reference</p>"] },
+            { noteId: "filter-beta", relationName: "supports" }
+        ]);
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<BacklinksWidget note={target} />, container));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+
+        const input = container.querySelector<HTMLInputElement>(".backlinks-filter input")!;
+        const items = () => container.querySelectorAll(".backlinks-items > li");
+        expect(input.getAttribute("aria-label")).toBeTruthy();
+        expect(items()).toHaveLength(2);
+
+        act(() => {
+            input.value = "ALPHA";
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        expect(items()).toHaveLength(1);
+        expect(container.textContent).toContain("Alpha reference");
+        expect(container.textContent).not.toContain("supports");
+
+        act(() => {
+            input.value = "support";
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        expect(items()).toHaveLength(1);
+        expect(container.textContent).toContain("supports");
+
+        act(() => {
+            input.value = "missing source";
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        expect(container.querySelector(".backlinks-no-matches")).not.toBeNull();
+        expect(container.querySelector(".backlinks-empty")).toBeNull();
+
+        const clear = container.querySelector<HTMLButtonElement>(".backlinks-filter-clear")!;
+        expect(clear.type).toBe("button");
+        act(() => clear.click());
+        expect(input.value).toBe("");
+        expect(items()).toHaveLength(2);
+        expect(get).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("Backlinks filter navigation", () => {
+    it("clears the filter when changing the selected note", async () => {
+        buildNote({ id: "root", title: "Root", children: [
+            { id: "nav-source", title: "Source" },
+            { id: "nav-first", title: "First target" },
+            { id: "nav-second", title: "Second target" }
+        ] });
+        const first = froca.getNoteFromCache("nav-first")!;
+        const second = froca.getNoteFromCache("nav-second")!;
+        vi.spyOn(server, "get").mockResolvedValue([
+            { noteId: "nav-source", excerpts: [ "<p>Visible backlink</p>" ] }
+        ]);
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<BacklinksWidget note={first} />, container));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+
+        const filter = container.querySelector<HTMLInputElement>(".backlinks-filter input")!;
+        act(() => {
+            filter.value = "nothing matches";
+            filter.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        expect(container.querySelector(".backlinks-no-matches")).not.toBeNull();
+
+        act(() => render(<BacklinksWidget note={second} />, container));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+        expect(container.querySelector<HTMLInputElement>(".backlinks-filter input")?.value).toBe("");
+        expect(container.querySelector(".backlinks-no-matches")).toBeNull();
+        expect(container.textContent).toContain("Visible backlink");
     });
 });
 

@@ -33,4 +33,6 @@
 
 - Added Copy Markdown Link to Current Note in the Command Palette, creating titled, escaped internal Markdown links and avoiding wrong-note copies when title lookups finish after navigation. Added focused regressions for formatting, copying, invalid selections, lookup-error feedback and stale asynchronous results.
 
+- Added accessible client-side backlink filtering across source-note titles and relation names, with clear and no-match states and reset on note navigation. Filtering uses prefetched source metadata and does not trigger extra network requests; new UI regressions cover filtering and note switching.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

@@ -36,16 +36,37 @@ export default function Backlinks() {
  * frame the list: this card, the mobile note menu's modal and the status bar's dropdown.
  */
 export function BacklinksWidget({ note }: { note: FNote }) {
+    const [ filterQuery, setFilterQuery ] = useState("");
+
+    // Moving between notes starts a fresh search rather than carrying an unrelated filter.
+    useEffect(() => setFilterQuery(""), [ note.noteId ]);
+
     return (
         <div class="tn-backlinks-widget">
+            <div class="backlinks-filter">
+                <input
+                    aria-label={t("zpetne_odkazy.filter_label") || "Filter backlinks"}
+                    type="search"
+                    class="form-control"
+                    value={filterQuery}
+                    placeholder={t("zpetne_odkazy.filter_placeholder")}
+                    onInput={event => setFilterQuery(event.currentTarget.value)}
+                />
+                {filterQuery && (
+                    <button type="button" class="backlinks-filter-clear btn btn-link"
+                        onClick={() => setFilterQuery("")}>
+                        {t("zpetne_odkazy.clear_filter")}
+                    </button>
+                )}
+            </div>
             <ul class="backlinks-items">
-                <BacklinksList note={note} />
+                <BacklinksList note={note} filterQuery={filterQuery} />
             </ul>
         </div>
     );
 }
 
-export function BacklinksList({ note }: { note: FNote }) {
+export function BacklinksList({ note, filterQuery = "" }: { note: FNote; filterQuery?: string }) {
     const [ result, setResult ] = useState<{ noteId: string; backlinks: BacklinksResponse }>();
     const [ failedNoteId, setFailedNoteId ] = useState<string>();
     const requestIdRef = useRef(0);
@@ -100,9 +121,27 @@ export function BacklinksList({ note }: { note: FNote }) {
         );
     }
 
+    // Filter cached source-note titles and relation names without an additional server request.
+    const term = filterQuery.trim().toLowerCase();
+    const visibleBacklinks = term
+        ? backlinks.filter(backlink => {
+            const sourceTitle = froca.getNoteFromCache(backlink.noteId)?.title ?? "";
+            const relation = "relationName" in backlink ? backlink.relationName : "";
+            return sourceTitle.toLowerCase().includes(term) || relation.toLowerCase().includes(term);
+        })
+        : backlinks;
+
+    if (!visibleBacklinks.length) {
+        return (
+            <li className="backlinks-no-matches" aria-live="polite">
+                <NoItems size="small" icon="bx bx-search" text={t("zpetne_odkazy.no_matches")} />
+            </li>
+        );
+    }
+
     // Keyed by position: one source note takes a row per relation it points with, so a note ID names
     // no single row, and the whole list is rebuilt at once anyway.
-    return backlinks.map((backlink, index) => (
+    return visibleBacklinks.map((backlink, index) => (
         <li key={index}>
             {/* Named so that the styling has something to hang off other than the position of the
                 link within the item (see Backlinks.css). */}

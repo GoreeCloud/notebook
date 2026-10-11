@@ -1262,7 +1262,11 @@
   "zpetne_odkazy": {
     "no_backlinks": "No notes link to this one.",
     "unavailable": "Could not load backlinks. Check your connection and try again.",
-    "retry": "Retry backlinks"
+    "retry": "Retry backlinks",
+    "filter_label": "Filter backlinks by source note or relation",
+    "filter_placeholder": "Find backlinks…",
+    "clear_filter": "Clear filter",
+    "no_matches": "No backlinks match this filter."
   },
   "mobile_detail_menu": {
     "insert_child_note": "Insert child note",
