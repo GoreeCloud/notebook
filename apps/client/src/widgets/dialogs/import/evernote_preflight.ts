@@ -5,7 +5,7 @@
  * detection, or an importer guarantee. Read only the initial 16 KiB of each
  * local file; no contents leave the browser during this inspection.
  */
-export type EvernotePreflightCode = "ready" | "empty" | "extension" | "doctype" | "header" | "unreadable";
+export type EvernotePreflightCode = "ready" | "empty" | "extension" | "doctype" | "header" | "duplicate" | "unreadable";
 
 export interface EvernotePreflightResult {
     source: EvernotePreflightFile;
@@ -15,7 +15,7 @@ export interface EvernotePreflightResult {
     ready: boolean;
 }
 
-export type EvernotePreflightFile = Pick<File, "name" | "size" | "slice">;
+export type EvernotePreflightFile = Pick<File, "name" | "size" | "slice"> & Partial<Pick<File, "lastModified">>;
 
 const HEADER_BYTES = 16 * 1024;
 const ENEX_OPEN_TAG = /^(?:<\?xml\s[^>]*\?>\s*)?(?:<!--[\s\S]*?-->\s*)*<en-export(?=[\s/>])/i;
@@ -59,7 +59,18 @@ export async function inspectEvernoteFile(file: EvernotePreflightFile): Promise<
 }
 
 export async function inspectEvernoteSelection(files: readonly EvernotePreflightFile[]): Promise<EvernotePreflightResult[]> {
-    return Promise.all(files.map(inspectEvernoteFile));
+    const checks = await Promise.all(files.map(inspectEvernoteFile));
+    const seen = new Set<EvernotePreflightFile>();
+    const identities = new Set<string>();
+    return checks.map((check) => {
+        const file = check.source;
+        const identity = typeof file.lastModified === "number"
+            ? JSON.stringify([file.name, file.size, file.lastModified]) : undefined;
+        const repeated = seen.has(file) || (identity !== undefined && identities.has(identity));
+        seen.add(file);
+        if (identity !== undefined) identities.add(identity);
+        return check.ready && repeated ? { ...check, code: "duplicate", ready: false } : check;
+    });
 }
 
 export function canImportEvernote(
