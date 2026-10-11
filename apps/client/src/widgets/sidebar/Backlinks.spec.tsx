@@ -15,6 +15,7 @@ let container: HTMLDivElement;
 afterEach(() => {
     act(() => render(null, container));
     container.remove();
+    vi.restoreAllMocks();
 });
 
 /**
@@ -51,6 +52,60 @@ describe("BacklinksList", () => {
         expect(paragraph?.getAttribute("onanimationstart")).toBeNull();
         expect(paragraph?.textContent).toBe("See the other note.");
         expect(paragraph?.querySelector("a")?.getAttribute("href")).toBe("#root/abcdefghijkl");
+    });
+
+    it("does not display a late response for a previously selected note", async () => {
+        buildNote({ id: "root", title: "Root", children: [
+            { id: "source", title: "Source" },
+            { id: "target-a", title: "First" },
+            { id: "target-b", title: "Second" }
+        ] });
+        const first = froca.getNoteFromCache("target-a")!;
+        const second = froca.getNoteFromCache("target-b")!;
+        let resolveFirst!: (items: unknown[]) => void;
+        let resolveSecond!: (items: unknown[]) => void;
+        const firstRequest = new Promise(resolve => { resolveFirst = resolve; });
+        const secondRequest = new Promise(resolve => { resolveSecond = resolve; });
+        vi.spyOn(server, "get").mockImplementation((url) =>
+            (url.includes("target-a") ? firstRequest : secondRequest) as never
+        );
+
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<ul><BacklinksList note={first} /></ul>, container));
+        act(() => render(<ul><BacklinksList note={second} /></ul>, container));
+        await act(async () => resolveSecond([ { noteId: "source", excerpts: ["<p>Current note link</p>"] } ]));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+        expect(container.textContent).toContain("Current note link");
+
+        await act(async () => resolveFirst([ { noteId: "source", excerpts: ["<p>Old note link</p>"] } ]));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+        expect(container.textContent).toContain("Current note link");
+        expect(container.textContent).not.toContain("Old note link");
+    });
+
+    it("shows a retry action for failed requests and recovers", async () => {
+        buildNote({ id: "root", title: "Root", children: [
+            { id: "source", title: "Source" },
+            { id: "target", title: "Target" }
+        ] });
+        const target = froca.getNoteFromCache("target")!;
+        const get = vi.spyOn(server, "get")
+            .mockRejectedValueOnce(new Error("network unavailable"))
+            .mockResolvedValueOnce([ { noteId: "source", excerpts: ["<p>Recovered link</p>"] } ]);
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<ul><BacklinksList note={target} /></ul>, container));
+        for (let i = 0; i < 3; i++) await act(async () => {});
+        const retry = container.querySelector<HTMLButtonElement>(".backlinks-retry");
+        expect(container.querySelector(".backlinks-error")).not.toBeNull();
+        expect(retry?.type).toBe("button");
+
+        await act(async () => retry?.click());
+        for (let i = 0; i < 3; i++) await act(async () => {});
+        expect(get).toHaveBeenCalledTimes(2);
+        expect(container.textContent).toContain("Recovered link");
+        expect(container.querySelector(".backlinks-error")).toBeNull();
     });
 
     it("drops a script tag from an excerpt", async () => {

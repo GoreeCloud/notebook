@@ -12,6 +12,7 @@
 - **QUICK-CAPTURE-PALETTE-001:** Inbox capture is also available as a searchable command-palette action, including quick-capture aliases and use without an active note. The exact-head CI run 38105989431 passed all 51 Quick Search and Command Palette component tests on commit `8dba9e745e`; installed-runtime and accessibility acceptance remain pending.
 - **NOTE-TEMPLATES-PALETTE-001:** A searchable command-palette action exposes the inherited note type/template chooser for the active note, preserving template destination/preset behavior and refusing parentless creation. Source regression tests cover dispatch and the no-parent guard; installed-runtime acceptance remains pending.
 - **RECENT-CHANGES-PALETTE-001:** A searchable Command Palette action opens recent changes scoped to the selected note subtree. When no note is selected, it does not open an unscoped view. Automated tests cover dispatch and missing-note protection; installed-app acceptance remains pending.
+- **BACKLINKS-RELIABILITY-001:** Backlinks load results are scoped to the active note, ignoring responses from abandoned requests and unmounted lists. Failure shows a localized retry action. Dedicated regression coverage tests note-switch races and retry recovery; installed-app acceptance remains pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)

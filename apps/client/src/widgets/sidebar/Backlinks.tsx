@@ -1,7 +1,7 @@
 import "./Backlinks.css";
 
 import { BacklinkCountResponse, BacklinksResponse } from "@triliumnext/commons";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import FNote from "../../entities/fnote";
 import attributes from "../../services/attributes";
@@ -46,27 +46,50 @@ export function BacklinksWidget({ note }: { note: FNote }) {
 }
 
 export function BacklinksList({ note }: { note: FNote }) {
-    const [ backlinks, setBacklinks ] = useState<BacklinksResponse>();
+    const [ result, setResult ] = useState<{ noteId: string; backlinks: BacklinksResponse }>();
+    const [ failedNoteId, setFailedNoteId ] = useState<string>();
+    const requestIdRef = useRef(0);
 
     function refresh() {
-        server.get<BacklinksResponse>(`note-map/${note.noteId}/backlinks`).then(async (backlinks) => {
-            // prefetch all
-            const noteIds = backlinks
-                .filter(bl => "noteId" in bl)
-                .map((bl) => bl.noteId);
+        const requestId = ++requestIdRef.current;
+        const noteId = note.noteId;
+        setFailedNoteId(undefined);
+        // Hide the last snapshot while refreshing, particularly when the active note changes.
+        setResult(undefined);
+        void server.get<BacklinksResponse>(`note-map/${noteId}/backlinks`).then(async (backlinks) => {
+            if (requestId !== requestIdRef.current) return;
+            const noteIds = backlinks.filter(bl => "noteId" in bl).map(bl => bl.noteId);
             await froca.getNotes(noteIds);
-            setBacklinks(backlinks);
+            if (requestId === requestIdRef.current) setResult({ noteId, backlinks });
+        }).catch(() => {
+            if (requestId === requestIdRef.current) setFailedNoteId(noteId);
         });
     }
 
-    useEffect(() => refresh(), [ note ]);
+    useEffect(() => {
+        refresh();
+        // Unmounted lists and notes we have navigated away from must not accept late responses.
+        return () => { requestIdRef.current++; };
+    }, [ note ]);
     useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
         if (needsRefresh(note, loadResults)) refresh();
     });
 
-    // Nothing at all until the request has answered, so that the placeholder below doesn't show for
-    // as long as it takes — the note usually has backlinks, this list being what says it has.
-    if (!backlinks) return null;
+    if (failedNoteId === note.noteId) {
+        return (
+            <li className="backlinks-error">
+                <NoItems size="small" icon="bx bx-error-circle" text={t("zpetne_odkazy.unavailable")}>
+                    <button type="button" className="btn btn-link backlinks-retry" onClick={refresh}>
+                        {t("zpetne_odkazy.retry")}
+                    </button>
+                </NoItems>
+            </li>
+        );
+    }
+
+    // State belongs to the fetched note, not just to this persistent sidebar component.
+    if (result?.noteId !== note.noteId) return null;
+    const { backlinks } = result;
 
     if (!backlinks.length) {
         return (

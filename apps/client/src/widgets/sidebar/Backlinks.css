@@ -101,6 +101,17 @@
     }
 }
 
+.tn-backlinks-widget .backlinks-retry {
+    margin-inline-start: 8px;
+    min-height: 30px;
+    border-radius: var(--glaze-radius-control, 6px);
+}
+
+.tn-backlinks-widget .backlinks-retry:focus-visible {
+    outline: 2px solid var(--glaze-semantic-focus, currentColor);
+    outline-offset: 2px;
+}
+
 .dropdown-menu.dropdown-backlinks {
     --menu-padding-size: .9em;
 
