@@ -194,7 +194,7 @@ export default function QuickSearch() {
                         icon="bx bx-x"
                         text={t("quick-search.clear")}
                         noIconActionClass
-                        onClick={clearSearch}
+                        onClick={() => clearSearch()}
                     />
                 )}
 

@@ -201,7 +201,7 @@ describe("QuickSearch", () => {
         expect(button?.disabled).toBe(true);
         expect(editor.state.doc.toString()).toBe("first capture");
 
-        await act(async () => pending.resolve());
+        await act(async () => pending.resolve(undefined));
         expect(editor.state.doc.toString()).toBe("");
         expect(button?.disabled).toBe(false);
     });
@@ -214,7 +214,7 @@ describe("QuickSearch", () => {
         container.querySelector<HTMLButtonElement>(".quick-search-new-note")?.click();
         typeQuery(editor, "next search");
 
-        await act(async () => pending.resolve());
+        await act(async () => pending.resolve(undefined));
         expect(editor.state.doc.toString()).toBe("next search");
     });
 
