@@ -43,7 +43,9 @@ jobs:
           node-version: '24'
       - name: Activate pinned workspace package manager
         run: corepack enable
-      - name: Install client dependency graph without install hooks
-        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter .
+      - name: Install client and share-theme dependency graphs without install hooks
+        # The client's Vite plugin compiles share-theme source directly; its Fuse
+        # dependency does not appear in the client's declared dependency closure.
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter .
       - name: Check client build without publishing
         run: pnpm --filter @triliumnext/client build

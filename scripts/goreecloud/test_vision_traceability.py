@@ -28,6 +28,14 @@ class VisionTraceabilityTests(unittest.TestCase):
             self.assertTrue(all(cells))
             self.assertIn("NB-", cells[2])
 
+    def test_client_build_ci_installs_share_theme_closure(self):
+        workflow = (ROOT / ".github/workflows/notebook-ci.yml").read_text(encoding="utf-8")
+        self.assertIn("build-qualification:", workflow)
+        self.assertIn("--filter '@triliumnext/client...'", workflow)
+        self.assertIn("--filter '@triliumnext/share-theme...'", workflow)
+        self.assertIn("--frozen-lockfile --ignore-scripts", workflow)
+        self.assertNotIn("secrets.", workflow)
+
     def test_mapped_workstreams_exist_and_claim_boundaries_are_explicit(self):
         trace = MATRIX.read_text(encoding="utf-8")
         roadmap = ROADMAP.read_text(encoding="utf-8")
