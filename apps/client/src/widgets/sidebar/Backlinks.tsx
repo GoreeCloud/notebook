@@ -150,13 +150,15 @@ export function BacklinksList({ note, filterQuery = "", sortByTitle = false }: {
         })
         : backlinks;
 
-    if (sortByTitle) {
-        visibleBacklinks.sort((a, b) => {
+    // Sort a copy: sorting the response array in place would permanently change
+    // the original order when the toggle is switched off.
+    const orderedBacklinks = sortByTitle
+        ? [...visibleBacklinks].sort((a, b) => {
             const aTitle = froca.getNoteFromCache(a.noteId)?.title ?? "";
             const bTitle = froca.getNoteFromCache(b.noteId)?.title ?? "";
             return aTitle.localeCompare(bTitle);
-        });
-    }
+        })
+        : visibleBacklinks;
 
     if (!visibleBacklinks.length) {
         return (
@@ -168,7 +170,7 @@ export function BacklinksList({ note, filterQuery = "", sortByTitle = false }: {
 
     // Keyed by position: one source note takes a row per relation it points with, so a note ID names
     // no single row, and the whole list is rebuilt at once anyway.
-    return visibleBacklinks.map((backlink, index) => (
+    return orderedBacklinks.map((backlink, index) => (
         <li key={index}>
             {/* Named so that the styling has something to hang off other than the position of the
                 link within the item (see Backlinks.css). */}
