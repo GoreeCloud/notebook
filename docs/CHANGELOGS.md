@@ -27,6 +27,6 @@
 
 - Added a searchable Recent Changes action for the selected subtree with a no-selection guard; the client UI CI job also runs the existing note-creation regression suite.
 
-- Scoped backlink results to the selected note and invalidated late network responses on navigation and unmount. Added retry feedback for unavailable backlink requests and covered note-switch races and recovery in the client UI CI suite.
+- Scoped backlink results to the selected note and invalidated late network responses on navigation and unmount. Added retry feedback for unavailable backlink requests and covered note-switch races and recovery in the client UI CI suite. The backlink count indicator also discards late counts from previously selected notes and hides counts outside its supported view.
 
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

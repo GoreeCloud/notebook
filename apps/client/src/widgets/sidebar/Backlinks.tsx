@@ -125,22 +125,34 @@ export function BacklinksList({ note }: { note: FNote }) {
 }
 
 export function useBacklinkCount(note: FNote | null | undefined, isDefaultViewMode: boolean) {
-    const [ backlinkCount, setBacklinkCount ] = useState(0);
+    const [ result, setResult ] = useState<{ noteId: string; count: number }>();
+    const requestIdRef = useRef(0);
 
     const refresh = useCallback(() => {
-        if (!note || !isDefaultViewMode) return;
+        const requestId = ++requestIdRef.current;
+        if (!note || !isDefaultViewMode) {
+            setResult(undefined);
+            return;
+        }
 
-        server.get<BacklinkCountResponse>(`note-map/${note.noteId}/backlink-count`).then(resp => {
-            setBacklinkCount(resp.count);
+        const noteId = note.noteId;
+        void server.get<BacklinkCountResponse>(`note-map/${noteId}/backlink-count`).then(resp => {
+            if (requestId === requestIdRef.current) setResult({ noteId, count: resp.count });
+        }).catch(() => {
+            // A failed count cannot be shown as a reliable value for this note.
+            if (requestId === requestIdRef.current) setResult(undefined);
         });
     }, [ isDefaultViewMode, note ]);
 
-    useEffect(() => refresh(), [ refresh ]);
+    useEffect(() => {
+        refresh();
+        return () => { requestIdRef.current++; };
+    }, [ refresh ]);
     useTriliumEvent("entitiesReloaded", ({ loadResults }) => {
         if (note && needsRefresh(note, loadResults)) refresh();
     });
 
-    return backlinkCount;
+    return isDefaultViewMode && result?.noteId === note?.noteId ? result.count : 0;
 }
 
 function needsRefresh(note: FNote, loadResults: LoadResults) {

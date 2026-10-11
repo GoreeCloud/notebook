@@ -5,10 +5,11 @@ import { render } from "preact";
 import { act } from "preact/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type FNote from "../../entities/fnote.js";
 import froca from "../../services/froca.js";
 import server from "../../services/server.js";
 import { buildNote } from "../../test/easy-froca.js";
-import { BacklinksList } from "./Backlinks.js";
+import { BacklinksList, useBacklinkCount } from "./Backlinks.js";
 
 let container: HTMLDivElement;
 
@@ -40,6 +41,52 @@ async function renderBacklinks(excerpts: string[]) {
     }
     return container;
 }
+
+function BacklinkCountHarness({ note, enabled = true }: { note: FNote; enabled?: boolean }) {
+    const count = useBacklinkCount(note, enabled);
+    return <output data-testid="backlink-count">{count}</output>;
+}
+
+describe("Backlink count", () => {
+    it("ignores a count response from a previously selected note", async () => {
+        buildNote({ id: "root", title: "Root", children: [
+            { id: "target-a", title: "First" },
+            { id: "target-b", title: "Second" }
+        ] });
+        const first = froca.getNoteFromCache("target-a")!;
+        const second = froca.getNoteFromCache("target-b")!;
+        let resolveFirst!: (value: { count: number }) => void;
+        let resolveSecond!: (value: { count: number }) => void;
+        const requestFirst = new Promise<{ count: number }>(resolve => { resolveFirst = resolve; });
+        const requestSecond = new Promise<{ count: number }>(resolve => { resolveSecond = resolve; });
+        vi.spyOn(server, "get").mockImplementation(url =>
+            (url.includes("target-a") ? requestFirst : requestSecond) as never
+        );
+
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<BacklinkCountHarness note={first} />, container));
+        act(() => render(<BacklinkCountHarness note={second} />, container));
+        expect(container.textContent).toBe("0");
+
+        await act(async () => resolveSecond({ count: 2 }));
+        expect(container.textContent).toBe("2");
+
+        await act(async () => resolveFirst({ count: 9 }));
+        expect(container.textContent).toBe("2");
+    });
+
+    it("does not request or display a count outside the default view", async () => {
+        buildNote({ id: "root", title: "Root", children: [ { id: "target", title: "Target" } ] });
+        const target = froca.getNoteFromCache("target")!;
+        const get = vi.spyOn(server, "get");
+        container = document.createElement("div");
+        document.body.appendChild(container);
+        act(() => render(<BacklinkCountHarness note={target} enabled={false} />, container));
+        expect(get).not.toHaveBeenCalled();
+        expect(container.textContent).toBe("0");
+    });
+});
 
 describe("BacklinksList", () => {
     it("strips event handlers from an excerpt while keeping its link and prose", async () => {
