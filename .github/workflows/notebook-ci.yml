@@ -91,3 +91,23 @@ jobs:
         run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
       - name: Test Evernote importer using isolated fixture database
         run: pnpm --filter @triliumnext/server exec vitest run ../../packages/trilium-core/src/services/import/enex.spec.ts --reporter=dot
+
+  desktop-build-qualification:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install desktop and embedded service dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/desktop...' --filter '@triliumnext/server...' --filter '@triliumnext/client...' --filter '@triliumnext/pdfjs-viewer...' --filter '@triliumnext/share-theme...' --filter .
+      - name: Build desktop source bundle without installer
+        run: pnpm --filter @triliumnext/desktop build
