@@ -64,3 +64,10 @@ test("unreadable source fails closed", async () => {
     assert.equal(result.code, "unreadable");
     assert.equal(result.ready, false);
 });
+
+test("repeat ENEX selections are blocked", async () => {
+    const file = sample("one.enex", "<en-export/>");
+    const checks = await inspectEvernoteSelection([file, file]);
+    assert.deepEqual(checks.map(r => r.code), ["ready", "duplicate"]);
+    assert.equal(canImportEvernote([file, file], checks, true, false), false);
+});
