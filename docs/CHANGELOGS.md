@@ -38,4 +38,7 @@
 - Added command-palette duplication for the active note with or without its descendants. Operations reuse the existing duplication endpoint and reject invalid/root/stale note paths; source regressions cover both variants and fail-closed guards.
 - Improved command-palette discovery for excessive spacing and reordered search terms across names, descriptions and aliases; stronger exact and contiguous matches retain their ranking.
 
+- Protected the Inbox capture button against overlapping dispatches; preserve typed search text when dispatch rejects and when the user edits during an unresolved creation, and expose a localized creating state and error message. Retained note-editor focus when creation completes by not refocusing the cleared search field.
+- Prevented a late Quick Search response from showing results after its pending query has changed, while preserving the low-rerender behavior of already displayed search rows. Added focused regression tests for these cases.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

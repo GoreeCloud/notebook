@@ -10,6 +10,7 @@ import appContext from "../components/app_context";
 import { t } from "../services/i18n";
 import { calculateHash, type ViewScope } from "../services/link";
 import server from "../services/server";
+import toast from "../services/toast";
 import type { ShortcutHintDefinition } from "../services/shortcut_hints";
 import { isMobile } from "../services/utils";
 import ActionButton from "./react/ActionButton";
@@ -56,6 +57,7 @@ export default function QuickSearch() {
     // In a ref rather than state, so typing re-renders nothing; only its emptiness is state.
     const searchStringRef = useRef("");
     const [ hasQuery, setHasQuery ] = useState(false);
+    const [ capturePending, setCapturePending ] = useState(false);
     const [ searchState, setSearchState ] = useState<SearchState>();
     const [ open, setOpen ] = useState(false);
     // Set while the keys move through the results; see `.tn-menu-keyboard` in Menu.css.
@@ -65,6 +67,9 @@ export default function QuickSearch() {
     const popupRef = useRef<HTMLDivElement | null>(null);
     // Each search takes a number, so a slower earlier response cannot overwrite a later one.
     const requestIdRef = useRef(0);
+    const pendingSearchRef = useRef<number | null>(null);
+    const queryRevisionRef = useRef(0);
+    const capturePendingRef = useRef(false);
 
     useTriliumEvent("quickSearch", () => editorRef.current?.focus());
     useResultNavigation(popupRef, open, {
@@ -83,6 +88,7 @@ export default function QuickSearch() {
 
         setOpen(true);
         const requestId = ++requestIdRef.current;
+        pendingSearchRef.current = requestId;
         setSearchState({ status: "searching" });
         try {
             const { searchResults, highlightedTokens, error } = await server.get<QuickSearchResponse>(
@@ -109,16 +115,38 @@ export default function QuickSearch() {
                 error: t("quick-search.unavailable"),
                 requestFailed: true
             });
+        } finally {
+            if (pendingSearchRef.current === requestId) pendingSearchRef.current = null;
         }
     }
 
-    function clearSearch() {
+    async function captureInboxNote() {
+        // Two clicks must never initiate two note creations while the first is unresolved.
+        if (capturePendingRef.current) return;
+        capturePendingRef.current = true;
+        setCapturePending(true);
+        const initialRevision = queryRevisionRef.current;
+        try {
+            await appContext.triggerCommand("createNoteIntoInbox", {});
+            // Don't erase a new search typed while creation was in progress.
+            if (queryRevisionRef.current === initialRevision) clearSearch(false);
+        } catch {
+            // A failed creation must not discard the user's input or expose internal errors.
+            toast.showError(t("quick-search.capture_failed"));
+        } finally {
+            capturePendingRef.current = false;
+            setCapturePending(false);
+        }
+    }
+
+    function clearSearch(restoreFocus = true) {
         // Ignore any pending response from the previous query.
         requestIdRef.current++;
+        pendingSearchRef.current = null;
         const editor = editorRef.current;
         if (editor) {
             editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: "" } });
-            editor.focus();
+            if (restoreFocus) editor.focus();
         }
         searchStringRef.current = "";
         setHasQuery(false);
@@ -173,12 +201,10 @@ export default function QuickSearch() {
                 <ActionButton
                     className="quick-search-new-note"
                     icon="bx bx-plus-circle"
-                    text={t("quick-search.new_note")}
+                    text={capturePending ? t("quick-search.creating_note") : t("quick-search.new_note")}
                     noIconActionClass
-                    onClick={() => {
-                        clearSearch();
-                        void appContext.triggerCommand("createNoteIntoInbox", {});
-                    }}
+                    disabled={capturePending}
+                    onClick={() => void captureInboxNote()}
                 />
                 <SearchStringEditor
                     className="search-string"
@@ -187,6 +213,17 @@ export default function QuickSearch() {
                     extraShortcutHints={QUICK_SEARCH_HINTS}
                     editorRef={editorRef}
                     onChange={(value) => {
+                        if (value !== searchStringRef.current) {
+                            queryRevisionRef.current++;
+                            // Preserve already-rendered results (and their fast typing UX),
+                            // but never let a pending request display results for an abandoned query.
+                            if (pendingSearchRef.current !== null) {
+                                requestIdRef.current++;
+                                pendingSearchRef.current = null;
+                                setSearchState(undefined);
+                                close();
+                            }
+                        }
                         searchStringRef.current = value;
                         setHasQuery(value.length > 0);
                     }}

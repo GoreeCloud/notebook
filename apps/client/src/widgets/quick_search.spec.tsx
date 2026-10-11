@@ -8,6 +8,7 @@ import appContext from "../components/app_context";
 import Component from "../components/component";
 import { calculateHash } from "../services/link";
 import server from "../services/server";
+import toast from "../services/toast";
 import { renderInto } from "../test/render";
 import QuickSearch from "./quick_search";
 import { ParentComponent } from "./react/react_utils";
@@ -170,6 +171,70 @@ describe("QuickSearch", () => {
         expect(trigger).toHaveBeenCalledWith("createNoteIntoInbox", {});
         expect(searchRequest).not.toHaveBeenCalled();
         expect(editor.state.doc.toString()).toBe("");
+    });
+
+    it("preserves search text and reports failed Inbox creation", async () => {
+        const trigger = vi.spyOn(appContext, "triggerCommand").mockRejectedValueOnce(new Error("offline"));
+        const showError = vi.spyOn(toast, "showError").mockImplementation(() => {});
+        const { container, editor } = await mount();
+        typeQuery(editor, "not yet saved");
+
+        await act(async () => {
+            container.querySelector<HTMLButtonElement>(".quick-search-new-note")?.click();
+        });
+
+        expect(trigger).toHaveBeenCalledTimes(1);
+        expect(showError).toHaveBeenCalledWith("quick-search.capture_failed");
+        expect(editor.state.doc.toString()).toBe("not yet saved");
+        expect(container.querySelector<HTMLButtonElement>(".quick-search-new-note")?.disabled).toBe(false);
+    });
+
+    it("blocks double capture while pending and clears only after dispatch succeeds", async () => {
+        const pending = deferred<void>();
+        const trigger = vi.spyOn(appContext, "triggerCommand").mockReturnValue(pending.promise as never);
+        const { container, editor } = await mount();
+        typeQuery(editor, "first capture");
+        const button = container.querySelector<HTMLButtonElement>(".quick-search-new-note");
+        button?.click();
+        button?.click();
+        expect(trigger).toHaveBeenCalledTimes(1);
+        expect(button?.disabled).toBe(true);
+        expect(editor.state.doc.toString()).toBe("first capture");
+
+        await act(async () => pending.resolve());
+        expect(editor.state.doc.toString()).toBe("");
+        expect(button?.disabled).toBe(false);
+    });
+
+    it("does not erase a replacement query when Inbox creation finishes late", async () => {
+        const pending = deferred<void>();
+        vi.spyOn(appContext, "triggerCommand").mockReturnValue(pending.promise as never);
+        const { container, editor } = await mount();
+        typeQuery(editor, "capture");
+        container.querySelector<HTMLButtonElement>(".quick-search-new-note")?.click();
+        typeQuery(editor, "next search");
+
+        await act(async () => pending.resolve());
+        expect(editor.state.doc.toString()).toBe("next search");
+    });
+
+    it("discards pending network responses when the search text changes", async () => {
+        const pending = deferred<QuickSearchResponse>();
+        const get = vi.spyOn(server, "get")
+            .mockReturnValueOnce(pending.promise as never)
+            .mockResolvedValueOnce(response(2, []));
+        const { editor } = await mount();
+        typeQuery(editor, "first");
+        pressEnter(editor);
+        await vi.waitFor(() => expect(placeholderItems()).toHaveLength(1));
+        typeQuery(editor, "second");
+        expect(menu()).toBeNull();
+
+        await act(async () => pending.resolve(response(9, [])));
+        expect(menu()).toBeNull();
+        pressEnter(editor);
+        await waitForResults(2);
+        expect(get).toHaveBeenCalledTimes(2);
     });
 
     it("ignores pending search results after creating an Inbox note", async () => {

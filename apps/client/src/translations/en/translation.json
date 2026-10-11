@@ -2746,6 +2746,8 @@
     "retry": "Retry search",
     "clear": "Clear search",
     "new_note": "Create note in Inbox",
+    "creating_note": "Creating Inbox note...",
+    "capture_failed": "Couldn't create an Inbox note. Your search text was kept.",
     "show-in-full-search": "Show in full search",
     "hints": {
       "title": "Quick search results",

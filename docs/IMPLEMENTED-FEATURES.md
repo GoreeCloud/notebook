@@ -19,6 +19,8 @@
 - **MARKDOWN-LINK-COPY-001:** Command Palette can copy a titled Markdown link to the current Notebook note, escaping special label characters and discarding stale title lookups after navigation. Tests cover formatting, dispatch, invalid selection, lookup-error feedback and race cancellation; installed-runtime acceptance remains pending.
 - **NOTE-DUPLICATION-PALETTE-001:** The Command Palette provides full-subtree and note-only duplication using the inherited server operation; invalid, root or stale note selections are rejected. Source and regression coverage added; exact-head CI and installed-app acceptance remain pending.
 - **COMMAND-DISCOVERY-001:** Palette searches trim repeated whitespace and support reordered multiword discovery across commands, descriptions and aliases while preserving contiguous-match ranking. Automated checks and installed-app acceptance remain pending.
+- **QUICK-CAPTURE-RELIABILITY-002:** Inbox capture dispatch now prevents double submission, keeps typed search text on a reported dispatch failure, and avoids erasing later edits on delayed completion. The creating state is exposed with a disabled action and localized labels; component tests added. Installed application acceptance remains pending.
+- **QUICK-SEARCH-RACE-002:** Changing the query invalidates and dismisses a still-pending search; its late response cannot display results for the new query. Already displayed result rows retain existing low-render typing behavior. Regression tests added; installed application acceptance remains pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)
