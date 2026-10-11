@@ -3725,6 +3725,8 @@
     "show_attachments_description": "View note attachments",
     "create_inbox_note_title": "Capture Note in Inbox",
     "create_inbox_note_description": "Create a text note in your Inbox",
+    "create_from_template_title": "Create Note from Type or Template",
+    "create_from_template_description": "Choose a note type, template, and destination",
     "search_notes_title": "Search Notes",
     "search_notes_description": "Open advanced search",
     "search_subtree_title": "Search in Subtree",

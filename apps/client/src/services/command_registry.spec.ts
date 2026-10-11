@@ -11,7 +11,8 @@ const {
     getActiveContext,
     getActiveMainContext,
     getActions,
-    isElectron
+    isElectron,
+    createNoteWithTypePrompt
 } = vi.hoisted(() => ({
     triggerCommand: vi.fn(),
     getComponentByEl: vi.fn(),
@@ -19,7 +20,8 @@ const {
     getActiveContext: vi.fn(),
     getActiveMainContext: vi.fn<() => { ntxId?: string } | undefined>(() => ({ ntxId: "ntx-main" })),
     getActions: vi.fn<() => Promise<ActionKeyboardShortcut[]>>(async () => []),
-    isElectron: vi.fn(() => false)
+    isElectron: vi.fn(() => false),
+    createNoteWithTypePrompt: vi.fn(async (_parentPath: string) => undefined)
 }));
 
 // translationsInitializedPromise must be already-resolved so the registry's
@@ -53,6 +55,10 @@ vi.mock("../components/app_context.js", () => ({
 
 vi.mock("./keyboard_actions.js", () => ({
     default: { getActions }
+}));
+
+vi.mock("./note_create.js", () => ({
+    default: { createNoteWithTypePrompt }
 }));
 
 vi.mock("./utils.js", () => ({
@@ -170,6 +176,27 @@ describe("GoreeCloud Inbox capture command", () => {
         getActiveContextNotePath.mockImplementation(() => null);
         await registry.executeCommand("create-inbox-note");
         expect(triggerCommand).toHaveBeenCalledWith("createNoteIntoInbox", {});
+    });
+});
+
+describe("GoreeCloud note type and template creation", () => {
+    it("offers the existing chooser from the palette with the active note as fallback parent", async () => {
+        const registry = await freshRegistry();
+        expect(registry.getCommand("create-note-from-template")).toBeDefined();
+        expect(registry.searchCommands("note template").map((c) => c.id))
+            .toContain("create-note-from-template");
+        expect(registry.searchCommands("choose note type").map((c) => c.id))
+            .toContain("create-note-from-template");
+
+        await registry.executeCommand("create-note-from-template");
+        expect(createNoteWithTypePrompt).toHaveBeenCalledExactlyOnceWith("root/abc");
+    });
+
+    it("does not create a root-level note without an active parent", async () => {
+        const registry = await freshRegistry();
+        getActiveContextNotePath.mockImplementation(() => null);
+        await registry.executeCommand("create-note-from-template");
+        expect(createNoteWithTypePrompt).not.toHaveBeenCalled();
     });
 });
 

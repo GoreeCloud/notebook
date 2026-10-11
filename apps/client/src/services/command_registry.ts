@@ -3,6 +3,7 @@ import appContext, { type CommandNames } from "../components/app_context.js";
 import type NoteTreeWidget from "../widgets/note_tree.js";
 import { t, translationsInitializedPromise } from "./i18n.js";
 import keyboardActions from "./keyboard_actions.js";
+import noteCreate from "./note_create.js";
 import utils from "./utils.js";
 
 export interface CommandDefinition {
@@ -68,6 +69,21 @@ export class CommandRegistry {
             aliases: ["quick capture", "new note", "inbox note", "capture note"],
             handler: () => appContext.triggerCommand("createNoteIntoInbox", {})
         });
+        // Use the existing type chooser so template destinations and presets are respected.
+        this.register({
+            id: "create-note-from-template",
+            name: t("command_palette.create_from_template_title"),
+            description: t("command_palette.create_from_template_description"),
+            icon: "bx bx-file-blank",
+            aliases: ["note template", "choose note type", "new from template", "new typed note"],
+            handler: () => {
+                const notePath = appContext.tabManager.getActiveContextNotePath();
+                if (notePath) {
+                    return noteCreate.createNoteWithTypePrompt(notePath);
+                }
+            }
+        });
+
         // Special search commands with custom logic
         this.register({
             id: "search-notes",

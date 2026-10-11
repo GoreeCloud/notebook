@@ -23,4 +23,6 @@
 - Added one-click Inbox capture beside Quick Search, with query clearing and stale-result cancellation; the development PR UI gate passed 23 Quick Search interactions on head `1c7821d75a`.
 - Added a searchable command-palette Inbox capture action with aliases and localized text. On head `8dba9e745e`, six CI jobs passed, including 51 Quick Search and Command Palette interaction tests (run 38105989431).
 
+- Added a discoverable command-palette action for creating notes from a chosen note type or template, reusing existing template defaults and a safe active-parent guard. Regression coverage tests the action and missing-parent behavior; real-app acceptance is pending.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

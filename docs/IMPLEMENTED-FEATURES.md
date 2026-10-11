@@ -10,6 +10,7 @@
 - **QUICK-SEARCH-UX-001:** Quick search now has a visible Glaze-styled clear action, an explicit retry for failed requests, localized connection-error feedback, and request invalidation when a query is discarded. The dedicated client UX CI gate ran 21 component interaction tests successfully on development commit `f2706dca3ed5e64955ae360f304647749678fcff`. Actual installed web/desktop accessibility and runtime acceptance remain pending.
 - **QUICK-CAPTURE-001:** One-click Inbox note action uses the existing note creation command; 23 UI component tests passed on PR head `1c7821d75a` (GitHub Actions run 38104695147). Installed-app acceptance remains pending.
 - **QUICK-CAPTURE-PALETTE-001:** Inbox capture is also available as a searchable command-palette action, including quick-capture aliases and use without an active note. The exact-head CI run 38105989431 passed all 51 Quick Search and Command Palette component tests on commit `8dba9e745e`; installed-runtime and accessibility acceptance remain pending.
+- **NOTE-TEMPLATES-PALETTE-001:** A searchable command-palette action exposes the inherited note type/template chooser for the active note, preserving template destination/preset behavior and refusing parentless creation. Source regression tests cover dispatch and the no-parent guard; installed-runtime acceptance remains pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)
