@@ -20,3 +20,7 @@ Preserve upstream pnpm workspace interoperability across `apps/client`, `apps/se
 ## Completion gates
 
 A source change is not a verified feature acceptance. Gate each milestone through tests of the exact source, manual user paths where required, access-control review, performance, privacy and security evidence, and upgrade/restore qualification. Production, Stable and Glaze compliance remain unverified until recorded evidence exists.
+
+## Comprehensive owner feature vision
+
+The [Complete Features and Capabilities](COMPLETE-FEATURES-AND-CAPABILITIES.md) record preserves the owner's 20-domain product vision and 12 core product principles. It defines desired scope rather than current requirements acceptance or evidence of shipped functionality. Each advanced capability needs separate design, feasibility, privacy/security, platform, Glaze and measurable acceptance review before a release claim.
