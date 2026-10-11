@@ -70,7 +70,7 @@ async function createNote(parentNotePath: string | undefined, options: CreateNot
     // Explicitly protected requests must never create an unprotected note.
     // Reject before reading editor selection or making a write request.
     if (options.isProtected && !protectedSessionHolder.isProtectedSessionAvailable()) {
-        const message = t("note_create.protected_session_required");
+        const message = t("protected_session_password.form_label");
         toastService.showError(message);
         throw new Error(message);
     }
