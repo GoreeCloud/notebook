@@ -135,3 +135,25 @@ body[data-goreecloud-product="notebook"] :is(button, .btn, a) {
         box-shadow: none;
     }
 }
+
+/* Product navigation: Glaze focus geometry without disturbing note content. */
+body[data-goreecloud-product="notebook"] .quick-search-box {
+    border-radius: var(--glaze-radius-control);
+    background: var(--glaze-semantic-canvas);
+}
+body[data-goreecloud-product="notebook"] .quick-search:focus-within .quick-search-box {
+    border-color: var(--glaze-semantic-focus);
+    box-shadow: 0 0 0 2px var(--glaze-semantic-selected-fallback);
+}
+body[data-goreecloud-product="notebook"] .quick-search-menu {
+    border: 1px solid var(--glaze-semantic-line);
+    border-radius: var(--glaze-radius-card);
+    background: var(--glaze-semantic-surface);
+    color: var(--glaze-semantic-on-surface);
+}
+@media (forced-colors: active) {
+    body[data-goreecloud-product="notebook"] .quick-search:focus-within .quick-search-box {
+        box-shadow: none;
+        outline: 2px solid Highlight;
+    }
+}
