@@ -18,6 +18,7 @@
 | NB-012 | P0 | Safe CI, release gating, packaging and rollback | Explicit approved target configuration and exact-head checks |
 | NB-013 | P2 | Performance optimization for large notebooks | Reproducible 10k/100k-note benchmarks |
 | NB-014 | P2 | Optional future AI assistance with consent and data isolation | Separate privacy and provider-boundary acceptance |
+| NB-015 | P1 | Triage the complete 20-domain owner product vision into bounded, prioritized delivery milestones | Traceable capability-to-milestone matrix with feasibility, evidence requirements, privacy/security and Glaze applicability |
 
 ## Full vision versus committed execution
 
