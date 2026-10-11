@@ -3731,6 +3731,8 @@
     "search_notes_description": "Open advanced search",
     "search_subtree_title": "Search in Subtree",
     "search_subtree_description": "Search within current subtree",
+    "recent_changes_subtree_title": "Recent Changes in This Note’s Subtree",
+    "recent_changes_subtree_description": "Review recent edits under the current note",
     "search_history_title": "Show Search History",
     "search_history_description": "View previous searches",
     "configure_launch_bar_title": "Configure Launch Bar",

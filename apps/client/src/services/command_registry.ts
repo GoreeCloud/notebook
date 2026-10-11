@@ -107,6 +107,20 @@ export class CommandRegistry {
         });
 
         this.register({
+            id: "recent-changes-in-current-note",
+            name: t("command_palette.recent_changes_subtree_title"),
+            description: t("command_palette.recent_changes_subtree_description"),
+            icon: "bx bx-history",
+            aliases: ["recent edits", "subtree changes", "recent note changes"],
+            handler: () => {
+                const ancestorNoteId = appContext.tabManager.getActiveContextNoteId();
+                if (ancestorNoteId) {
+                    appContext.triggerCommand("showRecentChanges", { ancestorNoteId });
+                }
+            }
+        });
+
+        this.register({
             id: "show-search-history",
             name: t("command_palette.search_history_title"),
             description: t("command_palette.search_history_description"),

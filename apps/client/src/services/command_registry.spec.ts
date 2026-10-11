@@ -8,6 +8,7 @@ const {
     triggerCommand,
     getComponentByEl,
     getActiveContextNotePath,
+    getActiveContextNoteId,
     getActiveContext,
     getActiveMainContext,
     getActions,
@@ -17,6 +18,7 @@ const {
     triggerCommand: vi.fn(),
     getComponentByEl: vi.fn(),
     getActiveContextNotePath: vi.fn<() => string | null | undefined>(() => "root/abc"),
+    getActiveContextNoteId: vi.fn(() => "abc" as string | null),
     getActiveContext: vi.fn(),
     getActiveMainContext: vi.fn<() => { ntxId?: string } | undefined>(() => ({ ntxId: "ntx-main" })),
     getActions: vi.fn<() => Promise<ActionKeyboardShortcut[]>>(async () => []),
@@ -47,6 +49,7 @@ vi.mock("../components/app_context.js", () => ({
         tabManager: {
             activeNtxId: "ntx-1",
             getActiveContextNotePath,
+            getActiveContextNoteId,
             getActiveContext,
             getActiveMainContext
         }
@@ -93,6 +96,7 @@ afterEach(() => {
     getActions.mockImplementation(async () => []);
     isElectron.mockImplementation(() => false);
     getActiveContextNotePath.mockImplementation(() => "root/abc");
+    getActiveContextNoteId.mockImplementation(() => "abc");
     getActiveMainContext.mockImplementation(() => ({ ntxId: "ntx-main" }));
 });
 
@@ -197,6 +201,21 @@ describe("GoreeCloud note type and template creation", () => {
         getActiveContextNotePath.mockImplementation(() => null);
         await registry.executeCommand("create-note-from-template");
         expect(createNoteWithTypePrompt).not.toHaveBeenCalled();
+    });
+});
+
+describe("GoreeCloud recent-changes navigation", () => {
+    it("opens changes in the active note subtree", async () => {
+        const registry = await freshRegistry();
+        await registry.executeCommand("recent-changes-in-current-note");
+        expect(triggerCommand).toHaveBeenCalledWith("showRecentChanges", { ancestorNoteId: "abc" });
+    });
+
+    it("does not open an unscoped changes view without a selected note", async () => {
+        const registry = await freshRegistry();
+        getActiveContextNoteId.mockImplementation(() => null);
+        await registry.executeCommand("recent-changes-in-current-note");
+        expect(triggerCommand).not.toHaveBeenCalled();
     });
 });
 

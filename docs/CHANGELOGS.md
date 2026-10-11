@@ -25,4 +25,6 @@
 
 - Added a discoverable command-palette action for creating notes from a chosen note type or template, reusing existing template defaults and a safe active-parent guard. Regression coverage tests the action and missing-parent behavior; real-app acceptance is pending.
 
+- Added a searchable Recent Changes action for the selected subtree with a no-selection guard; the client UI CI job also runs the existing note-creation regression suite.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

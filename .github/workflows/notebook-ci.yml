@@ -133,5 +133,5 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter '@triliumnext/web-clipper...' --filter .
       - name: Prepare web-clipper TypeScript context for the shared test config
         run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
-      - name: Test Notebook quick-search and command-palette interactions
-        run: pnpm --filter @triliumnext/client exec vitest run src/widgets/quick_search.spec.tsx src/services/command_registry.spec.ts --reporter=dot
+      - name: Test Notebook search, palette and note-creation interactions
+        run: pnpm --filter @triliumnext/client exec vitest run src/widgets/quick_search.spec.tsx src/services/command_registry.spec.ts src/services/note_create.spec.ts --reporter=dot
