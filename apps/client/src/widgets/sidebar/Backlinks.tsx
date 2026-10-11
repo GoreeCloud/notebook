@@ -37,6 +37,7 @@ export default function Backlinks() {
  */
 export function BacklinksWidget({ note }: { note: FNote }) {
     const [ filterQuery, setFilterQuery ] = useState("");
+    const filterInputRef = useRef<HTMLInputElement>(null);
 
     // Moving between notes starts a fresh search rather than carrying an unrelated filter.
     useEffect(() => setFilterQuery(""), [ note.noteId ]);
@@ -45,6 +46,7 @@ export function BacklinksWidget({ note }: { note: FNote }) {
         <div class="tn-backlinks-widget">
             <div class="backlinks-filter">
                 <input
+                    ref={filterInputRef}
                     aria-label={t("zpetne_odkazy.filter_label") || "Filter backlinks"}
                     type="search"
                     class="form-control"
@@ -54,7 +56,11 @@ export function BacklinksWidget({ note }: { note: FNote }) {
                 />
                 {filterQuery && (
                     <button type="button" class="backlinks-filter-clear btn btn-link"
-                        onClick={() => setFilterQuery("")}>
+                        onClick={() => {
+                            setFilterQuery("");
+                            // Keep keyboard and screen-reader users in the filtering workflow.
+                            filterInputRef.current?.focus();
+                        }}>
                         {t("zpetne_odkazy.clear_filter")}
                     </button>
                 )}
