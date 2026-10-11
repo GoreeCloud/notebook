@@ -195,8 +195,10 @@ describe("QuickSearch", () => {
         const { container, editor } = await mount();
         typeQuery(editor, "first capture");
         const button = container.querySelector<HTMLButtonElement>(".quick-search-new-note");
-        button?.click();
-        button?.click();
+        act(() => {
+            button?.click();
+            button?.click();
+        });
         expect(trigger).toHaveBeenCalledTimes(1);
         expect(button?.disabled).toBe(true);
         expect(editor.state.doc.toString()).toBe("first capture");
