@@ -1,0 +1,33 @@
+# Development declaration. No production/Stable/Glaze conformance is claimed.
+schemaVersion: 1
+product:
+  id: goreecloud-notebook
+  name: GoreeCloud Notebook
+  category: application
+  owner: GoreeCloud
+  repository: GoreeCloud/notebook
+  lifecycle: development
+  sourceModel: upstream-derived
+  upstream: TriliumNext/Trilium
+  license: AGPL-3.0-only
+platform:
+  distribution: blocked-pending-qualification
+  selfHostedTarget: true
+  web: inherited-upstream-source-unverified
+  desktop: inherited-upstream-source-unverified
+  mobile: inherited-upstream-source-unverified
+  synchronization: inherited-upstream-source-unverified
+  backupAndRestore: pending-verification
+  productionHealth: unverified
+glaze:
+  system: GoreeCloud/glaze
+  targetStable: 1.7.0
+  consumerAcceptance: pending
+  developmentSemanticAdapter: present
+  productionConformance: unverified
+security:
+  review: required
+  secretScan: pending
+  dependencyAudit: pending
+  licenseReview: required
+  deploymentAuthorization: not-granted

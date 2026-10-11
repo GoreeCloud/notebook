@@ -1,0 +1,13 @@
+<li>
+    <a href="<%= entry.href %>">
+        <span><%= entry.text %></span>
+    </a>
+
+    <% if (entry.children.length) { %>
+        <ul>
+            <% for (const subentry of entry.children) { %>
+                <%- include("toc_item", { entry: subentry }) %>
+            <% } %>
+        </ul>
+    <% } %>
+</li>

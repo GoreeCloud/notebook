@@ -1,0 +1,137 @@
+name: GoreeCloud Notebook Source Integrity
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate derived-repository foundation
+        run: python3 -m unittest discover -s scripts/goreecloud -p 'test_*.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate local Evernote file-review rules
+        run: node --experimental-strip-types --test apps/client/src/widgets/dialogs/import/evernote_preflight.test.mjs
+
+  build-qualification:
+    # Separate premerge client build check; never deploys or publishes.
+    # Source integrity remains independent, even if dependency resolution fails.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install client and share-theme dependency graphs without install hooks
+        # The client's Vite plugin compiles share-theme source directly; its Fuse
+        # dependency does not appear in the client's declared dependency closure.
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter .
+      - name: Check client build without publishing
+        run: pnpm --filter @triliumnext/client build
+
+  server-build-qualification:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install server, client, PDF and shared dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter '@triliumnext/client...' --filter '@triliumnext/pdfjs-viewer...' --filter '@triliumnext/share-theme...' --filter .
+      - name: Build server and packaged web assets without publication
+        run: pnpm --filter @triliumnext/server build
+
+  enex-import-fixtures:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install importer and web-clipper build-time dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/server...' --filter '@triliumnext/web-clipper...' --filter .
+      - name: Generate upstream web-clipper TypeScript configuration
+        run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
+      - name: Test Evernote importer using isolated fixture database
+        run: pnpm --filter @triliumnext/server exec vitest run ../../packages/trilium-core/src/services/import/enex.spec.ts --reporter=dot
+
+  desktop-build-qualification:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install desktop and embedded service dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/desktop...' --filter '@triliumnext/server...' --filter '@triliumnext/client...' --filter '@triliumnext/pdfjs-viewer...' --filter '@triliumnext/share-theme...' --filter .
+      - name: Build desktop source bundle without installer
+        run: pnpm --filter @triliumnext/desktop build
+
+  client-ux-interactions:
+    # Run real UI interaction tests with a disposable DOM; no browser secrets,
+    # deployment, persistent user data or release publishing.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install client, theme and config dependency graphs
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter '@triliumnext/share-theme...' --filter '@triliumnext/web-clipper...' --filter .
+      - name: Prepare web-clipper TypeScript context for the shared test config
+        run: pnpm --filter @triliumnext/web-clipper exec wxt prepare
+      - name: Test Notebook search, palette, creation and backlinks interactions
+        run: pnpm --filter @triliumnext/client exec vitest run src/widgets/quick_search.spec.tsx src/services/command_registry.spec.ts src/services/note_create.spec.ts src/widgets/sidebar/Backlinks.spec.tsx --reporter=dot

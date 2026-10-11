@@ -1,0 +1,28 @@
+.search-result-widget {
+    flex-grow: 100000;
+    flex-shrink: 100000;
+    contain: none !important;
+}
+
+.search-result-widget .note-list-wrapper {
+    margin-inline: var(--content-margin-inline);
+}
+
+.note-split.type-search .scrolling-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* A full-height view (table, board, calendar…) needs a bounded height: Tabulator, for one, renders
+   every row at once when its container grows with its content. */
+.search-result-widget:has(> .note-list-widget.full-height) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    > .note-list-widget.full-height {
+        flex-grow: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+}

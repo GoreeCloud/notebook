@@ -1,0 +1,311 @@
+import { describe, it, expect } from "vitest";
+import lex from "./lex.js";
+
+describe("Lexer fulltext", () => {
+    it("simple lexing", () => {
+        expect(lex("hello world").fulltextTokens.map((t) => t.token)).toEqual(["hello", "world"]);
+
+        expect(lex("hello, world").fulltextTokens.map((t) => t.token)).toEqual(["hello", "world"]);
+    });
+
+    it("use quotes to keep words together", () => {
+        expect(lex("'hello world' my friend").fulltextTokens.map((t) => t.token)).toEqual(["hello world", "my", "friend"]);
+
+        expect(lex('"hello world" my friend').fulltextTokens.map((t) => t.token)).toEqual(["hello world", "my", "friend"]);
+
+        expect(lex("`hello world` my friend").fulltextTokens.map((t) => t.token)).toEqual(["hello world", "my", "friend"]);
+    });
+
+    it("you can use different quotes and other special characters inside quotes", () => {
+        expect(lex("'i can use \" or ` or #~=*' without problem").fulltextTokens.map((t) => t.token)).toEqual(['i can use " or ` or #~=*', "without", "problem"]);
+    });
+
+    it("commas are noise in fulltext but kept inside quotes", () => {
+        expect(lex("europe, austria").fulltextTokens.map((t) => t.token)).toEqual(["europe", "austria"]);
+
+        // Quoted values must survive verbatim — e.g. the Geo Map manual's #geolocation="48.8583,2.2945".
+        expect(lex("'48.8583,2.2945'").fulltextTokens.map((t) => t.token)).toEqual(["48.8583,2.2945"]);
+    });
+
+    it("I can use backslash to escape quotes", () => {
+        expect(lex('hello \\"world\\"').fulltextTokens.map((t) => t.token)).toEqual(["hello", '"world"']);
+
+        expect(lex("hello \\'world\\'").fulltextTokens.map((t) => t.token)).toEqual(["hello", "'world'"]);
+
+        expect(lex("hello \\`world\\`").fulltextTokens.map((t) => t.token)).toEqual(["hello", "`world`"]);
+
+        expect(lex('"hello \\"world\\"').fulltextTokens.map((t) => t.token)).toEqual(['hello "world"']);
+
+        expect(lex("'hello \\'world\\''").fulltextTokens.map((t) => t.token)).toEqual(["hello 'world'"]);
+
+        expect(lex("`hello \\`world\\``").fulltextTokens.map((t) => t.token)).toEqual(["hello `world`"]);
+
+        expect(lex("\\#token").fulltextTokens.map((t) => t.token)).toEqual(["#token"]);
+    });
+
+    it("quote inside a word does not have a special meaning", () => {
+        const lexResult = lex("d'Artagnan is dead #hero = d'Artagnan");
+
+        expect(lexResult.fulltextTokens.map((t) => t.token)).toEqual(["d'artagnan", "is", "dead"]);
+
+        expect(lexResult.expressionTokens.map((t) => t.token)).toEqual(["#hero", "=", "d'artagnan"]);
+    });
+
+    it("if quote is not ended then it's just one long token", () => {
+        expect(lex("'unfinished quote").fulltextTokens.map((t) => t.token)).toEqual(["unfinished quote"]);
+    });
+
+    it("parenthesis and symbols in fulltext section are just normal characters", () => {
+        expect(lex("what's u=p <b(r*t)h>").fulltextTokens.map((t) => t.token)).toEqual(["what's", "u=p", "<b(r*t)h>"]);
+    });
+
+    it("operator characters in expressions are separate tokens", () => {
+        expect(lex("# abc+=-def**-+d").expressionTokens.map((t) => t.token)).toEqual(["#", "abc", "+=-", "def", "**-+", "d"]);
+    });
+
+    it("a parenthesis that opens a word starting an expression opens the expression part", () => {
+        const tokens = (query: string) => lex(query).expressionTokens.map((t) => t.token);
+
+        expect(tokens("(#a)")).toEqual([ "(", "#a", ")" ]);
+        expect(tokens("((#a))")).toEqual([ "(", "(", "#a", ")", ")" ]);
+        expect(tokens("( #a)")).toEqual([ "(", "#a", ")" ]);
+        expect(tokens("(~rel)")).toEqual([ "(", "~rel", ")" ]);
+        expect(tokens("(#a) and (#b)")).toEqual([ "(", "#a", ")", "and", "(", "#b", ")" ]);
+        expect(tokens("(note.title=x)")).toEqual([ "(", "note", ".", "title", "=", "x", ")" ]);
+
+        const afterText = lex("towers (#a)");
+        expect(afterText.fulltextTokens.map((t) => t.token)).toEqual([ "towers" ]);
+        expect(afterText.expressionTokens.map((t) => t.token)).toEqual([ "(", "#a", ")" ]);
+
+        // Brackets around plain words, and escaped ones, stay full text.
+        const fulltext = (query: string) => lex(query).fulltextTokens.map((t) => t.token);
+        expect(fulltext("(hello world)")).toEqual([ "(hello", "world)" ]);
+        expect(fulltext("(notebook)")).toEqual([ "(notebook)" ]);
+        expect(fulltext("foo(#a)")).toEqual([ "foo(#a)" ]);
+        expect(fulltext("\\(#a")).toEqual([ "(#a" ]);
+        expect(lex("\\(#a").expressionTokens).toEqual([]);
+    });
+
+    it("escaping special characters", () => {
+        expect(lex("hello \\#\\~\\'").fulltextTokens.map((t) => t.token)).toEqual(["hello", "#~'"]);
+    });
+
+    it("# and ~ inside a word are literal characters", () => {
+        const towers = lex("towers#book");
+        expect(towers.fulltextTokens.map((t) => t.token)).toEqual(["towers#book"]);
+        expect(towers.expressionTokens).toEqual([]);
+
+        expect(lex("learn c# and f#").fulltextTokens.map((t) => t.token)).toEqual(["learn", "c#", "and", "f#"]);
+        expect(lex("issue#42 a~b").fulltextTokens.map((t) => t.token)).toEqual(["issue#42", "a~b"]);
+
+        const spaced = lex("towers #book");
+        expect(spaced.fulltextTokens.map((t) => t.token)).toEqual(["towers"]);
+        expect(spaced.expressionTokens.map((t) => t.token)).toEqual(["#book"]);
+    });
+
+    it("recognizes leading = operator for exact match", () => {
+        const result1 = lex("=example");
+        expect(result1.fulltextTokens.map((t) => t.token)).toEqual(["example"]);
+        expect(result1.leadingOperator).toBe("=");
+
+        const result2 = lex("=hello world");
+        expect(result2.fulltextTokens.map((t) => t.token)).toEqual(["hello", "world"]);
+        expect(result2.leadingOperator).toBe("=");
+
+        const result3 = lex("='hello world'");
+        expect(result3.fulltextTokens.map((t) => t.token)).toEqual(["hello world"]);
+        expect(result3.leadingOperator).toBe("=");
+    });
+
+    it("doesn't treat = as leading operator in other contexts", () => {
+        const result1 = lex("==example");
+        expect(result1.fulltextTokens.map((t) => t.token)).toEqual(["==example"]);
+        expect(result1.leadingOperator).toBe("");
+
+        const result2 = lex("= example");
+        expect(result2.fulltextTokens.map((t) => t.token)).toEqual(["=", "example"]);
+        expect(result2.leadingOperator).toBe("");
+
+        const result3 = lex("example");
+        expect(result3.fulltextTokens.map((t) => t.token)).toEqual(["example"]);
+        expect(result3.leadingOperator).toBe("");
+    });
+});
+
+describe("Lexer expression", () => {
+    it("simple attribute existence", () => {
+        expect(lex("#label ~relation").expressionTokens.map((t) => t.token)).toEqual(["#label", "~relation"]);
+    });
+
+    it("simple label operators", () => {
+        expect(lex("#label*=*text").expressionTokens.map((t) => t.token)).toEqual(["#label", "*=*", "text"]);
+    });
+
+    it("simple label operator with in quotes", () => {
+        expect(lex("#label*=*'text'").expressionTokens).toEqual([
+            { token: "#label", inQuotes: false, startIndex: 0, endIndex: 5 },
+            { token: "*=*", inQuotes: false, startIndex: 6, endIndex: 8 },
+            { token: "text", inQuotes: true, startIndex: 10, endIndex: 13 }
+        ]);
+    });
+
+    it("keeps commas inside a quoted operand", () => {
+        // The Geo Map manual stores coordinates as #geolocation="48.8583,2.2945"; the lexer used
+        // to strip the comma even inside quotes, making the stored value unreachable (#11132).
+        expect(lex('#geolocation="48.8583,2.2945"').expressionTokens.map((t) => t.token)).toEqual(
+            ["#geolocation", "=", "48.8583,2.2945"]
+        );
+        expect(lex("#geolocation='48.8583,2.2945'").expressionTokens.map((t) => t.token)).toEqual(
+            ["#geolocation", "=", "48.8583,2.2945"]
+        );
+
+        const quoted = lex('#geolocation="48.8583,2.2945"').expressionTokens[2];
+        expect(quoted.inQuotes).toBe(true);
+    });
+
+    it("simple label operator with param without quotes", () => {
+        expect(lex("#label*=*text").expressionTokens).toEqual([
+            { token: "#label", inQuotes: false, startIndex: 0, endIndex: 5 },
+            { token: "*=*", inQuotes: false, startIndex: 6, endIndex: 8 },
+            { token: "text", inQuotes: false, startIndex: 9, endIndex: 12 }
+        ]);
+    });
+
+    it("simple label operator with empty string param", () => {
+        expect(lex("#label = ''").expressionTokens).toEqual([
+            { token: "#label", inQuotes: false, startIndex: 0, endIndex: 5 },
+            { token: "=", inQuotes: false, startIndex: 7, endIndex: 7 },
+            // weird case for empty strings which ends up with endIndex < startIndex :-(
+            { token: "", inQuotes: true, startIndex: 10, endIndex: 9 }
+        ]);
+    });
+
+    it("note. prefix also separates fulltext from expression", () => {
+        expect(lex(`hello fulltext note.labels.capital = Prague`).expressionTokens.map((t) => t.token)).toEqual(["note", ".", "labels", ".", "capital", "=", "prague"]);
+    });
+
+    it("an AND joining the fulltext to the expression is not a fulltext word", () => {
+        const lexed = lex(`"Trilium" AND note.noteId != abc`);
+        expect(lexed.fulltextTokens.map((t) => t.token)).toEqual(["trilium"]);
+        expect(lexed.fulltextQuery).toBe(lex(`"Trilium"`).fulltextQuery);
+        expect(lexed.expressionTokens.map((t) => t.token)).toEqual(["note", ".", "noteid", "!=", "abc"]);
+
+        expect(lex(`rings and #book`).fulltextTokens.map((t) => t.token)).toEqual(["rings"]);
+        // Quoted, or not followed by an expression, "and" is searched for.
+        expect(lex(`rings "and" #book`).fulltextTokens.map((t) => t.token)).toEqual(["rings", "and"]);
+        expect(lex(`rock and roll`).fulltextTokens.map((t) => t.token)).toEqual(["rock", "and", "roll"]);
+    });
+
+    it("note. prefix in quotes will note start expression", () => {
+        expect(lex(`hello fulltext "note.txt"`).expressionTokens.map((t) => t.token)).toEqual([]);
+
+        expect(lex(`hello fulltext "note.txt"`).fulltextTokens.map((t) => t.token)).toEqual(["hello", "fulltext", "note.txt"]);
+    });
+
+    it("complex expressions with and, or and parenthesis", () => {
+        expect(lex(`# (#label=text OR #second=text) AND ~relation`).expressionTokens.map((t) => t.token)).toEqual([
+            "#",
+            "(",
+            "#label",
+            "=",
+            "text",
+            "or",
+            "#second",
+            "=",
+            "text",
+            ")",
+            "and",
+            "~relation"
+        ]);
+    });
+
+    it("dot separated properties", () => {
+        expect(lex(`# ~author.title = 'Hugh Howey' AND note.'book title' = 'Silo'`).expressionTokens.map((t) => t.token)).toEqual([
+            "#",
+            "~author",
+            ".",
+            "title",
+            "=",
+            "hugh howey",
+            "and",
+            "note",
+            ".",
+            "book title",
+            "=",
+            "silo"
+        ]);
+    });
+
+    it("negation of label and relation", () => {
+        expect(lex(`#!capital ~!neighbor`).expressionTokens.map((t) => t.token)).toEqual(["#!capital", "~!neighbor"]);
+    });
+
+    it("fuzzy operators ~= and ~* are tokenized as single operators", () => {
+        // regression: https://github.com/TriliumNext/Trilium/issues/9426
+        expect(lex(`note.title ~= books`).expressionTokens.map((t) => t.token)).toEqual(["note", ".", "title", "~=", "books"]);
+        expect(lex(`note.title ~* books`).expressionTokens.map((t) => t.token)).toEqual(["note", ".", "title", "~*", "books"]);
+        expect(lex(`#author ~= tolkien`).expressionTokens.map((t) => t.token)).toEqual(["#author", "~=", "tolkien"]);
+        expect(lex(`#author ~*'lord of the rings'`).expressionTokens.map((t) => t.token)).toEqual(["#author", "~*", "lord of the rings"]);
+        expect(lex(`#author~=tolkien`).expressionTokens.map((t) => t.token)).toEqual(["#author", "~=", "tolkien"]);
+        expect(lex(`~author.title ~= tolkien`).expressionTokens.map((t) => t.token)).toEqual(["~author", ".", "title", "~=", "tolkien"]);
+    });
+
+    it("relation prefix still works when ~ is not followed by = or *", () => {
+        expect(lex(`~author.title = Tolkien`).expressionTokens.map((t) => t.token)).toEqual(["~author", ".", "title", "=", "tolkien"]);
+    });
+
+    it("negation of sub-expression", () => {
+        expect(lex(`# not(#capital) and note.noteId != "root"`).expressionTokens.map((t) => t.token)).toEqual(["#", "not", "(", "#capital", ")", "and", "note", ".", "noteid", "!=", "root"]);
+    });
+
+    it("order by multiple labels", () => {
+        expect(lex(`# orderby #a,#b`).expressionTokens.map((t) => t.token)).toEqual(["#", "orderby", "#a", ",", "#b"]);
+    });
+});
+
+describe("Lexer whitespace", () => {
+    it("a query can be laid out over several lines", () => {
+        const result = lex(`#book
+    and #author = 'tolkien'
+    orderby note.title`);
+
+        expect(result.expressionTokens.map((t) => t.token)).toEqual(["#book", "and", "#author", "=", "tolkien", "orderby", "note", ".", "title"]);
+
+        // A pasted query carries CRLF.
+        expect(lex("#book\r\nand #author").expressionTokens.map((t) => t.token)).toEqual(["#book", "and", "#author"]);
+    });
+
+    it("tabs separate tokens the way spaces do", () => {
+        expect(lex("#book\tand\t#author").expressionTokens.map((t) => t.token)).toEqual(["#book", "and", "#author"]);
+    });
+
+    it("the fulltext part spans lines too", () => {
+        const result = lex("lord of\nthe rings #book");
+
+        expect(result.fulltextTokens.map((t) => t.token)).toEqual(["lord", "of", "the", "rings"]);
+        expect(result.expressionTokens.map((t) => t.token)).toEqual(["#book"]);
+        // Scoring compares the whole query against titles, so the layout must not reach it.
+        expect(result.fulltextQuery).toBe("lord of the rings");
+    });
+
+    it("whitespace inside quotes is kept verbatim", () => {
+        expect(lex("#note = 'first\nsecond'").expressionTokens.map((t) => t.token)).toEqual(["#note", "=", "first\nsecond"]);
+    });
+
+    it("leading = followed by whitespace is not the exact-match operator", () => {
+        const result = lex("=\nexample");
+
+        expect(result.leadingOperator).toBe("");
+        expect(result.fulltextTokens.map((t) => t.token)).toEqual(["=", "example"]);
+    });
+});
+
+describe("Lexer invalid queries and edge cases", () => {
+    it("concatenated attributes", () => {
+        expect(lex("#label~relation").expressionTokens.map((t) => t.token)).toEqual(["#label", "~relation"]);
+    });
+
+    it("trailing escape \\", () => {
+        expect(lex("abc \\").fulltextTokens.map((t) => t.token)).toEqual(["abc", "\\"]);
+    });
+});

@@ -1,0 +1,200 @@
+import { ComponentChildren } from "preact";
+import { Dispatch, StateUpdater, useEffect, useState } from "preact/hooks";
+import FNote from "../../entities/fnote";
+import froca from "../../services/froca";
+import { useNoteLabelInt } from "../react/hooks";
+import { t } from "../../services/i18n";
+import ActionButton from "../react/ActionButton";
+import Button from "../react/Button";
+import "./Pagination.css";
+import clsx from "clsx";
+
+export interface PaginationContext {
+    className?: string;
+    page: number;
+    setPage: Dispatch<StateUpdater<number>>;
+    pageNotes?: FNote[];
+    pageCount: number;
+    pageSize: number;
+    totalNotes: number;
+}
+
+export function Pager({ className, page, pageSize, setPage, pageCount, totalNotes }: Omit<PaginationContext, "pageNotes">) {
+    if (pageCount < 2) return;
+
+    return (
+        <div className={clsx("note-list-pager-container", className)}>
+            <div className="note-list-pager">
+                <ActionButton
+                    icon="bx bx-chevron-left"
+                    className="note-list-pager-nav-button"
+                    disabled={(page === 1)}
+                    text={t("pagination.prev_page")}
+                    onClick={() => setPage(page - 1)}
+                />
+
+                <PageButtons page={page} setPage={setPage} pageCount={pageCount} />
+                <div className="note-list-pager-narrow-counter">
+                    <strong>{page}</strong> / <strong>{pageCount}</strong>
+                </div>
+                            
+                <ActionButton
+                    icon="bx bx-chevron-right"
+                    className="note-list-pager-nav-button"
+                    disabled={(page === pageCount)}
+                    text={t("pagination.next_page")}
+                    onClick={() => setPage(page + 1)}
+                />
+
+                <div className="note-list-pager-total-count">
+                    {t("pagination.total_notes", { count: totalNotes })}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+interface PageButtonsProps {
+    page: number;
+    setPage: Dispatch<StateUpdater<number>>;
+    pageCount: number;
+}
+
+function PageButtons(props: PageButtonsProps) {
+    const maxButtonCount = 9;
+    const maxLeftRightSegmentLength = 2;
+    
+    // The left-side segment
+    const leftLength = Math.min(props.pageCount, maxLeftRightSegmentLength);
+    const leftStart = 1;
+
+    // The middle segment
+    const middleMaxLength = maxButtonCount - maxLeftRightSegmentLength * 2;
+    const middleLength = Math.min(props.pageCount - leftLength, middleMaxLength);
+    let middleStart = props.page - Math.floor(middleLength / 2);
+    middleStart = Math.max(middleStart, leftLength + 1);
+
+    // The right-side segment
+    const rightLength = Math.min(props.pageCount - (middleLength + leftLength), maxLeftRightSegmentLength);
+    const rightStart = props.pageCount - rightLength + 1;
+    middleStart = Math.min(middleStart, rightStart - middleLength);
+
+    const totalButtonCount = leftLength + middleLength + rightLength;
+    const hasLeadingEllipsis =  (middleStart - leftLength > 1);
+    const hasTrailingEllipsis = (rightStart - (middleStart + middleLength - 1) > 1);
+
+    return <div className={clsx("note-list-pager-page-button-container", {
+                    "note-list-pager-ellipsis-present": (totalButtonCount === maxButtonCount)
+                })}
+                style={{"--note-list-pager-page-button-count": totalButtonCount}}>
+        {[
+            ...createSegment(leftStart, leftLength, props.page, props.setPage, false),
+            ...createSegment(middleStart, middleLength, props.page, props.setPage, hasLeadingEllipsis),
+            ...createSegment(rightStart, rightLength, props.page, props.setPage, hasTrailingEllipsis),
+        ]}
+    </div>;
+}
+
+function createSegment(start: number, length: number, currentPage: number, setPage: Dispatch<StateUpdater<number>>, prependEllipsis: boolean): ComponentChildren[] {
+    const children: ComponentChildren[] = [];
+    
+    if (prependEllipsis) {
+        children.push(<span className="note-list-pager-ellipsis">...</span>);
+    }
+
+    for (let i = 0; i < length; i++) {
+        const pageNum = start + i;
+        const isCurrent = (pageNum === currentPage);
+        children.push((
+            <Button
+                text={pageNum.toString()}
+                kind="lowProfile"
+                className={clsx(
+                    "note-list-pager-page-button",
+                    {"note-list-pager-page-button-current": isCurrent}
+                )}
+                disabled={isCurrent}
+                onClick={() => setPage(pageNum)}
+            />
+        ));
+    }
+
+    return children;
+}
+
+interface PaginationOptions {
+    /**
+     * Page size to use *instead of* the note's `#pageSize` label, for callers that list notes which
+     * aren't the children of a collection the user can label.
+     */
+    pageSizeOverride?: number;
+    /**
+     * Page size to fall back to when the note carries no `#pageSize` label (e.g. the synced
+     * `searchResultsPageSize` option). An explicit label always wins over this.
+     */
+    defaultPageSize?: number;
+}
+
+export function usePagination(
+    note: FNote,
+    noteIds: string[],
+    { pageSizeOverride, defaultPageSize = 20 }: PaginationOptions = {}
+): PaginationContext {
+    const [ page, setPage ] = useState(1);
+    const [ pageNotes, setPageNotes ] = useState<FNote[]>();
+
+    // Parse page size. An explicit override wins outright; otherwise a `#pageSize` label wins over
+    // the caller-supplied default, and 20 stands in when none of them yields a usable positive size.
+    const [ labelPageSize ] = useNoteLabelInt(note, "pageSize");
+    const pageSize = pageSizeOverride ?? (labelPageSize && labelPageSize > 0 ? labelPageSize : defaultPageSize);
+    const normalizedPageSize = (pageSize && pageSize > 0 ? pageSize : 20);
+
+    // Calculate start/end index.
+    const pageCount = Math.ceil(noteIds.length / normalizedPageSize);
+    // A growing page size, or a shrinking result set, can leave `page` past the last page. Clamp
+    // here rather than waiting for the effect below: callers slice with the page this returns, so
+    // an out-of-range value renders the previous result set's notes in the list and grid views,
+    // and nothing at all in the search cards, which re-derive their own slice from it.
+    const effectivePage = pageCount > 0 ? Math.min(page, pageCount) : page;
+    const startIdx = (effectivePage - 1) * normalizedPageSize;
+    const endIdx = startIdx + normalizedPageSize;
+
+    // Catch the state up to what is being rendered, so the pager and `setPage` callers agree.
+    useEffect(() => {
+        if (pageCount > 0 && page > pageCount) {
+            setPage(pageCount);
+        }
+    }, [ page, pageCount ]);
+
+    // Obtain notes within the range.
+    const pageNoteIds = noteIds.slice(startIdx, Math.min(endIdx, noteIds.length));
+
+    useEffect(() => {
+        // Overlapping loads (rapid page flips, a shrinking result set) can resolve out of order;
+        // the cleanup flag makes sure a superseded load can no longer overwrite the current page.
+        let cancelled = false;
+        froca.getNotes(pageNoteIds)
+            .then((notes) => {
+                if (!cancelled) {
+                    setPageNotes(notes);
+                }
+            })
+            // froca.getNotes() rejects when its `tree/load` request fails. The page keeps the notes
+            // it already has, and a superseded load stays as quiet about failing as it does about
+            // succeeding.
+            .catch((e) => {
+                if (!cancelled) {
+                    console.error(`Loading the notes of page ${effectivePage} failed`, e);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [ note, noteIds, effectivePage, normalizedPageSize ]);
+
+    return {
+        page: effectivePage, setPage, pageNotes, pageCount,
+        pageSize: normalizedPageSize,
+        totalNotes: noteIds.length
+    };
+}

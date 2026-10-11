@@ -1,0 +1,159 @@
+/*
+ * GoreeCloud Notebook — development Glaze semantic adapter.
+ * Governing system: GoreeCloud/glaze V1.7 / 1.7.0 Stable contract.
+ *
+ * The upstream TriliumNext themes remain functional; this is a scoped consumer
+ * mapping, not a fork of Glaze or a production conformance certificate.
+ * Solid reading surfaces, selectively translucent navigation, and accessible
+ * reduced-effects states are intentional.
+ */
+body[data-goreecloud-product="notebook"] {
+    color-scheme: light;
+    --glaze-semantic-surface: #ffffff;
+    --glaze-semantic-on-surface: #172620;
+    --glaze-semantic-canvas: #f6f8f6;
+    --glaze-semantic-muted: #4d6259;
+    --glaze-semantic-accent: #126d60;
+    --glaze-semantic-focus: #0b786a;
+    --glaze-semantic-selected-fallback: #d8eee6;
+    --glaze-semantic-critical: #a52f42;
+    --glaze-semantic-line: #c7d7cf;
+    --glaze-material-navigation: rgba(251, 254, 252, 0.96);
+    --glaze-radius-card: 14px;
+    --glaze-radius-control: 9px;
+    --glaze-transition-utility: 150ms;
+    --main-background-color: var(--glaze-semantic-surface);
+    --main-text-color: var(--glaze-semantic-on-surface);
+    --main-border-color: var(--glaze-semantic-line);
+    --subtle-border-color: color-mix(in srgb, var(--glaze-semantic-line) 70%, transparent);
+    --accented-background-color: var(--glaze-semantic-canvas);
+    --left-pane-background-color: var(--glaze-semantic-canvas);
+    --left-pane-text-color: var(--glaze-semantic-on-surface);
+    --right-pane-background-color: var(--glaze-semantic-canvas);
+    --muted-text-color: var(--glaze-semantic-muted);
+    --link-color: var(--glaze-semantic-accent);
+    --input-focus-outline-color: var(--glaze-semantic-focus);
+    --active-item-background-color: var(--glaze-semantic-selected-fallback);
+    --menu-background-color: var(--glaze-material-navigation);
+    --menu-background-color-no-backdrop: var(--glaze-semantic-surface);
+    --menu-text-color: var(--glaze-semantic-on-surface);
+    --modal-background-color: var(--glaze-semantic-surface);
+}
+
+body[data-goreecloud-product="notebook"].dark-theme {
+    color-scheme: dark;
+    --glaze-semantic-surface: #17231e;
+    --glaze-semantic-on-surface: #f4faf6;
+    --glaze-semantic-canvas: #101c17;
+    --glaze-semantic-muted: #b0c5ba;
+    --glaze-semantic-accent: #86f0cf;
+    --glaze-semantic-focus: #b1fbd9;
+    --glaze-semantic-selected-fallback: #274a3c;
+    --glaze-semantic-critical: #ff9da4;
+    --glaze-semantic-line: #405b4d;
+    --glaze-material-navigation: rgba(25, 40, 32, 0.97);
+}
+
+body[data-goreecloud-product="notebook"] .dropdown-menu,
+body[data-goreecloud-product="notebook"] .modal-content {
+    color: var(--glaze-semantic-on-surface);
+    background-color: var(--glaze-semantic-surface);
+    border: 1px solid var(--glaze-semantic-line);
+    border-radius: var(--glaze-radius-card);
+    box-shadow: 0 18px 46px rgba(9, 29, 20, 0.16);
+}
+
+body[data-goreecloud-product="notebook"] .dropdown-menu {
+    background: var(--glaze-material-navigation);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+
+body[data-goreecloud-product="notebook"] .note-detail,
+body[data-goreecloud-product="notebook"] .ck-content {
+    /* Reading content must remain solid even when navigation uses Glaze optics. */
+    color: var(--glaze-semantic-on-surface);
+}
+
+body[data-goreecloud-product="notebook"] :is(button, .btn, input, select, textarea) {
+    border-radius: var(--glaze-radius-control);
+}
+
+body[data-goreecloud-product="notebook"] :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+    outline: 3px solid var(--glaze-semantic-focus);
+    outline-offset: 2px;
+}
+
+body[data-goreecloud-product="notebook"] :is(button, .btn, a) {
+    transition-duration: var(--glaze-transition-utility);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body[data-goreecloud-product="notebook"] {
+        --glaze-transition-utility: 0ms;
+    }
+
+    body[data-goreecloud-product="notebook"] :is(button, .btn, a) {
+        transition: none !important;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    body[data-goreecloud-product="notebook"] {
+        --glaze-material-navigation: var(--glaze-semantic-surface);
+    }
+
+    body[data-goreecloud-product="notebook"] .dropdown-menu {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+
+@media (prefers-contrast: more) {
+    body[data-goreecloud-product="notebook"] {
+        --glaze-semantic-line: currentColor;
+    }
+}
+
+@media (forced-colors: active) {
+    body[data-goreecloud-product="notebook"] {
+        --glaze-semantic-surface: Canvas;
+        --glaze-semantic-on-surface: CanvasText;
+        --glaze-semantic-canvas: Canvas;
+        --glaze-semantic-accent: LinkText;
+        --glaze-semantic-focus: Highlight;
+        --glaze-semantic-line: CanvasText;
+        --glaze-material-navigation: Canvas;
+    }
+
+    body[data-goreecloud-product="notebook"] :is(.dropdown-menu, .modal-content) {
+        background: Canvas;
+        color: CanvasText;
+        border-color: CanvasText;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        box-shadow: none;
+    }
+}
+
+/* Product navigation: Glaze focus geometry without disturbing note content. */
+body[data-goreecloud-product="notebook"] .quick-search-box {
+    border-radius: var(--glaze-radius-control);
+    background: var(--glaze-semantic-canvas);
+}
+body[data-goreecloud-product="notebook"] .quick-search:focus-within .quick-search-box {
+    border-color: var(--glaze-semantic-focus);
+    box-shadow: 0 0 0 2px var(--glaze-semantic-selected-fallback);
+}
+body[data-goreecloud-product="notebook"] .quick-search-menu {
+    border: 1px solid var(--glaze-semantic-line);
+    border-radius: var(--glaze-radius-card);
+    background: var(--glaze-semantic-surface);
+    color: var(--glaze-semantic-on-surface);
+}
+@media (forced-colors: active) {
+    body[data-goreecloud-product="notebook"] .quick-search:focus-within .quick-search-box {
+        box-shadow: none;
+        outline: 2px solid Highlight;
+    }
+}

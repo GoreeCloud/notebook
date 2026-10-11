@@ -1,0 +1,19 @@
+@import "ckeditor5/ckeditor5-content.css";
+@import "./admonitions.css";
+
+.printed-content .ck-widget__selection-handle, .printed-content .ck-widget__type-around { /* gets rid of triangles: https://github.com/zadam/trilium/issues/1129 */
+    display: none;
+}
+
+.page-break {
+    page-break-after: always;
+}
+
+.printed-content .page-break:after,
+.printed-content .page-break > * {
+    display: none !important;
+}
+
+.ck-content li p {
+    margin: 0 !important;
+}

@@ -1,0 +1,10 @@
+.goreecloud-enex-review { border: 1px solid var(--glaze-semantic-line, currentColor); border-radius: var(--glaze-radius-card, 12px); padding: 1rem; margin-top: 1rem; background: var(--glaze-semantic-surface, Canvas); color: var(--glaze-semantic-on-surface, CanvasText); }
+.goreecloud-enex-review-files { max-height: 15rem; overflow-y: auto; padding-inline-start: 1.5rem; }
+.goreecloud-enex-review-files li { margin-block: 0.5rem; overflow-wrap: anywhere; }
+.goreecloud-enex-filename { font-weight: 600; margin-inline: 0.5rem; }
+.goreecloud-enex-status { display: block; margin-inline-start: 1.5rem; }
+.goreecloud-enex-blocked { color: var(--glaze-semantic-critical, currentColor); }
+.goreecloud-enex-caution { color: var(--glaze-semantic-muted, inherit); }
+.goreecloud-enex-confirmation { display: flex; gap: 0.6rem; align-items: flex-start; }
+.goreecloud-enex-confirmation input:focus-visible { outline: 3px solid var(--glaze-semantic-focus, Highlight); outline-offset: 2px; }
+@media (forced-colors: active) { .goreecloud-enex-review { background: Canvas; color: CanvasText; border-color: CanvasText; } .goreecloud-enex-blocked { color: CanvasText; } }

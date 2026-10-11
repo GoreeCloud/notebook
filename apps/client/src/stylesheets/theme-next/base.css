@@ -1,0 +1,351 @@
+@import url(./forms.css);
+@import url(./shell.css);
+@import url(./dialogs.css);
+@import url(./pages.css);
+@import url(./note-panels.css);
+@import url(./notes/text.css);
+@import url(./notes/canvas.css);
+@import url(./notes/collections/table.css);
+@import url(./menus.css);
+
+@font-face {
+    font-family: "Inter";
+    src: url(../../fonts/Inter/Inter-VariableFont_opsz,wght.woff2) format("woff2-variations");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/*
+ * GLOBAL VARIABLES
+ */
+
+:root {
+    color-scheme: var(--theme-style);
+
+    --suggestion-active-text-color: var(--hover-item-text-color);
+    --suggestion-active-background-color: var(--hover-item-background-color);
+    /* Match `ul.ck.ck-list button.ck-button` and `--ck-editor-popup-padding` in `notes/text.css`. */
+    --suggestion-item-padding-block: 2px;
+    --suggestion-item-padding-inline: 16px;
+    --suggestion-list-padding: 4px;
+
+    --main-font-family: "Inter", sans-serif;
+
+    --main-font-size: normal;
+
+    --tree-font-family: var(--main-font-family);
+    --tree-font-size: normal;
+
+    --detail-font-family: var(--main-font-family);
+    --detail-font-size: normal;
+
+    --monospace-font-family: JetBrainsLight, monospace;
+    --monospace-font-size: normal;
+
+    --left-pane-item-selected-shadow-size: 2px;
+
+    --launcher-pane-vert-size: 58px;
+    --launcher-pane-vert-icon-size: 150%;
+    --launcher-pane-vert-button-margin: 6px;
+    --launcher-pane-vert-button-gap: 3px;
+
+    --launcher-pane-horiz-size: 54px;
+    --launcher-pane-horiz-icon-size: 20px;
+    --launcher-pane-horiz-button-margin: 8px;
+    --launcher-pane-horiz-button-gap: 3px;
+
+    --tree-actions-toolbar-horizontal-margin: 8px;
+    --tree-actions-toolbar-vertical-margin: 8px;
+    --tree-actions-toolbar-padding-size: 4px;
+    --tree-actions-toolbar-collapsed-width: 40px;
+    --tree-actions-toolbar-expand-button-size: 25px;
+
+    --tab-bar-height: 50px;
+    --tab-height: 36px;
+    --new-tab-button-size: 24px;
+
+    --center-pane-border-radius: 10px;
+
+    --overlay-button-height: 28px;
+    --overlay-button-border-radius: 6px;
+    --overlay-button-background: var(--opaque-icon-button-background);
+    --overlay-button-backdrop-filter: var(--opaque-icon-button-backdrop-filter);
+    --overlay-button-color: var(--opaque-icon-button-color);
+    --overlay-button-icon-size: 16px;
+    --overlay-button-text-size: 14px;
+    /* How far a group of overlay buttons stands off the corner of the content it floats over. */
+    --overlay-button-inset: 10px;
+
+    --menu-padding-size: 8px;
+    --menu-item-icon-vert-offset: -2px;
+    --menu-submenu-mobile-background-color: rgba(255, 255, 255, 0.15);
+
+    --more-accented-background-color: var(--card-background-hover-color);
+
+    --timeline-left-gap: 20px;
+    --timeline-right-gap: 20px;
+    --timeline-item-top-padding: 4px;
+    --timeline-item-bottom-padding: 8px;
+    --timeline-bullet-size: 10px;
+    --timeline-bullet-vertical-pos: 0.75em;
+    --timeline-connector-size: 4px;
+
+    --help-backdrop-blur: 10px;
+
+    --icon-button-size: 32px;
+    --icon-button-icon-ratio: 0.65;
+
+    --opaque-icon-button-backdrop-filter: blur(32px) saturate(1000%);
+
+    --modal-control-button-size: 22px;
+
+    /* Theme capabilities */
+    --tab-note-icons: true;
+    --allow-background-effects: true;
+
+    /* To ensure that a tree item's custom color remains sufficiently contrasted and readable,
+     * the color is adjusted based on the current color scheme (light or dark). The lightness
+     * component of the color represented in the CIELAB color space, will be
+     * constrained to a certain percentage defined below.
+     *
+     * Note: the tree background may vary when background effects are enabled, so it is recommended
+     * to maintain a higher contrast margin than on the usual note tree solid background. */
+
+    /* The maximum perceptual lightness for the custom color in the light theme (%): */
+    --tree-item-light-theme-max-color-lightness: 60;
+
+    /* The minimum perceptual lightness for the custom color in the dark theme (%): */
+    --tree-item-dark-theme-min-color-lightness: 65;
+
+    /* Tooltips */
+    --tooltip-border-radius: 6px;
+    --tooltip-padding: 2px 8px 4px 8px;
+    --tooltip-box-shadow:
+        -1px -1px 2px var(--tooltip-shadow-color),
+        2px 2px 8px var(--tooltip-shadow-color);
+    --tooltip-backdrop-filter: blur(5px);
+    --tooltip-font-size: 0.9rem;
+    --tooltip-border: none;
+    --tooltip-arrow-display: none;
+
+    --note-tooltip-box-shadow: 10px 10px 93px -25px var(--tool-dialog-shadow-color);
+}
+
+body {
+    user-select: none;
+}
+
+.selectable-text {
+    user-select: text;
+}
+
+body.backdrop-effects-disabled {
+    /* Backdrop effects are disabled, replace the menu background color with the
+     * no-backdrop fallback color */
+    --menu-background-color: var(--menu-background-color-no-backdrop);
+}
+
+/*
+ * TOASTS
+ */
+
+#toast-container .toast {
+    --bs-toast-padding-x: 12px;
+    --bs-border-radius: 8px;
+    --bs-toast-bg: var(--toast-background);
+    --bs-toast-color: var(--toast-text-color);
+    --modal-control-button-background: var(--toast-close-button-background);
+    --modal-control-button-color: var(--bs-toast-color);
+
+    backdrop-filter: blur(6px);
+}
+
+#toast-container .toast .toast-header {
+    background: transparent !important;
+    border-bottom: none;
+    color: var(--toast-text-color) !important;
+}
+
+#toast-container .toast .toast-header strong > * {
+    vertical-align: middle;
+}
+
+#toast-container .toast .toast-header .btn-close,
+#toast-container .toast .toast-close .btn-close {
+    margin: 0 0 0 12px;
+}
+
+#toast-container .toast .toast-body {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-top: 0;
+}
+
+#toast-container .toast:not(.no-title) .tn-icon {
+    margin-inline-end: 0.5em;
+    font-size: 1.1em;
+    opacity: 0.85;
+}
+
+#toast-container .toast.no-title .tn-icon {
+    margin-inline-end: 0;
+    font-size: 1.3em;
+}
+
+#toast-container .toast.no-title .toast-body {
+    padding-top: var(--bs-toast-padding-x);
+    color: var(--toast-text-color);
+}
+
+/*
+ * TOOLTIPS
+ */
+
+.tooltip:not(.note-tooltip) .tooltip-inner p {
+    padding: 0;
+    margin: 0;
+}
+
+/* Keyboard shortcut. Note tooltips are excluded: their body is rendered note content, so
+   any <kbd> in there is styled as content (see `.ck-content kbd` in dialogs.css). */
+.tooltip:not(.note-tooltip) .tooltip-inner kbd {
+    display: inline-block;
+    margin: 0 2px 2px;
+    border: 1px solid var(--tooltip-kbd-border);
+    border-radius: 5px;
+    padding: 2px 8px;
+    background: var(--tooltip-kbd-background);
+    box-shadow:
+        0 2px 0 var(--tooltip-kbd-border),
+        inset 0 -1px 0 var(--tooltip-kbd-border);
+    color: var(--tooltip-kbd-color);
+    font-family: var(--main-font-family);
+    font-size: 0.75em;
+    font-weight: normal;
+    line-height: 1.4;
+    letter-spacing: 0.5pt;
+    vertical-align: 1px;
+    white-space: nowrap;
+}
+
+/*
+ * NOTE TOOLTIPS
+ */
+
+.tooltip.note-tooltip {
+    --tooltip-background-color: var(--note-tooltip-background-color);
+    --tooltip-foreground-color: var(--main-text-color);
+    --tooltip-box-shadow: var(--note-tooltip-box-shadow);
+
+    > .tooltip-inner {
+        outline: 1px solid var(--main-border-color);
+        border-radius: 12px;
+        min-height: 120px;
+    }
+
+    .rendered-content {
+        font-size: .8em;
+    }
+
+    .open-popup-button {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        inset-inline-end: 20px;
+        inset-block-end: 20px;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+
+        backdrop-filter: var(--opaque-icon-button-backdrop-filter);
+        background-color: var(--opaque-icon-button-background);
+        color: var(--opaque-icon-button-color);
+
+        &:hover {
+            background-color: var(--opaque-icon-button-hover-background-color);
+            color: var(--opaque-icon-button-hover-color);
+        }
+    }
+}
+
+.tooltip .tooltip-inner:has(.note-tooltip-content) {
+    border-radius: 8px;
+}
+
+.note-tooltip-content {
+    padding: 8px;
+    min-height: 56px;
+}
+
+.note-tooltip-title .note-title-with-path {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.note-tooltip-title a {
+    color: inherit !important;
+}
+
+.note-tooltip-title.note-no-content {
+    margin: 0;
+}
+
+.note-tooltip-title:not(.note-no-content) .note-title-with-path {
+    padding-bottom: 6px;
+    border-bottom: 2px solid currentColor;
+}
+
+.note-tooltip-content .note-path {
+    display: block;
+    color: var(--muted-text-color);
+    font-size: 0.75em;
+}
+
+.note-tooltip-content .note-tooltip-attributes {
+    margin-top: -4px;
+    font-size: 0.75em;
+}
+
+.note-tooltip-content .rendered-content {
+    padding-top: 12px;
+}
+
+/* NOTE PATHS */
+
+.note-path .path-bracket {
+    /* Hide the leading and trailing bracket from the path */
+    display: none;
+}
+
+.note-path .path-delimiter {
+    /* Hide the path delimiters (slashes) */
+    display: none;
+}
+
+.note-path .path-delimiter + span::before {
+    /* Replace the path delimiters with arrows */
+    display: inline-block;
+    content: "\ed3b";
+    padding: 0 0.25em;
+    font-family: boxicons;
+    opacity: 0.75;
+    transform: translateY(4%);
+}
+
+/*
+ * Alert bars
+ */
+
+div.alert {
+    margin-bottom: 8px;
+    background: var(--alert-bar-background) !important;
+    color: var(--main-text-color);
+    border-radius: 8px;
+    font-size: .85em;
+}
+
+div.alert p + p {
+    margin-block: 1em 0;
+}
