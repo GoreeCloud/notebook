@@ -16,4 +16,6 @@
 
 - Verified both client and server packaged-source builds on draft-PR head `058be388e345c4bc6c8e1e605d2a4261446cf67e` in CI; server qualification builds its bundled web assets and PDF viewer without deploying. The independent importer fixture test hit a missing generated web-clipper TypeScript configuration before tests started, so the test job now explicitly prepares WXT before running; exact-head requalification is required.
 
+- The Evernote file review now blocks repeated selections of the same export within one batch; it uses only local file identity and metadata, shows a descriptive warning and has regression coverage. This does not detect duplicates in an existing notebook.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.
