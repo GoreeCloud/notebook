@@ -22,10 +22,11 @@ const h = vi.hoisted(() => {
         triggerEvent: vi.fn(),
         triggerCommand: vi.fn(),
         showMessage: vi.fn(),
+        showError: vi.fn(),
         cloneNoteToParentNote: vi.fn(async (..._args: unknown[]) => {})
     };
 });
-const { tabManager, protectedAvailable, triggerEvent, triggerCommand, showMessage, cloneNoteToParentNote } = h;
+const { tabManager, protectedAvailable, triggerEvent, triggerCommand, showMessage, showError, cloneNoteToParentNote } = h;
 
 vi.mock("./branches.js", () => ({
     default: {
@@ -56,7 +57,8 @@ vi.mock("./tree.js", () => ({
 
 vi.mock("./toast.js", () => ({
     default: {
-        showMessage: (...args: unknown[]) => h.showMessage(...args)
+        showMessage: (...args: unknown[]) => h.showMessage(...args),
+        showError: (...args: unknown[]) => h.showError(...args)
     }
 }));
 
@@ -165,26 +167,47 @@ describe("createNote", () => {
         expect(triggerEvent).not.toHaveBeenCalled();
     });
 
-    it("keeps isProtected only when requested AND session is available", async () => {
-        setActiveContext(true);
-
-        // requested but session unavailable -> forced to false
+    it("rejects locked protected-note creation before any mutation or selection extraction", async () => {
+        const setNote = setActiveContext(true);
         protectedAvailable.value = false;
-        await noteCreateService.createNote("root", { isProtected: true });
-        expect(server.post).toHaveBeenLastCalledWith(
-            expect.any(String),
-            expect.objectContaining({ isProtected: false }),
-            undefined
-        );
+        const removeSelection = vi.fn();
+        const getSelectedHtml = vi.fn(() => "<p>confidential text</p>");
+        await expect(noteCreateService.createNote("root", {
+            isProtected: true,
+            saveSelection: true,
+            textEditor: { getSelectedHtml, removeSelection } as any
+        })).rejects.toThrow("note_create.protected_session_required");
 
-        // requested and session available -> stays true
+        expect(showError).toHaveBeenCalledWith("note_create.protected_session_required:{}");
+        expect(server.post).not.toHaveBeenCalled();
+        expect(getSelectedHtml).not.toHaveBeenCalled();
+        expect(removeSelection).not.toHaveBeenCalled();
+        expect(setNote).not.toHaveBeenCalled();
+        expect(triggerEvent).not.toHaveBeenCalled();
+    });
+
+    it("creates protected notes when the protected session is available", async () => {
+        setActiveContext(true);
         protectedAvailable.value = true;
         await noteCreateService.createNote("root", { isProtected: true });
-        expect(server.post).toHaveBeenLastCalledWith(
+        expect(server.post).toHaveBeenCalledWith(
             expect.any(String),
             expect.objectContaining({ isProtected: true }),
             undefined
         );
+        expect(showError).not.toHaveBeenCalled();
+    });
+
+    it("does not block explicitly unprotected or ordinary notes when locked", async () => {
+        setActiveContext(true);
+        protectedAvailable.value = false;
+        await noteCreateService.createNote("root", { isProtected: false });
+        await noteCreateService.createNote("root");
+        expect(server.post).toHaveBeenCalledTimes(2);
+        for (const call of vi.mocked(server.post).mock.calls) {
+            expect(call[1]).toEqual(expect.objectContaining({ isProtected: false }));
+        }
+        expect(showError).not.toHaveBeenCalled();
     });
 
     it("parses a heading selection into title/content and removes the selection (text context)", async () => {
