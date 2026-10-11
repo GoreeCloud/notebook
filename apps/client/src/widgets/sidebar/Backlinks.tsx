@@ -37,6 +37,7 @@ export default function Backlinks() {
  */
 export function BacklinksWidget({ note }: { note: FNote }) {
     const [ filterQuery, setFilterQuery ] = useState("");
+    const [ sortByTitle, setSortByTitle ] = useState(false);
     const filterInputRef = useRef<HTMLInputElement>(null);
 
     // Moving between notes starts a fresh search rather than carrying an unrelated filter.
@@ -65,14 +66,26 @@ export function BacklinksWidget({ note }: { note: FNote }) {
                     </button>
                 )}
             </div>
+            <label class="backlinks-sort-label">
+                <input
+                    type="checkbox"
+                    checked={sortByTitle}
+                    onChange={event => setSortByTitle(event.currentTarget.checked)}
+                />
+                {t("zpetne_odkazy.sort_by_title")}
+            </label>
             <ul class="backlinks-items">
-                <BacklinksList note={note} filterQuery={filterQuery} />
+                <BacklinksList note={note} filterQuery={filterQuery} sortByTitle={sortByTitle} />
             </ul>
         </div>
     );
 }
 
-export function BacklinksList({ note, filterQuery = "" }: { note: FNote; filterQuery?: string }) {
+export function BacklinksList({ note, filterQuery = "", sortByTitle = false }: {
+    note: FNote;
+    filterQuery?: string;
+    sortByTitle?: boolean;
+}) {
     const [ result, setResult ] = useState<{ noteId: string; backlinks: BacklinksResponse }>();
     const [ failedNoteId, setFailedNoteId ] = useState<string>();
     const requestIdRef = useRef(0);
@@ -136,6 +149,14 @@ export function BacklinksList({ note, filterQuery = "" }: { note: FNote; filterQ
             return sourceTitle.toLowerCase().includes(term) || relation.toLowerCase().includes(term);
         })
         : backlinks;
+
+    if (sortByTitle) {
+        visibleBacklinks.sort((a, b) => {
+            const aTitle = froca.getNoteFromCache(a.noteId)?.title ?? "";
+            const bTitle = froca.getNoteFromCache(b.noteId)?.title ?? "";
+            return aTitle.localeCompare(bTitle);
+        });
+    }
 
     if (!visibleBacklinks.length) {
         return (
