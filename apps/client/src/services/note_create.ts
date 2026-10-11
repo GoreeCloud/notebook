@@ -99,9 +99,19 @@ async function createNote(parentNotePath: string | undefined, options: CreateNot
         attributes: options.attributes
     }, componentId);
 
-    if (options.saveSelection) {
-        // we remove the selection only after it was saved to server to make sure we don't lose anything
-        options.textEditor?.removeSelection();
+    if (options.saveSelection && selectedHtml) {
+        // The request is asynchronous. A user may have changed the selection while
+        // the server was saving; never cut different content after a successful save.
+        // A duplicate left in the source is safer than losing a new selection.
+        try {
+            if (options.textEditor?.getSelectedHtml() === selectedHtml) {
+                options.textEditor.removeSelection();
+            }
+        } catch {
+            // The editor may have unmounted during the request. The note was already
+            // saved; keep the original content instead of treating this as a failed save.
+            console.warn("Saved note, but could not safely remove its source selection.");
+        }
     }
 
     for (const cloneParentNoteId of options.cloneToNoteIds ?? []) {
