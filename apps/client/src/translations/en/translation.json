@@ -1,4 +1,19 @@
 {
+  "goreecloud_notebook": {
+    "enex": {
+      "review_title": "Review Evernote export files",
+      "local_check": "Each file is checked locally before upload. This is a header check, not a full import preview.",
+      "inspecting": "Checking the selected exports...",
+      "ready": "ENEX header recognized",
+      "empty": "The file is empty",
+      "extension": "Select an .enex export file",
+      "doctype": "Unsupported XML declaration detected",
+      "header": "Could not recognize an Evernote export header",
+      "unreadable": "Unable to read the file for review",
+      "qualification_warning": "Check filenames and preserve your original Evernote exports. This check cannot guarantee the integrity of notes, resources, or timestamps after import.",
+      "backup_confirmation": "I have a restorable backup of the destination notebook and will verify the imported notes before deleting my exports."
+    }
+  },
   "about": {
     "version_label": "Version:",
     "version": "{{appVersion}} (database: {{dbVersion}}, sync protocol: {{syncVersion}})",

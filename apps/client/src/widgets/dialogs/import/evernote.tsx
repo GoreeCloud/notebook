@@ -1,3 +1,4 @@
+import "./evernote_review.css";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import { t } from "../../../services/i18n.js";
@@ -8,19 +9,42 @@ import { Card, CardSection } from "../../react/Card.js";
 import FileDropZone from "../../react/FileDropZone.js";
 import { useTriliumOptionBool } from "../../react/hooks.js";
 import OptionsRow, { OptionsRowWithToggle } from "../../type_widgets/options/components/OptionsRow.js";
+import { canImportEvernote, inspectEvernoteSelection, type EvernotePreflightResult } from "./evernote_preflight.js";
 import iconUrl from "./icons/evernote.svg?url";
 import type { ImportProvider, ImportProviderPanelProps } from "./types.js";
 
 function EvernotePanel({ parentNoteId, closeDialog, setFooter }: ImportProviderPanelProps) {
     const [files, setFiles] = useState<File[]>([]);
+    const [results, setResults] = useState<EvernotePreflightResult[]>([]);
+    const [inspecting, setInspecting] = useState(false);
+    const [backupConfirmed, setBackupConfirmed] = useState(false);
     const [compressImages] = useTriliumOptionBool("compressImages");
     const [shrinkImages, setShrinkImages] = useState(compressImages);
 
     // An Evernote export is one ENEX (.enex) file per notebook, so allow selecting several at once.
     const onChange = useCallback((fileList: File[] | null) => setFiles(fileList ?? []), []);
 
+    // Selection preflight is strictly local and reads only a bounded prefix.
+    // Dropping/adding a file invalidates both prior checks and backup consent.
+    useEffect(() => {
+        let active = true;
+        setBackupConfirmed(false);
+        setResults([]);
+        setInspecting(files.length > 0);
+        if (files.length) {
+            void inspectEvernoteSelection(files).then((checks) => {
+                if (active) setResults(checks);
+            }).finally(() => {
+                if (active) setInspecting(false);
+            });
+        }
+        return () => { active = false; };
+    }, [files]);
+
+    const ready = canImportEvernote(files, results, backupConfirmed, inspecting);
+
     const doImport = useCallback(async () => {
-        if (!files.length) {
+        if (!canImportEvernote(files, results, backupConfirmed, inspecting)) {
             return;
         }
 
@@ -31,7 +55,7 @@ function EvernotePanel({ parentNoteId, closeDialog, setFooter }: ImportProviderP
         // so swallow the rejection to avoid an unhandled rejection from this void-ed call.
         closeDialog();
         await importService.uploadFiles("notes", parentNoteId, files, { safeImport: "true", shrinkImages: shrinkImages ? "true" : "false" }).catch(() => {});
-    }, [files, shrinkImages, parentNoteId, closeDialog]);
+    }, [files, results, backupConfirmed, inspecting, shrinkImages, parentNoteId, closeDialog]);
 
     // Keep the latest import handler in a ref so the footer effect depends only on whether files are
     // selected, never on doImport's identity — otherwise re-pushing the footer on every change would loop
@@ -44,11 +68,11 @@ function EvernotePanel({ parentNoteId, closeDialog, setFooter }: ImportProviderP
             <Button
                 text={t("evernote_import.import")}
                 kind="primary"
-                disabled={!files.length}
+                disabled={!ready}
                 onClick={() => void doImportRef.current()}
             />
         );
-    }, [files.length, setFooter]);
+    }, [ready, setFooter]);
 
     return (
         <Card heading={t("evernote_import.choose_file")}>
@@ -64,6 +88,32 @@ function EvernotePanel({ parentNoteId, closeDialog, setFooter }: ImportProviderP
                     onChange={setShrinkImages}
                     disabled={!compressImages}
                 />
+                {files.length > 0 && (
+                    <section className="goreecloud-enex-review" aria-label={t("goreecloud_notebook.enex.review_title")}>
+                        <h6>{t("goreecloud_notebook.enex.review_title")}</h6>
+                        <p>{t("goreecloud_notebook.enex.local_check")}</p>
+                        {inspecting && <p role="status">{t("goreecloud_notebook.enex.inspecting")}</p>}
+                        {!inspecting && (
+                            <ul className="goreecloud-enex-review-files">
+                                {results.map((result, index) => (
+                                    <li key={index} className={result.ready ? "goreecloud-enex-ready" : "goreecloud-enex-blocked"}>
+                                        <span aria-hidden="true" className={result.ready ? "bx bx-check-circle" : "bx bx-error-circle"} />
+                                        <span className="goreecloud-enex-filename">{result.name}</span>
+                                        <small>{new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(result.bytes / 1048576)} MiB</small>
+                                        <span className="goreecloud-enex-status">{t(`goreecloud_notebook.enex.${result.code}`)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <p className="goreecloud-enex-caution">{t("goreecloud_notebook.enex.qualification_warning")}</p>
+                        <label className="goreecloud-enex-confirmation">
+                            <input type="checkbox" checked={backupConfirmed}
+                                onChange={(event) => setBackupConfirmed(event.currentTarget.checked)}
+                                disabled={inspecting || !results.length || results.some(result => !result.ready)} />
+                            <span>{t("goreecloud_notebook.enex.backup_confirmation")}</span>
+                        </label>
+                    </section>
+                )}
             </CardSection>
         </Card>
     );

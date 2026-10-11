@@ -14,7 +14,7 @@ The source base includes a hierarchical note tree, rich editing, attributes, sea
 4. Inspect notes, images, PDFs, timestamps, tags, links and any reported skipped items.
 5. Do not discard ENEX files until restoring the destination and the imported content have been verified.
 
-The branded migration wizard, duplicate preview and import safety gates described in the roadmap are **not implemented/verified**.
+The Development import dialog now performs a **limited, local ENEX header check** and requires a backup acknowledgment before uploading. It does not read every note, guarantee a complete import, validate every attachment, or replace a real backup-and-restore test. Full note-by-note previews, duplicate handling, and migration qualification are still pending.
 
 ## Privacy and accessibility
 

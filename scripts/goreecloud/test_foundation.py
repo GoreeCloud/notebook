@@ -54,6 +54,16 @@ class FoundationTests(unittest.TestCase):
         self.assertNotIn("pull_request_target", text)
         self.assertNotIn("secrets.", text)
 
+    def test_enex_review_connected_and_localized(self):
+        source = (ROOT / "apps/client/src/widgets/dialogs/import/evernote.tsx").read_text(encoding="utf-8")
+        translation = (ROOT / "apps/client/src/translations/en/translation.json").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/notebook-ci.yml").read_text(encoding="utf-8")
+        self.assertIn("inspectEvernoteSelection(files)", source)
+        self.assertIn("canImportEvernote(files, results, backupConfirmed, inspecting)", source)
+        self.assertIn("goreecloud_notebook.enex.backup_confirmation", source)
+        self.assertIn('"backup_confirmation"', translation)
+        self.assertIn("evernote_preflight.test.mjs", workflow)
+
     def test_no_false_release_claim(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("not", readme.lower())
