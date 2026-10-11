@@ -13,6 +13,8 @@
 - **NOTE-TEMPLATES-PALETTE-001:** A searchable command-palette action exposes the inherited note type/template chooser for the active note, preserving template destination/preset behavior and refusing parentless creation. Source regression tests cover dispatch and the no-parent guard; installed-runtime acceptance remains pending.
 - **RECENT-CHANGES-PALETTE-001:** A searchable Command Palette action opens recent changes scoped to the selected note subtree. When no note is selected, it does not open an unscoped view. Automated tests cover dispatch and missing-note protection; installed-app acceptance remains pending.
 - **BACKLINKS-RELIABILITY-001:** Backlinks and their count indicator are scoped to the active note, ignoring responses from abandoned requests and unmounted views. Failure shows a localized retry action. Dedicated regression coverage tests note-switch races and retry recovery; installed-app acceptance remains pending.
+- **NOTE-REVISION-NAV-001:** Command Palette offers View Note Revisions for the selected note using the existing revision dialog, with a guard for no active note; installed-app acceptance remains pending.
+- **NOTE-LINK-COPY-001:** Command Palette offers Copy Link to Current Note using the existing clipboard helper and note path, without copying if no note is selected; installed-app acceptance remains pending.
 - **DOCS-BASELINE-001:** Source-linked provenance, specifications, privacy/security disclosure, product status and planned capability records.
 
 ## Inherited upstream implementation (not fork-tested)

@@ -13,7 +13,8 @@ const {
     getActiveMainContext,
     getActions,
     isElectron,
-    createNoteWithTypePrompt
+    createNoteWithTypePrompt,
+    copyTextWithToast
 } = vi.hoisted(() => ({
     triggerCommand: vi.fn(),
     getComponentByEl: vi.fn(),
@@ -23,7 +24,8 @@ const {
     getActiveMainContext: vi.fn<() => { ntxId?: string } | undefined>(() => ({ ntxId: "ntx-main" })),
     getActions: vi.fn<() => Promise<ActionKeyboardShortcut[]>>(async () => []),
     isElectron: vi.fn(() => false),
-    createNoteWithTypePrompt: vi.fn(async (_parentPath: string) => undefined)
+    createNoteWithTypePrompt: vi.fn(async (_parentPath: string) => undefined),
+    copyTextWithToast: vi.fn()
 }));
 
 // translationsInitializedPromise must be already-resolved so the registry's
@@ -59,6 +61,8 @@ vi.mock("../components/app_context.js", () => ({
 vi.mock("./keyboard_actions.js", () => ({
     default: { getActions }
 }));
+
+vi.mock("./clipboard_ext.js", () => ({ copyTextWithToast }));
 
 vi.mock("./note_create.js", () => ({
     default: { createNoteWithTypePrompt }
@@ -216,6 +220,38 @@ describe("GoreeCloud recent-changes navigation", () => {
         getActiveContextNoteId.mockImplementation(() => null);
         await registry.executeCommand("recent-changes-in-current-note");
         expect(triggerCommand).not.toHaveBeenCalled();
+    });
+});
+
+describe("GoreeCloud note revisions and linking", () => {
+    it("opens revisions only for the selected note", async () => {
+        const registry = await freshRegistry();
+        expect(registry.searchCommands("version history").map(c => c.id))
+            .toContain("show-current-note-revisions");
+        await registry.executeCommand("show-current-note-revisions");
+        expect(triggerCommand).toHaveBeenCalledWith("showRevisions", { noteId: "abc" });
+    });
+
+    it("does not open revisions without an active note", async () => {
+        const registry = await freshRegistry();
+        getActiveContextNoteId.mockImplementation(() => null);
+        await registry.executeCommand("show-current-note-revisions");
+        expect(triggerCommand).not.toHaveBeenCalled();
+    });
+
+    it("copies an internal note link through the existing clipboard helper", async () => {
+        const registry = await freshRegistry();
+        expect(registry.searchCommands("internal note link").map(c => c.id))
+            .toContain("copy-current-note-link");
+        await registry.executeCommand("copy-current-note-link");
+        expect(copyTextWithToast).toHaveBeenCalledWith("#root/abc");
+    });
+
+    it("does not touch the clipboard without an active note", async () => {
+        const registry = await freshRegistry();
+        getActiveContextNotePath.mockImplementation(() => null);
+        await registry.executeCommand("copy-current-note-link");
+        expect(copyTextWithToast).not.toHaveBeenCalled();
     });
 });
 

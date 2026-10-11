@@ -29,4 +29,6 @@
 
 - Scoped backlink results to the selected note and invalidated late network responses on navigation and unmount. Added retry feedback for unavailable backlink requests and covered note-switch races and recovery in the client UI CI suite. The backlink count indicator also discards late counts from previously selected notes and hides counts outside its supported view.
 
+- Exposed View Note Revisions and Copy Link to Current Note via searchable Command Palette actions, reusing the existing revision dialog and clipboard helper. Added four regressions for command lookup, dispatch and no-note guards.
+
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

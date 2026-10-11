@@ -2,6 +2,7 @@ import { ActionKeyboardShortcut } from "@triliumnext/commons";
 import appContext, { type CommandNames } from "../components/app_context.js";
 import type NoteTreeWidget from "../widgets/note_tree.js";
 import { t, translationsInitializedPromise } from "./i18n.js";
+import { copyTextWithToast } from "./clipboard_ext.js";
 import keyboardActions from "./keyboard_actions.js";
 import noteCreate from "./note_create.js";
 import utils from "./utils.js";
@@ -80,6 +81,35 @@ export class CommandRegistry {
                 const notePath = appContext.tabManager.getActiveContextNotePath();
                 if (notePath) {
                     return noteCreate.createNoteWithTypePrompt(notePath);
+                }
+            }
+        });
+
+        // Direct routes to inherited editing and navigation tools. Neither needs new persistence.
+        this.register({
+            id: "show-current-note-revisions",
+            name: t("command_palette.note_revisions_title"),
+            description: t("command_palette.note_revisions_description"),
+            icon: "bx bx-history",
+            aliases: ["note history", "version history", "revisions"],
+            handler: () => {
+                const noteId = appContext.tabManager.getActiveContextNoteId();
+                if (noteId) {
+                    appContext.triggerCommand("showRevisions", { noteId });
+                }
+            }
+        });
+
+        this.register({
+            id: "copy-current-note-link",
+            name: t("command_palette.copy_note_link_title"),
+            description: t("command_palette.copy_note_link_description"),
+            icon: "bx bx-link",
+            aliases: ["copy note link", "internal note link", "note reference"],
+            handler: () => {
+                const notePath = appContext.tabManager.getActiveContextNotePath();
+                if (notePath) {
+                    copyTextWithToast(`#${notePath}`);
                 }
             }
         });
