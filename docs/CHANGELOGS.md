@@ -11,5 +11,7 @@
 - Implemented an in-dialog Evernote file-review checkpoint with bounded local header inspection, explicit backup acknowledgment, selection-change invalidation, English fallback strings, semantic Glaze styling and dependency-free Node tests.
 
 - Captured the complete owner-provided 20-domain feature and capability product vision, product principles and long-term definition as a separate proposed-scope record with references from the repository documentation. No new feature implementation or acceptance is implied.
+- Added a 20-domain capability-to-roadmap traceability matrix and automated structural checks; tightened Evernote local header review to ignore XML-like declarations inside actual note content.
+- Added an independent pull-request client build-qualification job without deployment steps using the pinned package-manager and frozen lockfile. Build acceptance is pending an actual workflow result.
 
 This is source development, not a public release, verified build, deployment or Glaze conformance claim.

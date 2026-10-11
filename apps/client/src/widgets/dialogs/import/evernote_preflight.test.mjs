@@ -45,3 +45,22 @@ test("review requires consent and original selection", async () => {
  assert.equal(canImportEvernote([first], checks, true, false), true);
  assert.equal(canImportEvernote([sample("one.enex", "<en-export/>")], checks, true, false), false);
 });
+
+test("literal XML declarations inside note content are not treated as prolog", async () => {
+    const fixture = sample("example.enex", '<en-export><note><content><![CDATA[<en-note><pre>&lt;!DOCTYPE sample&gt;</pre></en-note>]]></content></note></en-export>');
+    assert.equal((await inspectEvernoteFile(fixture)).code, "ready");
+});
+
+test("any blocked file prevents a mixed selection from starting upload", async () => {
+    const files = [sample("first.enex", "<en-export/>"), sample("second.enex", "not xml")];
+    const results = await inspectEvernoteSelection(files);
+    assert.deepEqual(results.map(result => result.ready), [true, false]);
+    assert.equal(canImportEvernote(files, results, true, false), false);
+});
+
+test("unreadable source fails closed", async () => {
+    const file = { name: "blocked.enex", size: 12, slice() { throw new Error("read denied"); } };
+    const result = await inspectEvernoteFile(file);
+    assert.equal(result.code, "unreadable");
+    assert.equal(result.ready, false);
+});

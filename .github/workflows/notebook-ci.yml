@@ -25,3 +25,25 @@ jobs:
           node-version: '24'
       - name: Validate local Evernote file-review rules
         run: node --experimental-strip-types --test apps/client/src/widgets/dialogs/import/evernote_preflight.test.mjs
+
+  build-qualification:
+    # Separate premerge client build check; never deploys or publishes.
+    # Source integrity remains independent, even if dependency resolution fails.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned workspace package manager
+        run: corepack enable
+      - name: Install client dependency graph without install hooks
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter '@triliumnext/client...' --filter .
+      - name: Check client build without publishing
+        run: pnpm --filter @triliumnext/client build

@@ -40,10 +40,16 @@ export async function inspectEvernoteFile(file: EvernotePreflightFile): Promise<
         // The file stays local until the explicit import action; no whole-file
         // read, XML DOM construction, external entity resolution, or network.
         const header = (await file.slice(0, HEADER_BYTES).text()).replace(/^\uFEFF/, "").trimStart();
-        if (UNSAFE_DECLARATION.test(header)) {
+        // Only XML declarations BEFORE the export root are relevant to
+        // the header review. Note content can legitimately contain a
+        // literal "<!DOCTYPE" in an example or CDATA string.
+        const rootMatch = ENEX_OPEN_TAG.exec(header);
+        const rootStart = rootMatch ? rootMatch[0].lastIndexOf("<en-export") : header.length;
+        const prolog = header.slice(0, rootStart);
+        if (UNSAFE_DECLARATION.test(prolog)) {
             return result("doctype");
         }
-        if (!ENEX_OPEN_TAG.test(header)) {
+        if (!rootMatch) {
             return result("header");
         }
         return result("ready");
