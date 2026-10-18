@@ -32,6 +32,21 @@ class EnexPreflightTests(unittest.TestCase):
         self.assertEqual(result["mode"], "read-only-preflight")
         self.assertNotIn("First", str(result))
 
+    def test_unrecognized_resource_mime_is_not_echoed(self):
+        data = b"""<en-export><note>
+          <resource><mime>IMAGE/PNG</mime></resource>
+          <resource><mime>unrecognized/custom-label</mime></resource>
+          <resource><mime>application/x-unlisted-custom</mime></resource>
+          <resource><mime> </mime></resource>
+        </note></en-export>"""
+        result = self.check(data)
+        self.assertEqual(result["resources"], 4)
+        self.assertEqual(result["resource_mime_counts"], {
+            "image/png": 1, "other/unknown": 2, "unspecified": 1,
+        })
+        self.assertNotIn("custom-label", str(result))
+        self.assertNotIn("x-unlisted", str(result))
+
     def test_internal_entity_rejected(self):
         data = b'<!DOCTYPE en-export [<!ENTITY x "secret">]><en-export><note><title>&x;</title></note></en-export>'
         with self.assertRaises(EnexValidationError):

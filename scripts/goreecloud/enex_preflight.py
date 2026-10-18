@@ -19,6 +19,24 @@ from xml.parsers import expat
 class EnexValidationError(ValueError):
     """Input was not a safe, supported Evernote export structure."""
 
+# ENEX resource MIME is untrusted text. Output only known public labels.
+PUBLIC_MIMES = frozenset({
+    "application/octet-stream", "application/pdf", "application/zip",
+    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/png", "image/jpeg", "image/gif", "image/webp",
+    "image/heic", "image/heif", "image/tiff", "image/bmp", "image/svg+xml",
+    "audio/mpeg", "audio/mp4", "audio/ogg", "audio/wav",
+    "video/mp4", "video/webm", "text/plain", "text/html",
+})
+
+
+def public_mime(raw: str) -> str:
+    normalized = raw.strip().lower()
+    if not normalized:
+        return "unspecified"
+    return normalized if normalized in PUBLIC_MIMES else "other/unknown"
+
+
 
 def inspect_enex(path: Path, max_bytes: int = 200 * 1024 * 1024) -> dict:
     """Safely stream an ENEX file and return non-identifying aggregate metadata."""
@@ -87,7 +105,7 @@ def inspect_enex(path: Path, max_bytes: int = 200 * 1024 * 1024) -> dict:
         if captured_field == tag:
             value = "".join(captured)[:4096].strip()
             if tag == "mime":
-                mime_counts[value.lower() or "unspecified"] += 1
+                mime_counts[public_mime(value)] += 1
             elif current_note is not None:
                 current_note[tag] = value
             captured_field = None
