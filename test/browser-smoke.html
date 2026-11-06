@@ -9,6 +9,14 @@ import { SCHEMA_VERSION, makeNote } from "../src/model.js";
 
 const out = document.getElementById("output");
 const check = (condition, description) => { if (!condition) throw new Error(description); };
+const isExplicitLocalTest = location.protocol === "http:" &&
+  location.hostname === "127.0.0.1" &&
+  new URLSearchParams(location.search).get("notebook-smoke") === "enabled";
+if (!isExplicitLocalTest) {
+  document.documentElement.dataset.testResult = "REFUSED";
+  throw new Error("Destructive Notebook test refused outside an explicitly marked local test URL.");
+}
+
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(fn, timeout = 8000) {
   const started = Date.now();
