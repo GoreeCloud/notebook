@@ -6,9 +6,9 @@ GoreeCloud Notebook is a static PWA with zero runtime packages and no server dep
 
 ## Current data model
 
-Version 1 snapshot comprises version, notes, selectedId and theme. Every note has a local ID; title; body; parentId; type; tags; favorite, archived, trashed and completed flags; dueDate; createdAt and updatedAt. Parent pointers create an acyclic rooted forest. Deletion is soft trash; export copies the full note set including trash.
+Version 1 snapshot comprises version, notes, selectedId and theme, plus a monotonically increasing local revision number (legacy snapshots start at revision zero). Every note has a local ID; title; body; parentId; type; tags; favorite, archived, trashed and completed flags; dueDate; createdAt and updatedAt. Parent pointers create an acyclic rooted forest. Deletion is soft trash; export copies the full note set including trash.
 
-The current adapter stores one snapshot under the IndexedDB app object store and snapshot key. Writes are serialized and debounced. This is suitable only as an initial single-user preview, not yet large-scale or multi-tab synchronization.
+The current adapter stores one snapshot under the IndexedDB app object store and snapshot key. Writes are serialized and debounced. Every write checks the expected revision within the IndexedDB read/write transaction and aborts on a mismatch, preventing silent stale-tab replacement. The UI preserves the in-memory unsaved notes and exposes export/reload choices after a conflict. This is only optimistic conflict rejection, not multi-tab collaboration, merge, recovery journaling, or synchronization.
 
 ## Future transition
 
