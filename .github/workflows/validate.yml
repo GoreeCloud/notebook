@@ -20,7 +20,17 @@ jobs:
       - name: Model unit tests
         run: npm test
       - name: Browser storage and UI smoke
+        env:
+          NOTEBOOK_SCREENSHOT_DIR: test-output/screenshots
         run: CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)" node scripts/cdp-smoke.mjs
+      - name: Upload synthetic UI review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-ui-review
+          path: test-output/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Validate documentation and license
         run: |
           test -s LICENSE
