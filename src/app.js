@@ -121,7 +121,7 @@ function chrome(content) {
   return '<div class="shell">' +
     '<aside class="sidebar" aria-label="Workspace navigation">' +
       '<div class="brand"><span class="brand-symbol" aria-hidden="true">✦</span><span><strong>GoreeCloud</strong><small>NOTEBOOK</small></span></div>' +
-      '<button class="new-button" data-action="new"><span aria-hidden="true">＋</span> New note <kbd>Ctrl N</kbd></button>' +
+      '<button class="new-button" data-action="new"><span aria-hidden="true">+</span> New note <kbd>Ctrl N</kbd></button>' +
       '<div class="nav-section-label">WORKSPACE</div><nav class="primary-nav" aria-label="Main navigation">' +
         navButton("home", "Overview", icons.home) + navButton("notes", "All notes", icons.notes) +
         navButton("favorites", "Favorites", icons.favorites) + navButton("tasks", "My tasks", icons.tasks) +
@@ -133,7 +133,7 @@ function chrome(content) {
     '</aside><div class="page">' +
       '<header class="topbar"><button class="mobile-brand" data-view="home" aria-label="Notebook home">✦</button><div class="breadcrumb">My workspace <span aria-hidden="true">/</span> <b>' + safe(state.view === "home" ? "Overview" : selected()?.title || (state.view[0].toUpperCase() + state.view.slice(1))) + '</b></div>' +
         '<label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search your notes</span><input id="globalSearch" type="search" placeholder="Search anything..." value="' + safe(state.query) + '" autocomplete="off"><kbd>Ctrl K</kbd></label>' +
-        '<button class="top-action" data-action="new" aria-label="Create note">＋ <span>New note</span></button><button class="icon-button theme-button" data-action="theme" aria-label="Toggle light and dark theme">' + (state.theme === "dark" ? "☼" : "☾") + '</button>' +
+        '<button class="top-action" data-action="new" aria-label="Create note">+ <span>New note</span></button><button class="icon-button theme-button" data-action="theme" aria-label="Toggle light and dark theme">' + (state.theme === "dark" ? "☼" : "☾") + '</button>' +
       '</header>' +
       (saveBlocked ? '<div class="save-warning" role="alert"><span>' + safe(saveError) + ' Export a backup before leaving this tab.</span><button data-action="export">Export unsaved notes</button><button data-action="reload">Reload saved version</button></div>' : '') +
       content +
@@ -155,7 +155,7 @@ function noteCard(note) {
 }
 function home() {
   const counts = stats(state.notes), recent = searchNotes(state.notes, "").slice(0, 6);
-  return '<main class="content overview"><div class="hero"><span class="eyebrow"><span class="hero-spark">✦</span> YOUR PERSONAL KNOWLEDGE SPACE</span><h1>Every thought deserves<br><em>a place to grow.</em></h1><p>Capture the little moments and connect the big ideas. Your knowledge, beautifully organized and kept in your control.</p><div class="hero-actions"><button class="gc-button primary" data-action="new">＋ Create a note</button><button class="gc-button secondary" data-action="new-task">✓ Add a task</button></div><span class="hero-decoration" aria-hidden="true">✺</span></div>' +
+  return '<main class="content overview"><div class="hero"><span class="eyebrow"><span class="hero-spark">✦</span> YOUR PERSONAL KNOWLEDGE SPACE</span><h1>Every thought deserves<br><em>a place to grow.</em></h1><p>Capture the little moments and connect the big ideas. Your knowledge, beautifully organized and kept in your control.</p><div class="hero-actions"><button class="gc-button primary" data-action="new">+ Create a note</button><button class="gc-button secondary" data-action="new-task">✓ Add a task</button></div><span class="hero-decoration" aria-hidden="true">✺</span></div>' +
     '<div class="metrics"><div class="metric"><span>YOUR NOTES</span><strong>' + counts.notes + '</strong><small>Ideas worth keeping</small></div><div class="metric"><span>OPEN TASKS</span><strong>' + counts.tasks + '</strong><small>Things in motion</small></div><div class="metric"><span>FAVORITES</span><strong>' + counts.favorites + '</strong><small>Close at hand</small></div><div class="metric"><span>TOPICS</span><strong>' + counts.tags + '</strong><small>Connected themes</small></div></div>' +
     '<div class="section-heading"><div><span class="overline">PICK UP WHERE YOU LEFT OFF</span><h2>Recent notes</h2></div><button class="inline-link" data-view="notes">View all notes →</button></div>' +
     (recent.length ? '<div class="note-grid">' + recent.map(noteCard).join("") + '</div>' : '<div class="empty-panel"><span class="empty-art">✎</span><h3>Start with a single thought</h3><p>Your notebook is ready. Create a note, then build your own connected knowledge space.</p><button class="gc-button primary" data-action="new">Create first note</button></div>') +
@@ -179,7 +179,7 @@ function simpleMarkdown(source) {
   }).join("");
 }
 function editor(note) {
-  if (!note) return '<div class="empty-editor"><div class="empty-art">✧</div><h2>A quiet space for your ideas</h2><p>Select a note or create something new.</p><button class="gc-button primary" data-action="new">＋ New note</button></div>';
+  if (!note) return '<div class="empty-editor"><div class="empty-art">✧</div><h2>A quiet space for your ideas</h2><p>Select a note or create something new.</p><button class="gc-button primary" data-action="new">+ New note</button></div>';
   const parentChoices = ['<option value="">Top level</option>'].concat(state.notes.filter(n => n.id !== note.id && !n.trashed && !descendantsOf(state.notes, note.id).has(n.id)).map(n => '<option value="' + safe(n.id) + '" ' + (n.id === note.parentId ? "selected" : "") + '>' + safe(n.title) + '</option>')).join("");
   const links = backlinks(state.notes, note);
   return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">' + (saveBlocked ? "Unsaved changes" : "Saved on this device") + '</span></div><div class="editor-actions">' +
@@ -189,7 +189,7 @@ function editor(note) {
     '<button class="icon-button" data-action="duplicate" aria-label="Duplicate note" title="Duplicate note">⧉</button>' +
     '<button class="icon-button" data-action="archive" aria-label="Archive note" title="Archive note">◫</button>' +
     '<button class="icon-button danger" data-action="trash" aria-label="Move note to trash" title="Move to trash">♻</button></div></div>' +
-    '<input class="editor-title" id="noteTitle" maxlength="180" aria-label="Note title" value="' + safe(note.title) + '" placeholder="Untitled note" ' + (saveBlocked ? 'disabled' : '') + '>' +
+    '<textarea class="editor-title" id="noteTitle" rows="1" maxlength="180" aria-label="Note title" placeholder="Untitled note" ' + (saveBlocked ? 'disabled' : '') + '>' + safe(note.title) + '</textarea>' +
     '<div class="editor-meta"><label>FOLDER <select id="parentSelect" aria-label="Parent note">' + parentChoices + '</select></label>' +
     '<label>TAGS <input id="noteTags" aria-label="Comma-separated tags" value="' + safe(note.tags.join(", ")) + '" placeholder="Add tags, separated by commas" ' + (saveBlocked ? 'disabled' : '') + '></label></div>' +
     (note.type === "task" ? '<div class="task-bar"><label><input type="checkbox" id="taskDone" ' + (note.completed ? "checked" : "") + '> Completed</label><label>Due <input type="date" id="taskDue" value="' + safe(note.dueDate) + '"></label></div>' : "") +
@@ -202,14 +202,20 @@ function collection() {
   const visible = searchNotes(state.notes, state.query, state.view);
   const title = { notes: "All notes", tasks: "My tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
   return '<main class="collection"><section class="list-panel"><div class="list-heading"><span class="overline">YOUR LIBRARY</span><h1>' + title + '</h1><p>' + visible.length + ' item' + (visible.length === 1 ? "" : "s") + '</p></div>' +
-    '<div class="list-tools"><button class="gc-button primary compact" data-action="new">＋ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
+    '<div class="list-tools"><button class="gc-button primary compact" data-action="new">+ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
     '<div class="note-list">' + (visible.length ? visible.map(note => '<button class="note-list-item ' + (note.id === state.selectedId ? "selected" : "") + '" data-note="' + safe(note.id) + '"><span class="list-item-title">' + (note.favorite ? "★ " : "") + safe(note.title) + '</span><span class="list-item-sub">' + safe(note.tags.join(" · ") || (note.body.slice(0, 55).replace(/\n/g, " ") || "No content yet")) + '</span><small>' + safe(date(note.updatedAt)) + '</small></button>').join("") : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
     '<section class="editor-panel">' + (state.view === "trash" || state.view === "archive" ? '<div class="empty-editor"><div class="empty-art">◫</div><h2>' + title + '</h2><p>' + (state.view === "trash" ? "Restore a note from the list to continue editing." : "Archived notes stay safe and searchable when restored.") + '</p>' + (selected() ? '<button class="gc-button primary" data-action="restore">' + (state.view === "trash" ? "Restore note" : "Unarchive note") + '</button>' : "") + '</div>' : editor(selected())) + '</section></main>';
+}
+function fitTitleEditor(element) {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = element.scrollHeight + "px";
 }
 function render() {
   document.documentElement.dataset.theme = state.theme;
   const content = state.view === "home" ? home() : collection();
   root.innerHTML = chrome(content);
+  fitTitleEditor(document.getElementById("noteTitle"));
 }
 function exportFile() {
   try {
@@ -341,6 +347,7 @@ root.addEventListener("input", event => {
   if (field) {
     const value = field === "tags" ? event.target.value.split(",") : event.target.value;
     patch({ [field]: value }, false);
+    if (field === "title") fitTitleEditor(event.target);
   }
 });
 root.addEventListener("change", event => {
@@ -354,6 +361,11 @@ root.addEventListener("change", event => {
   }
 });
 document.addEventListener("keydown", event => {
+  if (event.target.id === "noteTitle" && event.key === "Enter") {
+    event.preventDefault();
+    document.getElementById("noteBody")?.focus();
+    return;
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); create(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); document.getElementById("globalSearch")?.focus(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); flushSave(); if (!saveBlocked) notify("Saving locally…"); }
