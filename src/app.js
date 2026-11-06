@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, escapeHtml } from "./model.js";
+import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
 
@@ -306,7 +306,22 @@ async function importFile(file) {
   if (!file) return;
   try {
     const backup = await importBackup(file);
-    if (!window.confirm("Replace all notes in this browser with " + backup.notes.length + " imported notes? Export a backup first.")) return;
+    const impact = describeImportImpact(state.notes, backup.notes);
+    const warning = [
+      "Replace the locally saved workspace?",
+      "",
+      "Current notes: " + impact.existing,
+      "Imported notes: " + impact.incoming,
+      "Added: " + impact.added,
+      "Modified (same ID): " + impact.changed,
+      "Unchanged: " + impact.unchanged,
+      "Removed from current workspace: " + impact.removed,
+      "",
+      "Archived and trashed notes are included in these counts.",
+      "A local one-step undo checkpoint is saved if the import succeeds.",
+      "Export an independent backup first. Cancel keeps your workspace unchanged."
+    ].join("\n");
+    if (!window.confirm(warning)) return;
     await flushSave();
     if (saveBlocked) return;
     // Persist atomically BEFORE replacing in-memory notes. A stale import cannot overwrite another tab.
