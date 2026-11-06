@@ -118,5 +118,10 @@ try {
     await Promise.race([stopped, pause(2000)]);
   }
   await new Promise(resolve => server.close(resolve));
-  rmSync(profile, { recursive: true, force: true });
+  try {
+    rmSync(profile, { recursive: true, force: true, maxRetries: 12, retryDelay: 200 });
+  } catch (error) {
+    // Runner-created profile contains only synthetic test notes; warn without hiding test results.
+    console.warn("Temporary Chromium profile cleanup requires attention:", error.code || error.message);
+  }
 }
