@@ -9,6 +9,11 @@ const icons = {
 let state = { version: SCHEMA_VERSION, notes: [], selectedId: null, view: "home", query: "", theme: "dark", preview: false };
 let saveChain = Promise.resolve();
 let saveTimer;
+let savedRevision = 0;
+let changeNumber = 0;
+let enqueuedNumber = 0;
+let saveBlocked = false;
+let saveError = "";
 const safe = escapeHtml;
 const uid = () => crypto.randomUUID().replace(/-/g, "");
 const selected = () => state.notes.find(note => note.id === state.selectedId) || null;
@@ -22,20 +27,53 @@ function notify(message, error = false) {
   clearTimeout(notify.timer);
   notify.timer = setTimeout(() => { el.hidden = true; }, 4000);
 }
+function pendingSnapshot() {
+  return {
+    version: SCHEMA_VERSION,
+    // Capture an immutable representation of the current edits before the asynchronous write.
+    notes: state.notes.map(note => ({ ...note, tags: [...note.tags] })),
+    selectedId: state.selectedId,
+    theme: state.theme
+  };
+}
+function showSaveStatus(label) {
+  const node = document.getElementById("saveStatus");
+  if (node) node.textContent = label;
+}
 function queueSave() {
+  if (saveBlocked) {
+    notify("Saving is paused. Export unsaved changes, then reload.", true);
+    return;
+  }
+  changeNumber += 1;
   clearTimeout(saveTimer);
-  const label = document.getElementById("saveStatus");
-  if (label) label.textContent = "Saving locally…";
-  saveTimer = setTimeout(() => {
-    const snapshot = { version: SCHEMA_VERSION, notes: state.notes, selectedId: state.selectedId, theme: state.theme };
-    saveChain = saveChain.catch(() => {}).then(() => writeState(snapshot));
-    saveChain.then(() => {
-      const status = document.getElementById("saveStatus");
-      if (status) status.textContent = "Saved on this device";
-    }).catch(() => notify("Saving failed. Export your data and check available storage.", true));
-  }, 250);
+  showSaveStatus("Saving locally…");
+  saveTimer = setTimeout(flushSave, 250);
+}
+function flushSave() {
+  clearTimeout(saveTimer);
+  if (saveBlocked || changeNumber === enqueuedNumber) return saveChain;
+  const generation = changeNumber;
+  enqueuedNumber = generation;
+  const snapshot = pendingSnapshot();
+  saveChain = saveChain.then(async () => {
+    if (saveBlocked) return;
+    try {
+      savedRevision = await writeState(snapshot, savedRevision);
+      if (changeNumber === generation) showSaveStatus("Saved on this device");
+    } catch (error) {
+      saveBlocked = true;
+      saveError = error?.code === "NOTEBOOK_STORAGE_CONFLICT"
+        ? "Another tab has newer changes. Your edits are still in this tab but were NOT saved."
+        : "This browser could not save your notes. Your edits remain in this tab but were NOT saved.";
+      render();
+      notify(saveError + " Export a backup before reloading.", true);
+    }
+  });
+  return saveChain;
 }
 function create(type = "note", parentId = null) {
+  if (saveBlocked) return notify("Export unsaved changes, then reload before editing.", true);
   if (state.notes.length >= MAX_NOTES) return notify("Note limit reached. Export or archive content.", true);
   const note = makeNote({ id: uid(), type, parentId, title: type === "task" ? "New task" : type === "journal" ? "Daily journal" : "Untitled note" });
   state.notes.unshift(note);
@@ -47,6 +85,7 @@ function create(type = "note", parentId = null) {
   document.getElementById("noteTitle")?.focus();
 }
 function patch(changes, rerender = true) {
+  if (saveBlocked) return notify("Saving is paused. Export unsaved edits before reloading.", true);
   if (!selected()) return;
   try { state.notes = updateNote(state.notes, state.selectedId, changes); queueSave(); if (rerender) render(); }
   catch (error) { notify(error.message, true); }
@@ -56,7 +95,6 @@ function openNote(id) {
   state.selectedId = id;
   state.view = "notes";
   state.preview = false;
-  queueSave();
   render();
 }
 function changeView(view) {
@@ -96,7 +134,9 @@ function chrome(content) {
       '<header class="topbar"><button class="mobile-brand" data-view="home" aria-label="Notebook home">✦</button><div class="breadcrumb">My workspace <span aria-hidden="true">/</span> <b>' + safe(state.view === "home" ? "Overview" : selected()?.title || (state.view[0].toUpperCase() + state.view.slice(1))) + '</b></div>' +
         '<label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search your notes</span><input id="globalSearch" type="search" placeholder="Search anything..." value="' + safe(state.query) + '" autocomplete="off"><kbd>Ctrl K</kbd></label>' +
         '<button class="top-action" data-action="new" aria-label="Create note">＋ <span>New note</span></button><button class="icon-button theme-button" data-action="theme" aria-label="Toggle light and dark theme">' + (state.theme === "dark" ? "☼" : "☾") + '</button>' +
-      '</header>' + content +
+      '</header>' +
+      (saveBlocked ? '<div class="save-warning" role="alert"><span>' + safe(saveError) + ' Export a backup before leaving this tab.</span><button data-action="export">Export unsaved notes</button><button data-action="reload">Reload saved version</button></div>' : '') +
+      content +
       '<div class="mobile-bottom" aria-label="Mobile navigation">' + navButton("home", "Home", "⌂") + navButton("notes", "Notes", "▤") + navButton("tasks", "Tasks", "✓") + navButton("favorites", "Saved", "★") + '<button class="nav-link" data-action="settings"><span class="nav-icon">⚙</span>Settings</button></div>' +
     '</div></div><div id="toast" role="status" aria-live="polite" hidden></div>' +
     '<input id="importFile" type="file" accept="application/json,.json" hidden>' +
@@ -144,12 +184,12 @@ function editor(note) {
     '<button class="icon-button" data-action="duplicate" aria-label="Duplicate note" title="Duplicate note">⧉</button>' +
     '<button class="icon-button" data-action="archive" aria-label="Archive note" title="Archive note">◫</button>' +
     '<button class="icon-button danger" data-action="trash" aria-label="Move note to trash" title="Move to trash">♻</button></div></div>' +
-    '<input class="editor-title" id="noteTitle" maxlength="180" aria-label="Note title" value="' + safe(note.title) + '" placeholder="Untitled note">' +
+    '<input class="editor-title" id="noteTitle" maxlength="180" aria-label="Note title" value="' + safe(note.title) + '" placeholder="Untitled note" ' + (saveBlocked ? 'disabled' : '') + '>' +
     '<div class="editor-meta"><label>FOLDER <select id="parentSelect" aria-label="Parent note">' + parentChoices + '</select></label>' +
-    '<label>TAGS <input id="noteTags" aria-label="Comma-separated tags" value="' + safe(note.tags.join(", ")) + '" placeholder="Add tags, separated by commas"></label></div>' +
+    '<label>TAGS <input id="noteTags" aria-label="Comma-separated tags" value="' + safe(note.tags.join(", ")) + '" placeholder="Add tags, separated by commas" ' + (saveBlocked ? 'disabled' : '') + '></label></div>' +
     (note.type === "task" ? '<div class="task-bar"><label><input type="checkbox" id="taskDone" ' + (note.completed ? "checked" : "") + '> Completed</label><label>Due <input type="date" id="taskDue" value="' + safe(note.dueDate) + '"></label></div>' : "") +
     '<div class="editor-toolbar"><div class="tab-buttons" role="group" aria-label="Editor mode"><button data-action="edit" class="' + (!state.preview ? "active" : "") + '" aria-pressed="' + (!state.preview) + '">✎ Write</button><button data-action="preview" class="' + (state.preview ? "active" : "") + '" aria-pressed="' + state.preview + '">◉ Preview</button></div><span>Markdown · [[linked notes]]</span></div>' +
-    (state.preview ? '<div class="markdown-preview" id="previewOutput">' + simpleMarkdown(note.body) + '</div>' : '<textarea id="noteBody" class="editor-body" aria-label="Note body" spellcheck="true" placeholder="Start writing here. Use # headings, **bold**, or [[Note title]] to connect ideas.">' + safe(note.body) + '</textarea>') +
+    (state.preview ? '<div class="markdown-preview" id="previewOutput">' + simpleMarkdown(note.body) + '</div>' : '<textarea id="noteBody" class="editor-body" aria-label="Note body" spellcheck="true" ' + (saveBlocked ? 'disabled' : '') + ' placeholder="Start writing here. Use # headings, **bold**, or [[Note title]] to connect ideas.">' + safe(note.body) + '</textarea>') +
     '<div class="editor-footer"><span>' + note.body.trim().split(/\s+/).filter(Boolean).length + ' words</span><span>Created ' + safe(date(note.createdAt)) + '</span></div>' +
     '<div class="backlinks"><strong>↗ Linked from ' + links.length + ' note' + (links.length === 1 ? "" : "s") + '</strong>' + (links.length ? links.map(n => '<button data-note="' + safe(n.id) + '">' + safe(n.title) + '</button>').join("") : '<small>Write [[ ' + safe(note.title) + ' ]] without spaces in another note to create a backlink.</small>') + '</div></div>';
 }
@@ -178,16 +218,32 @@ function exportFile() {
   } catch (error) { notify(error.message, true); }
 }
 async function importFile(file) {
-  if (!file || file.size > 22_000_000) return notify("Backup exceeds the supported size limit.", true);
+  if (saveBlocked) return notify("Export unsaved edits before importing or reloading.", true);
+  if (!file) return;
+  if (file.size > 22_000_000) return notify("Backup exceeds the supported size limit.", true);
   try {
     const backup = validateSnapshot(JSON.parse(await file.text()));
     if (!window.confirm("Replace all notes in this browser with " + backup.notes.length + " imported notes? Export a backup first.")) return;
-    clearTimeout(saveTimer);
-    await saveChain.catch(() => {});
-    state.notes = backup.notes; state.selectedId = null; state.view = "home";
-    await writeState({ version: SCHEMA_VERSION, notes: state.notes, selectedId: null, theme: state.theme });
-    render(); notify("Backup imported successfully.");
-  } catch (error) { notify("Import rejected: " + error.message, true); }
+    await flushSave();
+    if (saveBlocked) return;
+    // Persist atomically BEFORE replacing in-memory notes. A stale import cannot overwrite another tab.
+    const revision = await writeState({
+      version: SCHEMA_VERSION, notes: backup.notes, selectedId: null, theme: state.theme
+    }, savedRevision);
+    savedRevision = revision;
+    state.notes = backup.notes;
+    state.selectedId = null;
+    state.view = "home";
+    render();
+    notify("Backup imported and saved.");
+  } catch (error) {
+    if (error?.code === "NOTEBOOK_STORAGE_CONFLICT") {
+      saveBlocked = true;
+      saveError = "Another tab saved newer data. Your current edits were not overwritten.";
+      render();
+    }
+    notify("Import rejected: " + error.message, true);
+  }
 }
 root.addEventListener("click", event => {
   const link = event.target.closest("[data-link]");
@@ -216,6 +272,7 @@ root.addEventListener("click", event => {
       if (note) { patch(state.view === "trash" ? { trashed: false } : { archived: false }, false); state.view = "notes"; render(); }
       break;
     case "duplicate":
+      if (saveBlocked) return notify("Export unsaved edits before editing.", true);
       if (note) {
         const copy = makeNote({ id: uid(), title: "Copy of " + note.title, parentId: note.parentId, type: note.type });
         copy.body = note.body; copy.tags = [...note.tags];
@@ -226,7 +283,8 @@ root.addEventListener("click", event => {
     case "theme": state.theme = state.theme === "dark" ? "light" : "dark"; queueSave(); render(); break;
     case "settings": document.getElementById("settingsDialog")?.showModal(); break;
     case "export": exportFile(); break;
-    case "import": document.getElementById("importFile")?.click(); break;
+    case "import": if (saveBlocked) return notify("Export unsaved changes first.", true); document.getElementById("importFile")?.click(); break;
+    case "reload": if (window.confirm("Unsaved edits in this tab will be lost unless you export them. Reload the last successfully saved version?")) window.location.reload(); break;
   }
 });
 root.addEventListener("input", event => {
@@ -253,7 +311,7 @@ root.addEventListener("change", event => {
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); create(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); document.getElementById("globalSearch")?.focus(); }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); queueSave(); notify("Saving locally."); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); flushSave(); if (!saveBlocked) notify("Saving locally…"); }
 });
 async function boot() {
   try {
@@ -261,6 +319,7 @@ async function boot() {
     if (saved) {
       const clean = validateSnapshot(saved);
       state.notes = clean.notes;
+      savedRevision = Number.isSafeInteger(saved.revision) && saved.revision >= 0 ? saved.revision : 0;
       state.selectedId = state.notes.some(n => n.id === saved.selectedId && !n.trashed) ? saved.selectedId : null;
       state.theme = saved.theme === "light" ? "light" : "dark";
     }
@@ -269,5 +328,9 @@ async function boot() {
   } catch (error) {
     root.innerHTML = '<div class="fatal"><h1>Could not open your local notebook</h1><p>' + safe(error.message) + '</p><p>No existing data was overwritten. Check browser storage settings and reload.</p></div>';
   }
-}
+} 
+// Browser backgrounding is a best-effort flush; the revision check still enforces safe writes.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") void flushSave();
+});
 boot();
