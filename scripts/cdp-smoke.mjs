@@ -79,7 +79,7 @@ try {
   });
   await command("Runtime.enable");
   await command("Page.enable");
-  await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/browser-smoke.html" });
+  await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/browser-smoke.html?notebook-smoke=enabled" });
   const result = await waitFor(async () => {
     const evaluation = await command("Runtime.evaluate", {
       expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('output')?.textContent||''})",
@@ -175,7 +175,7 @@ try {
     if (!limited.overrideActive || limited.quota > quotaSize + 1) {
       throw Error("Chromium did not activate the test origin quota override");
     }
-    await command("Page.navigate", { url: testOrigin + "/test/quota-smoke.html" });
+    await command("Page.navigate", { url: testOrigin + "/test/quota-smoke.html?notebook-smoke=enabled" });
     const quotaResult = await waitFor(async () => {
       const evaluation = await command("Runtime.evaluate", {
         expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('result')?.textContent||''})",
