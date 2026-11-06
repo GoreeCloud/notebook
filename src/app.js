@@ -107,7 +107,9 @@ function flushSave() {
       saveBlocked = true;
       saveError = error?.code === "NOTEBOOK_STORAGE_CONFLICT"
         ? "Another tab has newer changes. Your edits are still in this tab but were NOT saved."
-        : "This browser could not save your notes. Your edits remain in this tab but were NOT saved.";
+        : error?.name === "QuotaExceededError"
+          ? "The browser rejected this save because its storage quota was exceeded. Your edits remain in this tab but were NOT saved."
+          : "This browser could not save your notes. Your edits remain in this tab but were NOT saved.";
       render();
       notify(saveError + " Export a backup before reloading.", true);
     }
