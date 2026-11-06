@@ -22,11 +22,11 @@ jobs:
       - name: Verify allowlisted static release bundle
         run: |
           npm run build:release
-          for file in index.html manifest.webmanifest sw.js assets/styles.css assets/icon.svg src/app.js src/model.js src/storage.js src/backup.js; do
+          for file in LICENSE index.html manifest.webmanifest sw.js assets/styles.css assets/icon.svg src/app.js src/model.js src/storage.js src/backup.js; do
             test -s "dist/$file"
             cmp "$file" "dist/$file"
           done
-          test "$(find dist -type f | wc -l)" -eq 9
+          test "$(find dist -type f | wc -l)" -eq 10
           test ! -e dist/test
           test ! -e dist/scripts
           test ! -e dist/docs
