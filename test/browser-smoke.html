@@ -11,7 +11,9 @@ const out = document.getElementById("output");
 const check = (condition, description) => { if (!condition) throw new Error(description); };
 const isExplicitLocalTest = location.protocol === "http:" &&
   location.hostname === "127.0.0.1" &&
-  new URLSearchParams(location.search).get("notebook-smoke") === "enabled";
+  typeof window.__goreecloudNotebookSmokeToken === "string" &&
+  window.__goreecloudNotebookSmokeToken.length >= 32 &&
+  new URLSearchParams(location.search).get("notebook-smoke") === window.__goreecloudNotebookSmokeToken;
 if (!isExplicitLocalTest) {
   document.documentElement.dataset.testResult = "REFUSED";
   throw new Error("Destructive Notebook test refused outside an explicitly marked local test URL.");
