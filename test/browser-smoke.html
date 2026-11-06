@@ -223,6 +223,7 @@ try {
     return nativeObjectUrl.call(this, blob);
   };
   doc.querySelector('[data-action="export"]').click();
+  await until(() => Boolean(exportedBlob));
   check(Boolean(exportedBlob), "Export action did not produce a JSON backup");
   const exportedData = JSON.parse(await exportedBlob.text());
   check(exportedData.version === SCHEMA_VERSION &&
@@ -270,6 +271,33 @@ try {
     "Failed write changed the active Notebook workspace");
   check(JSON.stringify(recoveryAfterCloneFailure) === JSON.stringify(recoveryBeforeCloneFailure),
     "Failed write changed the recovery checkpoint");
+
+  // A standard gzip JSON file must import and undo through the user interface.
+  const gzipNote = makeNote({ id: "gzipnote1", title: "Compressed restore" });
+  gzipNote.body = "Restored from a standard gzip archive";
+  const rawGzipSource = new Blob([JSON.stringify({ version: SCHEMA_VERSION, notes: [gzipNote] })]);
+  const zipped = await new Response(rawGzipSource.stream().pipeThrough(
+    new doc.defaultView.CompressionStream("gzip")
+  )).blob();
+  const gzipFile = new doc.defaultView.File([zipped], "notebook.json.gz", { type: "application/gzip" });
+  const compressedTransfer = new doc.defaultView.DataTransfer();
+  compressedTransfer.items.add(gzipFile);
+  const gzipInput = doc.getElementById("importFile");
+  gzipInput.files = compressedTransfer.files;
+  gzipInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  const compressedRestored = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === 1 && snapshot.notes[0].id === "gzipnote1" && snapshot;
+  });
+  check(compressedRestored.notes[0].body === gzipNote.body, "Gzip restore lost note contents");
+  const settingsForUndo = doc.getElementById("settingsDialog");
+  if (!settingsForUndo.open) doc.querySelector('[data-action="settings"]').click();
+  doc.querySelector('[data-action="recover-import"]').click();
+  await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === originalRestored.notes.length &&
+      snapshot.notes.some(note => note.id === acceptedId);
+  });
 
   // Keyboard navigation and authoring shortcuts must be functional without a pointer.
   doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
