@@ -163,6 +163,32 @@ try {
     await capture("editor-light-tablet");
     console.log("PASS: Responsive layouts have no horizontal overflow at 320px, 390px and 768px.");
   }
+
+  // Chrom(e|ium)'s real quota manager is constrained only in this disposable profile.
+  // This is stronger than mocking IDBObjectStore.put, but not physical disk exhaustion.
+  const testOrigin = "http://127.0.0.1:" + server.address().port;
+  const quotaBefore = await command("Storage.getUsageAndQuota", { origin: testOrigin });
+  const quotaSize = Math.ceil(quotaBefore.usage) + 4096;
+  await command("Storage.overrideQuotaForOrigin", { origin: testOrigin, quotaSize });
+  try {
+    const limited = await command("Storage.getUsageAndQuota", { origin: testOrigin });
+    if (!limited.overrideActive || limited.quota > quotaSize + 1) {
+      throw Error("Chromium did not activate the test origin quota override");
+    }
+    await command("Page.navigate", { url: testOrigin + "/test/quota-smoke.html" });
+    const quotaResult = await waitFor(async () => {
+      const evaluation = await command("Runtime.evaluate", {
+        expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('result')?.textContent||''})",
+        returnByValue: true
+      });
+      const value = evaluation.result?.value;
+      return value?.status === "PASS" || value?.status === "FAIL" ? value : null;
+    }, 30000);
+    if (quotaResult.status !== "PASS") throw Error(quotaResult.details);
+    console.log(quotaResult.details);
+  } finally {
+    await command("Storage.overrideQuotaForOrigin", { origin: testOrigin });
+  }
 } catch (error) {
   console.error("Browser smoke failed:", error.message);
   for (const detail of exceptions.slice(-3)) console.error(detail);
