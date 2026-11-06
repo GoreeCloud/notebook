@@ -170,6 +170,21 @@ try {
   }
 
 
+  // The optional static release candidate must actually boot with only allowlisted assets.
+  // CI builds dist/ first; direct local browser smoke runs can omit this optional check.
+  if (existsSync(join(root, "dist", "index.html"))) {
+    await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/dist/index.html" });
+    await waitFor(async () => {
+      const r = await command("Runtime.evaluate", {
+        expression: "({home: !!document.querySelector('.content.overview'), action: !!document.querySelector('[data-action=\"new\"]'), title: document.title})",
+        returnByValue: true
+      });
+      const value = r.result?.value;
+      return value?.home && value.action && value.title === "GoreeCloud Notebook";
+    }, 12000);
+    console.log("PASS: packaged allowlisted dist/ PWA loads and renders its home screen.");
+  }
+
   // Browser test fixtures contain destructive synthetic-data operations. They must
   // refuse plain URLs on any hosted site, including accidental direct navigation.
   for (const filename of ["browser-smoke.html", "quota-smoke.html"]) {
