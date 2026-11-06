@@ -226,6 +226,37 @@ try {
   check(!(await readState()).notes.some(note => note.title === "Outdated title"),
         "Read-only cross-tab guard allowed a stale editor to replace a note title");
 
+  // When BroadcastChannel is unavailable, a returning tab must re-read the
+  // authoritative IndexedDB revision before allowing stale edits. This iframe
+  // uses an isolated JS realm with the channel API deliberately disabled.
+  const fallbackFrame = document.createElement("iframe");
+  fallbackFrame.title = "Notebook foreground fallback without BroadcastChannel";
+  const scriptStart = "<scr" + "ipt>";
+  const moduleStart = '<scr' + 'ipt type="module" src="/src/app.js">';
+  const scriptEnd = "</scr" + "ipt>";
+  fallbackFrame.srcdoc = '<!doctype html><html><head><base href="' + location.origin +
+    '/"></head><body><div id="app"></div>' + scriptStart +
+    'Object.defineProperty(window,"BroadcastChannel",{value:undefined,configurable:true});' +
+    scriptEnd + moduleStart + scriptEnd + "</body></html>";
+  document.body.append(fallbackFrame);
+  const fallbackDoc = await until(() =>
+    fallbackFrame.contentDocument?.querySelector(".content.overview") && fallbackFrame.contentDocument);
+  check(typeof fallbackFrame.contentWindow.BroadcastChannel === "undefined",
+    "Fallback frame did not disable BroadcastChannel");
+  const newerBody = "Changed again to verify refocus fallback";
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const firstTabEditor = doc.getElementById("noteBody");
+  firstTabEditor.value = newerBody;
+  firstTabEditor.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body === newerBody));
+  check(!fallbackDoc.querySelector(".save-warning"),
+    "No-BroadcastChannel tab was unexpectedly notified before regaining focus");
+  fallbackFrame.contentWindow.dispatchEvent(new Event("focus"));
+  await until(() => fallbackDoc.querySelector(".save-warning"));
+  check(fallbackDoc.querySelector(".save-warning")?.textContent.includes("read-only"),
+    "Refocus did not detect a newer saved workspace without BroadcastChannel");
+
   // Browser import: validate the file and replace the snapshot atomically.
   const fromBackup = makeNote({ id: "restored1", title: "Restored from backup" });
   fromBackup.body = "My recovered note";
