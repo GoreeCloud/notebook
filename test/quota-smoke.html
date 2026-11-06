@@ -9,6 +9,14 @@ import { makeNote, SCHEMA_VERSION } from "../src/model.js";
 
 const output = document.getElementById("result");
 const check = (value, message) => { if (!value) throw Error(message); };
+const isExplicitLocalTest = location.protocol === "http:" &&
+  location.hostname === "127.0.0.1" &&
+  new URLSearchParams(location.search).get("notebook-smoke") === "enabled";
+if (!isExplicitLocalTest) {
+  document.documentElement.dataset.testResult = "REFUSED";
+  throw new Error("Destructive Notebook test refused outside an explicitly marked local test URL.");
+}
+
 try {
   const saved = await readState();
   const checkpoint = await readRecoveryState();
