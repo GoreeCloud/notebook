@@ -25,6 +25,7 @@ let enqueuedNumber = 0;
 let persistedGeneration = 0;
 let saveBlocked = false;
 let saveError = "";
+let workspaceReady = false;
 const safe = escapeHtml;
 const uid = () => crypto.randomUUID().replace(/-/g, "");
 const selected = () => state.notes.find(note => note.id === state.selectedId) || null;
@@ -94,6 +95,10 @@ async function requestPersistentStorage() {
 async function onOtherTabCommitted(revision) {
   // Broadcasts are only hints. Re-read IndexedDB to confirm the actual committed
   // revision, so a forged or delayed message cannot block the editor.
+  if (!workspaceReady || saveBlocked || revision <= savedRevision) return;
+  // Wait for this tab's in-flight write to finish before comparing revisions.
+  // An own successful commit must never be mistaken for somebody else's change.
+  await saveChain;
   if (saveBlocked || revision <= savedRevision) return;
   try {
     const latest = await readState();
@@ -488,6 +493,7 @@ async function boot() {
       state.theme = saved.theme === "light" ? "light" : "dark";
     }
     render();
+    workspaceReady = true;
     subscribeToWorkspaceRevisions(onOtherTabCommitted);
     if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./sw.js").catch(() => {});
   } catch (error) {
@@ -505,5 +511,9 @@ window.addEventListener("beforeunload", event => {
 // Browser backgrounding is a best-effort flush; the revision check still enforces safe writes.
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") void flushSave();
+  else void onOtherTabCommitted(Number.MAX_SAFE_INTEGER);
 });
+// Also check on return to the window for browsers that omit BroadcastChannel,
+// and when a tab missed messages while frozen or suspended.
+window.addEventListener("focus", () => { void onOtherTabCommitted(Number.MAX_SAFE_INTEGER); });
 boot();
