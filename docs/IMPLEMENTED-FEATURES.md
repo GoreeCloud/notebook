@@ -12,7 +12,7 @@
 | Task notes with completion and due dates | src/app.js, src/model.js | Chromium UI task completion/due-date scenario passed |
 | Wiki links, stable-ID references, renamed-note resolution and backlinks | src/model.js, src/app.js | Model unit test and Chromium note-renaming/link-opening scenario passed (run 42245914584) |
 | Safe subset Markdown preview | src/app.js | Syntax checked; not full CommonMark |
-| JSON export, validated import, one-step local pre-import undo and oversized-backup warning | src/model.js, src/storage.js, src/app.js | Chromium valid/invalid import, export content, rollback and stale replacement rejection passed; 22 MB import boundary unit-tested |
+| Portable JSON and gzip-compressed JSON backup, bounded large-file restore and one-step import undo | src/model.js, src/backup.js, src/storage.js, src/app.js | Node tests cover gzip round-trip above 22 MB, malformed files and bounded decompression; Chromium tested gzip import/undo. Plain JSON ≤22 MB; gzip ≤64 MB decompressed. Full device-quota acceptance pending |
 | Responsive dashboard and dark/light design | index.html, assets/styles.css | Six before/after Chromium screenshots reviewed; wrapped mobile title and plus glyph defects corrected; full visual acceptance pending |
 | Approximate browser-origin storage quota and optional persistent-storage request | src/app.js | Chromium verified settings control and browser result reporting; storage persistence is never assumed (run 42293110734) |
 | PWA metadata and offline shell caching | manifest.webmanifest, sw.js | Chromium reopened the cached shell with networking disabled; native/device install pending |
