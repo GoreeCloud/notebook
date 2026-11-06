@@ -153,6 +153,15 @@ try {
     }
     console.log("PASS: Responsive note heading wraps without overflow at 390px.");
     await capture("editor-light-mobile");
+    await viewport(320, 640, true);
+    const narrow = await evaluate("(()=>{const e=document.getElementById('noteTitle');return e?{width:e.clientWidth,scrollWidth:e.scrollWidth,height:e.clientHeight,scrollHeight:e.scrollHeight}:null})()");
+    if (!narrow || narrow.scrollWidth > narrow.width + 2 || narrow.scrollHeight > narrow.height + 2) {
+      throw Error("Small mobile note title is clipped: " + JSON.stringify(narrow));
+    }
+    await capture("editor-light-small-mobile");
+    await viewport(768, 1024, false);
+    await capture("editor-light-tablet");
+    console.log("PASS: Responsive layouts have no horizontal overflow at 320px, 390px and 768px.");
   }
 } catch (error) {
   console.error("Browser smoke failed:", error.message);
