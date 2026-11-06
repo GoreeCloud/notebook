@@ -35,8 +35,14 @@ PY
   }
 if ! grep -q 'data-test-result="PASS"' "$TMP/dom.html"; then
   echo "Browser smoke failed or did not complete:" >&2
-  grep -o 'FAIL:[^<]*' "$TMP/dom.html" | head -5 >&2 || true
-  tail -35 "$TMP/chrome.log" >&2
+  python3 - "$TMP/dom.html" <<'PY'
+import html, re, sys
+source = open(sys.argv[1], encoding="utf-8").read()
+all_results = re.findall(r'<pre id="output">([\s\S]*?)</pre>', source)
+print("DOM test output:", html.unescape(all_results[-1])[-2800:] if all_results else "No <pre id=output> found")
+print("HTML state:", re.search(r'<html[^>]*>', source).group(0) if '<html' in source else "No HTML root")
+PY
+  tail -8 "$TMP/chrome.log" >&2
   exit 1
 fi
 echo "Notebook browser smoke passed."
