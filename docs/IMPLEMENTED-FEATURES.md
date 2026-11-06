@@ -1,11 +1,11 @@
 # GoreeCloud Notebook — Implemented Features (Development Preview)
 
-**Status:** Implemented in source in feature branch, with passing JavaScript syntax, twelve model tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42293110734). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
+**Status:** Implemented in source in feature branch, with passing JavaScript syntax, twelve model tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42294300602). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
 
 | Capability | Owning source | Verification |
 | --- | --- | --- |
 | Note creation, title/body editing and debounced local saves | src/app.js, src/storage.js | Chromium smoke: create, edit and persist passed |
-| IndexedDB persistence with revision checks and unsaved-exit protection | src/storage.js, src/app.js | Chromium verifies persisted notes, stale-tab conflict warning, atomic clone failure rollback, and leave warning only while unsaved (run 42293110734) |
+| IndexedDB persistence with revision checks, quota-error reporting and unsaved-exit protection | src/storage.js, src/app.js | Chromium confirms stale-tab rejection, atomic clone and simulated quota failure rollback, retained unsaved export, and conditional leave warning (run 42294300602) |
 | Nested hierarchy, relocation and cycle prevention | src/model.js, src/app.js | Model cycle checks and Chromium nested-note create/move/parent-option regression passed |
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
