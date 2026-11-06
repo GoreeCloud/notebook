@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>GoreeCloud Notebook browser smoke test</title>
+<body data-smoke="running"><h1>Notebook browser smoke test</h1><pre id="output">Running…</pre></body>
+<script type="module">
+import { readState, writeState } from "../src/storage.js";
+import { SCHEMA_VERSION, makeNote } from "../src/model.js";
+
+const out = document.getElementById("output");
+const check = (condition, description) => { if (!condition) throw new Error(description); };
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function until(fn, timeout = 8000) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    const value = await fn();
+    if (value) return value;
+    await delay(100);
+  }
+  throw new Error("Timed out waiting for browser check");
+}
+function finish(ok, details) {
+  document.documentElement.dataset.testResult = ok ? "PASS" : "FAIL";
+  document.body.dataset.smoke = ok ? "passed" : "failed";
+  out.textContent = details;
+}
+try {
+  check((await readState()) === null, "Expected clean browser profile");
+  const seed = makeNote({ id: "smoke001", title: "Initial idea" });
+  const first = { version: SCHEMA_VERSION, notes: [seed] };
+  const rev1 = await writeState(first, 0);
+  check(rev1 === 1 && (await readState()).revision === 1, "Initial write revision failed");
+
+  // Simultaneous stale-tab writes: exactly one transaction may win.
+  const changes = [1, 2].map(i => writeState({
+    version: SCHEMA_VERSION, notes: [{ ...seed, body: "Concurrent change " + i }]
+  }, rev1));
+  const results = await Promise.allSettled(changes);
+  check(results.filter(r => r.status === "fulfilled").length === 1, "Expected one winning write");
+  const loss = results.filter(r => r.status === "rejected");
+  check(loss.length === 1 && loss[0].reason.code === "NOTEBOOK_STORAGE_CONFLICT",
+        "Expected stale writer to report a conflict");
+  const saved = await readState();
+  check(saved.revision === 2, "Atomic revision should increase once");
+  check(saved.notes[0].body.startsWith("Concurrent change "), "Winner content missing");
+
+  // Load the actual application in an iframe and exercise its real UI.
+  const frame = document.createElement("iframe");
+  frame.title = "Notebook interface test";
+  frame.src = "../index.html";
+  document.body.append(frame);
+  const doc = await until(() => frame.contentDocument?.querySelector(".content.overview") && frame.contentDocument);
+  const newButton = doc.querySelector('[data-action="new"]');
+  check(Boolean(newButton), "New-note button not rendered");
+  newButton.click();
+  const title = await until(() => doc.getElementById("noteTitle"));
+  title.value = "Browser acceptance note";
+  title.dispatchEvent(new Event("input", { bubbles: true }));
+  const body = doc.getElementById("noteBody");
+  check(Boolean(body), "Note editor missing");
+  body.value = "A local-first saved idea [[Initial idea]].";
+  body.dispatchEvent(new Event("input", { bubbles: true }));
+  const persisted = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.find(note => note.title === "Browser acceptance note" && note.body.includes("local-first")) && snapshot;
+  });
+  check(persisted.notes.length === 2, "New note was not persisted");
+
+  // Reopen the UI in a new page context; persisted edits must survive.
+  const second = document.createElement("iframe");
+  second.title = "Notebook second tab test";
+  second.src = "../index.html";
+  document.body.append(second);
+  const secondDoc = await until(() => second.contentDocument?.querySelector(".content.overview") && second.contentDocument);
+  secondDoc.querySelector('[data-view="notes"]').click();
+  check(secondDoc.body.textContent.includes("Browser acceptance note"), "Saved note unavailable after reopen");
+
+  // First tab saves a newer version; stale second tab must show a persistent warning.
+  body.value = "Changed in first tab after second opened";
+  body.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note => note.body.includes("Changed in first tab")));
+  secondDoc.querySelector('[data-note="smoke001"]').click();
+  const secondTitle = secondDoc.getElementById("noteTitle");
+  secondTitle.value = "Outdated title";
+  secondTitle.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(() => secondDoc.querySelector(".save-warning"));
+  check((await readState()).notes.some(note => note.body.includes("Changed in first tab")),
+        "Conflict incorrectly overwrote newer data");
+
+  finish(true, "PASS: IndexedDB revision compare-and-swap, local editor autosave, reload recovery and stale-tab warning.");
+} catch (error) {
+  console.error(error);
+  finish(false, "FAIL: " + (error?.stack || error));
+}
+</script>
+</html>
