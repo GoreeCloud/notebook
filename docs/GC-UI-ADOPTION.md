@@ -16,15 +16,15 @@
 
 1. `index.html` loads the exact pinned GC UI CSS **before** Notebook's local `assets/styles.css`. All styles stay local and within the current CSP.
 2. Notebook's existing `--gc-brand`, surface, text, outline, success, danger, radius, spacing-relevant motion and typography values now resolve through the versioned `--gc-v1-*` Foundation properties. This is a **compatibility bridge**, not a rewrite of the existing UI.
-3. `src/app.js` now synchronizes `data-gc-mode` alongside the persisted Notebook `data-theme`, so the upstream light/dark palettes actually switch. Initial HTML selects dark before the app boots.
+3. `src/app.js` now synchronizes `data-gc-mode` alongside the persisted Notebook `data-theme`, so the upstream light/dark palettes actually switch. Initial HTML selects dark before the app boots. It also tracks the operating system's `(prefers-contrast: more)` preference through `data-gc-contrast`, applying the released high-contrast palette without rewriting user settings or note content.
 4. `sw.js` caches the new CSS with its allowlisted shell and increments the cache version to avoid retaining an obsolete theme.
 5. The review-only `dist/` now includes the pinned stylesheet, MIT `LICENSE`, the Apache-2.0 license and attribution notice. The static bundle excludes `test/`, `scripts/` and other authoring material.
-6. Tests verify the vendored file's **exact Git blob SHA**, license, token bridge, light/dark DOM-mode switching and the offline/static package requirements.
+6. Tests verify the vendored file's **exact Git blob SHA**, license, token bridge, light/dark DOM-mode switching, canonical keyboard focus-ring styles, system high-contrast preference changes and offline/static package requirements (GitHub Actions run #326 passed the preference regression).
 
 ## Explicit limits
 
 - Notebook retains product-specific layouts, copy, components and some purposeful hard-coded decorative colors (such as the dashboard hero). Only the mapped semantic foundation roles are certified as drawn from this upstream release.
-- The upstream experimental component library, full 100-principle review, high-contrast interaction design, accessibility audit and responsive/visual acceptance **are not yet completed**.
+- The upstream experimental component library, full 100-principle review, complete high-contrast interaction and screen-reader audits, plus product-wide responsive/visual acceptance **are not yet completed**. The automatic system high-contrast palette change is tested but does not establish full high-contrast acceptance.
 - The upstream project's `package.json` can describe the wider monorepo as `0.2.0-alpha.1`. The **Foundations 1.0.1 release tag**, rather than that monorepo package's development version, identifies the pinned released CSS and license.
 - GC UI may update later. Source upgrades must be explicitly reviewed, re-pinned, relicensed as appropriate and tested before replacing the vendored copy. No automatic CDN, npm or background updates are implied.
 
