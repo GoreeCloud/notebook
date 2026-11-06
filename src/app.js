@@ -322,6 +322,7 @@ root.addEventListener("click", event => {
       break;
     case "duplicate":
       if (saveBlocked) return notify("Export unsaved edits before editing.", true);
+      if (state.notes.length >= MAX_NOTES) return notify("Note limit reached; duplication is unavailable.", true);
       if (note) {
         const copy = makeNote({ id: uid(), title: "Copy of " + note.title, parentId: note.parentId, type: note.type });
         copy.body = note.body; copy.tags = [...note.tags];
