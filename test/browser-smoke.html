@@ -4,7 +4,7 @@
 <title>GoreeCloud Notebook browser smoke test</title>
 <body data-smoke="running"><h1>Notebook browser smoke test</h1><pre id="output">Running…</pre></body>
 <script type="module">
-import { readState, writeState } from "../src/storage.js";
+import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "../src/storage.js";
 import { SCHEMA_VERSION, makeNote } from "../src/model.js";
 
 const out = document.getElementById("output");
@@ -26,6 +26,7 @@ function finish(ok, details) {
 }
 try {
   check((await readState()) === null, "Expected clean browser profile");
+  check((await readRecoveryState()) === null, "Expected no existing import checkpoint");
   // An app's service worker must not erase other same-origin application caches.
   const unrelatedCache = await caches.open("unrelated-app-test-cache");
   await unrelatedCache.put("./unrelated-test-resource", new Response("preserve"));
@@ -170,6 +171,9 @@ try {
     return snapshot.notes.length === 1 && snapshot.notes[0].id === "restored1" && snapshot;
   });
   check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
+  const importCheckpoint = await readRecoveryState();
+  check(importCheckpoint && importCheckpoint.notes.some(note => note.title === "Browser acceptance note"),
+    "Import did not capture the previously saved workspace");
   // Reject malformed backups without replacing a successfully restored workspace.
   const broken = new doc.defaultView.File(
     ['{"version":1,"notes":[{"id":"invalid","body":false}]}'],
@@ -201,6 +205,27 @@ try {
     "Export backup is incomplete");
   doc.defaultView.URL.createObjectURL = nativeObjectUrl;
 
+  // Restore the prior workspace through the settings UI. Undo is itself atomic and reversible.
+  doc.querySelector('[data-action="settings"]').click();
+  doc.querySelector('[data-action="recover-import"]').click();
+  const originalRestored = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.some(note => note.title === "Browser acceptance note") &&
+      !snapshot.notes.some(note => note.id === "restored1") && snapshot;
+  });
+  check(originalRestored.revision > imported.revision, "Undo did not advance the storage revision");
+  const inverseCheckpoint = await readRecoveryState();
+  check(inverseCheckpoint?.notes.some(note => note.id === "restored1"),
+    "Undo did not retain the just-replaced workspace for another reversal");
+  try {
+    await replaceStateWithRecovery({ version: SCHEMA_VERSION, notes: [] }, imported.revision);
+    throw new Error("Stale import unexpectedly overwrote a newer workspace");
+  } catch (error) {
+    check(error.code === "NOTEBOOK_STORAGE_CONFLICT", "Stale import failed without a revision-conflict error");
+  }
+  check((await readState()).revision === originalRestored.revision,
+    "Rejected stale import changed the saved workspace");
+
   // Wait for the service-worker shell installation before the runner emulates offline networking.
   const activeWorker = await Promise.race([
     frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
@@ -210,7 +235,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
