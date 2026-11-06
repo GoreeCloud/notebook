@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "../src/model.js";
+import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml, supportedBackupSize, MAX_IMPORT_BYTES } from "../src/model.js";
 const note = (id, title, parentId = null) => makeNote({ id, title, parentId });
 test("creates safe defaults and IDs", () => {
   const n = note("root001", "Welcome");
@@ -78,4 +78,13 @@ test("note headings keep one-line semantics even when pasted with line breaks", 
   assert.equal(created.title, "First Second Part");
   const edited = updateNote([created], created.id, { title: "Updated\r\nTitle" })[0];
   assert.equal(edited.title, "Updated Title");
+});
+
+test("backup size guard matches the maximum accepted import size", () => {
+  assert.equal(MAX_IMPORT_BYTES, 22_000_000);
+  assert.equal(supportedBackupSize(0), true);
+  assert.equal(supportedBackupSize(MAX_IMPORT_BYTES), true);
+  assert.equal(supportedBackupSize(MAX_IMPORT_BYTES + 1), false);
+  assert.equal(supportedBackupSize(-1), false);
+  assert.equal(supportedBackupSize(Number.NaN), false);
 });
