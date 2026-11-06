@@ -6,7 +6,7 @@ These features are **not implemented** in the v0.1.0 preview. Priority is based 
 - Expand the existing passing Chromium smoke test beyond note editing, persistence and stale-tab conflict rejection to cover hierarchy move, note links, more edge cases, multiple browser engines and offline installation on supported devices. Chromium smoke already covers search, tasks, archive/trash restoration, JSON import/export and offline shell reopening.
 - Browser/device matrix, keyboard, screen reader and GC UI screenshot-led acceptance.
 - IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), recovery journal, quota handling and verified backups.
-- Stable-ID note links with rename-safe cross-references.
+- Migrate legacy title-based links to the now-verified stable-ID format, with a broken-link report and link-remapping tools; add typed graph relationships.
 - Canonical GC UI token and component integration.
 - Secure import validation, quotas, export verification and privacy review.
 
