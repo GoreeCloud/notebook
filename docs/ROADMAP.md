@@ -2,7 +2,7 @@
 
 | Milestone | Goal | Verification gate |
 | --- | --- | --- |
-| 0.1 development preview | Offline PWA, note hierarchy, editing, search, tasks, backup | Syntax + 9 model tests + targeted Chromium editor/storage/conflict smoke verified; wider UX and visual review pending |
+| 0.1 development preview | Offline PWA, note hierarchy, editing, search, tasks, backup | Syntax + 9 model tests + Chromium editor/storage/conflict, task, search, recovery, import/export and offline shell checks verified; multi-device UX and visual review pending |
 | 0.2 durability | Record-level IndexedDB, migrations, conflict recovery, revisions, tested backups | Recovery, quota, cross-tab merge/reload and migration regression tests |
 | 0.3 knowledge | Stable links, attributes, graph, rich Markdown and collections | Link integrity and graph consistency |
 | 0.4 capture | Attachments, clipping, OCR, reminders, calendar | Input sanitation, media and accessibility tests |
