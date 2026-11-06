@@ -79,8 +79,15 @@ async function persistState(state, expectedRevision, preserveCurrent = false) {
         return;
       }
       nextRevision = actual + 1;
-      if (preserveCurrent && read.result) store.put(read.result, RECOVERY_KEY);
-      store.put({ ...state, revision: nextRevision }, "snapshot");
+      try {
+        if (preserveCurrent && read.result) store.put(read.result, RECOVERY_KEY);
+        store.put({ ...state, revision: nextRevision }, "snapshot");
+      } catch (error) {
+        // A synchronous put failure (e.g. DataCloneError) must not leave a
+        // dangling save promise or partially replace the recovery checkpoint.
+        fail(error);
+        try { tx.abort(); } catch { /* transaction may already be aborted */ }
+      }
     };
     read.onerror = () => fail(read.error || new Error("Could not check the current revision."));
     tx.oncomplete = () => {
