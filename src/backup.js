@@ -21,7 +21,15 @@ export async function createBackup(notes) {
     return { blob: json, extension: ".json", restorable: false,
       reason: "This browser does not support gzip backups. The JSON export exceeds the 22 MB import limit." };
   }
-  const compressed = await new Response(json.stream().pipeThrough(new CompressionStream("gzip"))).blob();
+  let compressed;
+  try {
+    compressed = await new Response(json.stream().pipeThrough(new CompressionStream("gzip"))).blob();
+  } catch {
+    // Preserve the ability to export even when the browser exposes gzip APIs
+    // but compression fails, for example under memory or stream pressure.
+    return { blob: json, extension: ".json", restorable: false,
+      reason: "Gzip compression failed. The JSON exceeds the 22 MB import limit." };
+  }
   const restorable = json.size <= MAX_GZIP_RESTORE_BYTES && compressed.size <= MAX_GZIP_FILE_BYTES;
   return { blob: new Blob([compressed], { type: "application/gzip" }),
     extension: ".json.gz", restorable,
