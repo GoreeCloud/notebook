@@ -260,6 +260,7 @@ function fitTitleEditor(element) {
 }
 function render() {
   document.documentElement.dataset.theme = state.theme;
+  document.documentElement.dataset.gcMode = state.theme;
   const content = state.view === "home" ? home() : collection();
   root.innerHTML = chrome(content);
   fitTitleEditor(document.getElementById("noteTitle"));
