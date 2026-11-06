@@ -19,6 +19,8 @@ jobs:
         run: npm run check
       - name: Model unit tests
         run: npm test
+      - name: Headless browser data-safety smoke
+        run: bash scripts/smoke-browser.sh
       - name: Validate documentation and license
         run: |
           test -s LICENSE
