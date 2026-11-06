@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
+import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, auditNoteLinks, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery, subscribeToWorkspaceRevisions } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
 
@@ -222,8 +222,10 @@ function chrome(content) {
       '<div class="settings-grid"><button data-action="export" class="setting-choice">⇩ <strong>Export backup</strong><small>Portable JSON including your entire note hierarchy</small></button>' +
       '<button data-action="import" class="setting-choice">⇧ <strong>Import backup</strong><small>Replace workspace after validation and confirmation</small></button>' +
       '<button data-action="recover-import" class="setting-choice">↶ <strong>Undo last import</strong><small>Restore your previous locally saved workspace, if available</small></button>' +
+      '<button data-action="audit-links" class="setting-choice">⌁ <strong>Audit note links</strong><small>Find missing, ambiguous and rename-sensitive links without changing notes</small></button>' +
       '<button data-action="protect-storage" class="setting-choice">▣ <strong>Protect local storage</strong><small>Ask this browser to reduce automatic eviction of Notebook data</small></button></div>' +
       '<p class="muted" id="storageStatus" role="status" aria-live="polite">Browser storage status not yet checked.</p>' +
+      '<div class="link-audit-results" id="linkAuditResults" role="status" aria-live="polite" hidden></div>' +
       '<p class="dialog-note">Browser data clearing, private browsing, or storage eviction can erase local notes. The local pre-import checkpoint is not a backup and may disappear if browser storage is cleared. Keep separate protected backups. Cloud sync, encryption and team sharing are not yet implemented.</p>' +
     '</dialog>';
 }
@@ -445,6 +447,26 @@ root.addEventListener("click", event => {
     case "export": exportFile(); break;
     case "import": if (saveBlocked) return notify("Export unsaved changes first.", true); document.getElementById("importFile")?.click(); break;
     case "recover-import": void undoLastImport(); break;
+    case "audit-links": {
+      const report = auditNoteLinks(state.notes);
+      const lines = [
+        "Note links: " + report.links + " across " + report.sourceNotes + " notes",
+        "Permanent ID links: " + report.stable,
+        "Legacy title links: " + report.legacy + " (" + report.convertible + " have a unique target)",
+        "Broken links: " + report.broken,
+        "Ambiguous title links: " + report.ambiguous,
+        "Audit is read-only. Nothing has been changed."
+      ];
+      if (report.examples.length) {
+        lines.push("", "Examples (up to 12):");
+        for (const example of report.examples) {
+          lines.push(example.problem + " in “" + example.sourceTitle + "”: [[" + example.reference + "]]");
+        }
+      }
+      const output = document.getElementById("linkAuditResults");
+      if (output) { output.textContent = lines.join("\n"); output.hidden = false; }
+      break;
+    }
     case "protect-storage": void requestPersistentStorage(); break;
     case "reload": if (window.confirm("Unsaved edits in this tab will be lost unless you export them. Reload the last successfully saved version?")) window.location.reload(); break;
   }
