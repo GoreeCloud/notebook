@@ -66,6 +66,12 @@ try {
   });
   check(persisted.notes.length === 2, "New note was not persisted");
   const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
+  doc.querySelector('[data-action="favorite"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && note.favorite));
+  doc.querySelector('[data-action="duplicate"]').click();
+  await until(async () => (await readState()).notes.some(note =>
+    note.id !== acceptedId && note.title === "Copy of Browser acceptance note" && note.body.includes("local-first")));
+
 
   // Full application search and task controls, not just the pure model.
   const search = doc.getElementById("globalSearch");
@@ -145,7 +151,7 @@ try {
   });
   check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
 
-  finish(true, "PASS: IndexedDB revision conflict, autosave, search, tasks, archive/trash recovery, stale-tab warning and JSON import.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, search, tasks, archive/trash recovery, stale-tab warning and JSON import.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
