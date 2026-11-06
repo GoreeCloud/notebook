@@ -29,6 +29,12 @@ Chromium's experimental DevTools command `Storage.overrideQuotaForOrigin` report
 
 A device-level true-quota test should use an isolated profile and a controlled storage budget, ensure the failure occurs, check both the saved workspace and recovery checkpoint, and avoid operating-system disk exhaustion or other destructive experiments on shared devices.
 
+## Verified release-candidate staging
+
+`npm run build:release` copies an explicit allowlist of **nine PWA runtime assets** and the required MIT `LICENSE` into a new `dist/`. The script refuses to overwrite an existing `dist/`, verifies source paths are regular files, stages into a temporary directory and renames that directory only when every copy succeeded. CI verifies exactly ten resulting files with byte-for-byte comparisons, and checks that no `test/`, `scripts/`, or `docs/` directory is included. No external dependency, upload, hosting or deployment is performed.
+
+The development HTTP server is bound to `127.0.0.1` by default. Reviewing or testing `dist/` is not equivalent to approving a production launch. Any future release review must use the intended hosting controls, validate actual service worker behavior at that scope, and retain rollback options.
+
 ## Release and distribution requirements
 
 - Never deploy or expose destructive test fixtures as a documented feature.
