@@ -5,7 +5,7 @@ These features are **not implemented** in the v0.1.0 preview. Priority is based 
 ## P0 — Acceptance and data integrity
 - Expand the existing passing Chromium smoke test beyond note editing, persistence and stale-tab conflict rejection to cover additional hierarchy edge cases, accessibility, multiple browser engines, restored data under quota pressure and offline installation on supported devices. Chromium smoke now covers nested-note creation/move, permanent links, search, tasks, archive/trash restoration, import/undo/export and offline shell reopening.
 - Browser/device matrix, keyboard, screen reader and complete GC UI screenshot-led acceptance (a targeted before/after Chromium screenshot review is documented in docs/VISUAL-REVIEW.md).
-- IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), multi-version revision recovery beyond the implemented one-step import checkpoint, quota handling and verified external backups.
+- IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), multi-version revision recovery beyond the one-step import checkpoint, full storage-quota exhaustion recovery (basic estimate and persistence request now implemented) and verified external backups.
 - Migrate legacy title-based links to the now-verified stable-ID format, with a broken-link report and link-remapping tools; add typed graph relationships.
 - Canonical GC UI token and component integration.
 - Resolve the 22 MB JSON-import ceiling versus currently unbounded JSON export (large exports warn but are not restorable in v0.1); implement a safe streamed/chunked backup format, quota checks, compatible restore and security review.
