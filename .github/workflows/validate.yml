@@ -38,3 +38,13 @@ jobs:
           test -s docs/IMPLEMENTED-FEATURES.md
           test -s docs/PLANNED-FEATURES.md
           test -s docs/COMPETITIVE-OBJECTIVES.md
+      - name: Stage verified Notebook Markdown sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-markdown-source
+          path: |
+            docs/IMPLEMENTED-FEATURES.md
+            docs/PLANNED-FEATURES.md
+            docs/COMPETITIVE-OBJECTIVES.md
+          if-no-files-found: error
+          retention-days: 3
