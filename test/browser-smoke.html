@@ -181,6 +181,13 @@ try {
     "Export backup is incomplete");
   doc.defaultView.URL.createObjectURL = nativeObjectUrl;
 
+  // Wait for the service-worker shell installation before the runner emulates offline networking.
+  const activeWorker = await Promise.race([
+    frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
+    delay(8000).then(() => null)
+  ]);
+  check(Boolean(activeWorker), "PWA service-worker shell did not become ready");
+
   finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, search, tasks, archive/trash recovery, stale-tab warning and validated JSON backup import/export.");
 } catch (error) {
   console.error(error);
