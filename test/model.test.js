@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stats, validateSnapshot, exportSnapshot, escapeHtml } from "../src/model.js";
+import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "../src/model.js";
 const note = (id, title, parentId = null) => makeNote({ id, title, parentId });
 test("creates safe defaults and IDs", () => {
   const n = note("root001", "Welcome");
@@ -59,4 +59,16 @@ test("rejects unsupported, duplicate, broken or cyclic backups", () => {
 });
 test("escapes HTML-sensitive content", () => {
   assert.equal(escapeHtml('<img src=x onerror="alert(1)">'), "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+});
+
+test("stable note links and backlinks survive target renaming", () => {
+  const target = note("root001", "Original title");
+  const source = { ...note("other01", "Source"), body: "See [[id:root001]]." };
+  const renamed = updateNote([target, source], target.id, { title: "Renamed title" });
+  assert.equal(stableNoteLink(renamed[0]), "[[id:root001]]");
+  assert.equal(resolveNoteLink(renamed, "id:root001")?.title, "Renamed title");
+  assert.equal(resolveNoteLink(renamed, "Renamed title")?.id, "root001");
+  assert.deepEqual(backlinks(renamed, renamed[0]).map(n => n.id), ["other01"]);
+  assert.equal(resolveNoteLink(renamed, "Original title"), null);
+  assert.equal(resolveNoteLink(renamed, "id:missing"), null);
 });
