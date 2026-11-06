@@ -41,7 +41,8 @@ The application uses GoreeCloud UI semantic roles and layout principles. Fallbac
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security](docs/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
-- [Rendered UI review](docs/VISUAL-REVIEW.md) — screenshot-led findings and remaining acceptance gaps.
+- [Rendered UI review](docs/VISUAL-REVIEW.md)
+- [Browser testing and data-safety evidence](docs/TESTING.md) — local-only destructive fixtures; quota limitations. — screenshot-led findings and remaining acceptance gaps.
 
 GoreeShield governs privacy; Wardveil governs cybersecurity; GoreeCloud Mesh governs interoperability; GoreeCloud UI governs design. GoreeCloud Identity is a separate future identity integration boundary. None of their remote integrations is claimed operational in this preview.
 
