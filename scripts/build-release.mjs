@@ -7,9 +7,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(root, "dist");
 const files = Object.freeze([
   "LICENSE",
+  "licenses/GC-UI-APACHE-2.0.txt",
+  "THIRD_PARTY_NOTICES.md",
   "index.html",
   "manifest.webmanifest",
   "sw.js",
+  "assets/gc-ui-foundations.v1.css",
   "assets/styles.css",
   "assets/icon.svg",
   "src/app.js",
