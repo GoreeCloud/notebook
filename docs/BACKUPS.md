@@ -15,7 +15,7 @@ Open **Settings → Export backup**. The export includes all notes, including ar
 
 ## Importing a backup
 
-Open **Settings → Import backup** and select a `.json` or `.json.gz` file. The app validates note IDs, types, body length, hierarchy and backup schema before asking whether to replace the workspace. Only a confirmed, valid import reaches the IndexedDB replacement transaction.
+Open **Settings → Import backup** and select a `.json` or `.json.gz` file. The app validates note IDs, types, body length, hierarchy and backup schema, then displays a **read-only import impact summary** (current and incoming totals; added, modified, unchanged and removed notes). Its comparison includes archived and trashed notes. Matching note IDs are compared using note contents, types, tags and hierarchy rather than volatile timestamps. **Cancel** performs no replacement and leaves the one-step recovery checkpoint unchanged. Only after confirmation can a revision-checked IndexedDB replacement occur. Only a confirmed, valid import reaches the IndexedDB replacement transaction.
 
 - **Plain JSON:** Up to **22,000,000 bytes**.
 - **Gzip JSON:** Up to **66,000,000 compressed bytes**, with an enforced **64,000,000 decompressed-byte limit**. Malformed gzip and oversized decompressed content are rejected before replacement. Gzip import needs the browser's `DecompressionStream` API.
