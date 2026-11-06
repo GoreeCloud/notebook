@@ -1,5 +1,5 @@
 import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
-import { readState, writeState } from "./storage.js";
+import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "./storage.js";
 
 const root = document.getElementById("app");
 const icons = {
@@ -143,8 +143,9 @@ function chrome(content) {
     '<dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle"><form method="dialog" class="dialog-head"><h2 id="settingsTitle">Workspace settings</h2><button class="icon-button" aria-label="Close settings">✕</button></form>' +
       '<p class="muted">Your notes are saved in this browser’s IndexedDB. No GoreeCloud server or AI provider receives this data.</p>' +
       '<div class="settings-grid"><button data-action="export" class="setting-choice">⇩ <strong>Export backup</strong><small>Portable JSON including your entire note hierarchy</small></button>' +
-      '<button data-action="import" class="setting-choice">⇧ <strong>Import backup</strong><small>Replace workspace after validation and confirmation</small></button></div>' +
-      '<p class="dialog-note">Browser data clearing, private browsing, or storage eviction can erase local notes. Keep a separate backup. Cloud sync, encryption and team sharing are not yet implemented.</p>' +
+      '<button data-action="import" class="setting-choice">⇧ <strong>Import backup</strong><small>Replace workspace after validation and confirmation</small></button>' +
+      '<button data-action="recover-import" class="setting-choice">↶ <strong>Undo last import</strong><small>Restore your previous locally saved workspace, if available</small></button></div>' +
+      '<p class="dialog-note">Browser data clearing, private browsing, or storage eviction can erase local notes. The local pre-import checkpoint is not a backup and may disappear if browser storage is cleared. Keep separate protected backups. Cloud sync, encryption and team sharing are not yet implemented.</p>' +
     '</dialog>';
 }
 function noteCard(note) {
@@ -231,7 +232,7 @@ async function importFile(file) {
     await flushSave();
     if (saveBlocked) return;
     // Persist atomically BEFORE replacing in-memory notes. A stale import cannot overwrite another tab.
-    const revision = await writeState({
+    const revision = await replaceStateWithRecovery({
       version: SCHEMA_VERSION, notes: backup.notes, selectedId: null, theme: state.theme
     }, savedRevision);
     savedRevision = revision;
@@ -239,7 +240,7 @@ async function importFile(file) {
     state.selectedId = null;
     state.view = "home";
     render();
-    notify("Backup imported and saved.");
+    notify("Backup imported. The previous workspace can be restored from Settings.");
   } catch (error) {
     if (error?.code === "NOTEBOOK_STORAGE_CONFLICT") {
       saveBlocked = true;
@@ -247,6 +248,34 @@ async function importFile(file) {
       render();
     }
     notify("Import rejected: " + error.message, true);
+  }
+}
+async function undoLastImport() {
+  if (saveBlocked) return notify("Export unsaved changes before attempting recovery.", true);
+  try {
+    const old = await readRecoveryState();
+    if (!old) return notify("No previous workspace checkpoint is available.", true);
+    const valid = validateSnapshot(old);
+    if (!window.confirm("Restore the previous workspace (" + valid.notes.length +
+      " notes)? Your current saved workspace will become the new local recovery checkpoint.")) return;
+    await flushSave();
+    if (saveBlocked) return;
+    const next = await replaceStateWithRecovery({
+      version: SCHEMA_VERSION, notes: valid.notes, selectedId: null, theme: state.theme
+    }, savedRevision);
+    savedRevision = next;
+    state.notes = valid.notes;
+    state.selectedId = null;
+    state.view = "home";
+    render();
+    notify("Previous workspace restored. Export a backup to keep it safe.");
+  } catch (error) {
+    if (error?.code === "NOTEBOOK_STORAGE_CONFLICT") {
+      saveBlocked = true;
+      saveError = "Another tab saved newer data. Your workspace was not replaced.";
+      render();
+    }
+    notify("Recovery failed: " + error.message, true);
   }
 }
 root.addEventListener("click", event => {
@@ -298,6 +327,7 @@ root.addEventListener("click", event => {
     case "settings": document.getElementById("settingsDialog")?.showModal(); break;
     case "export": exportFile(); break;
     case "import": if (saveBlocked) return notify("Export unsaved changes first.", true); document.getElementById("importFile")?.click(); break;
+    case "recover-import": void undoLastImport(); break;
     case "reload": if (window.confirm("Unsaved edits in this tab will be lost unless you export them. Reload the last successfully saved version?")) window.location.reload(); break;
   }
 });
