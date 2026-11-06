@@ -150,8 +150,38 @@ try {
     return snapshot.notes.length === 1 && snapshot.notes[0].id === "restored1" && snapshot;
   });
   check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
+  // Reject malformed backups without replacing a successfully restored workspace.
+  const broken = new doc.defaultView.File(
+    ['{"version":1,"notes":[{"id":"invalid","body":false}]}'],
+    "invalid-backup.json", { type: "application/json" }
+  );
+  const invalidData = new doc.defaultView.DataTransfer();
+  invalidData.items.add(broken);
+  const invalidInput = doc.getElementById("importFile");
+  invalidInput.files = invalidData.files;
+  invalidInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  await until(() => doc.getElementById("toast")?.textContent.includes("Import rejected"));
+  const afterRejectedImport = await readState();
+  check(afterRejectedImport.revision === imported.revision &&
+    afterRejectedImport.notes[0].id === "restored1", "Invalid backup modified stored notes");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, search, tasks, archive/trash recovery, stale-tab warning and JSON import.");
+  // Confirm the actual Export action serializes the complete restored note.
+  let exportedBlob;
+  const nativeObjectUrl = doc.defaultView.URL.createObjectURL;
+  doc.defaultView.URL.createObjectURL = function(blob) {
+    exportedBlob = blob;
+    return nativeObjectUrl.call(this, blob);
+  };
+  doc.querySelector('[data-action="export"]').click();
+  check(Boolean(exportedBlob), "Export action did not produce a JSON backup");
+  const exportedData = JSON.parse(await exportedBlob.text());
+  check(exportedData.version === SCHEMA_VERSION &&
+    exportedData.notes[0].id === "restored1" &&
+    exportedData.notes[0].body === "My recovered note",
+    "Export backup is incomplete");
+  doc.defaultView.URL.createObjectURL = nativeObjectUrl;
+
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, search, tasks, archive/trash recovery, stale-tab warning and validated JSON backup import/export.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
