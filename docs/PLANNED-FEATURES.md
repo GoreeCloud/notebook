@@ -8,7 +8,7 @@ These features are **not implemented** in the v0.1.0 preview. Priority is based 
 - IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), multi-version revision recovery beyond the implemented one-step import checkpoint, quota handling and verified external backups.
 - Migrate legacy title-based links to the now-verified stable-ID format, with a broken-link report and link-remapping tools; add typed graph relationships.
 - Canonical GC UI token and component integration.
-- Secure import validation, quotas, export verification and privacy review.
+- Resolve the 22 MB JSON-import ceiling versus currently unbounded JSON export (large exports warn but are not restorable in v0.1); implement a safe streamed/chunked backup format, quota checks, compatible restore and security review.
 
 ## P1 — Rich knowledge management
 - Complete Markdown/rich-text editor, code, tables, LaTeX and media embeds.
