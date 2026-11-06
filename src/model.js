@@ -3,6 +3,9 @@ export const SCHEMA_VERSION = 1;
 export const MAX_NOTES = 5000;
 export const MAX_BODY_LENGTH = 1000000;
 export const MAX_IMPORT_BYTES = 22_000_000;
+export function supportedBackupSize(bytes) {
+  return Number.isSafeInteger(bytes) && bytes >= 0 && bytes <= MAX_IMPORT_BYTES;
+}
 const validTypes = new Set(["note", "task", "journal", "research", "meeting", "code"]);
 const iso = () => new Date().toISOString();
 const text = (value, max) => typeof value === "string" ? value.slice(0, max) : "";
