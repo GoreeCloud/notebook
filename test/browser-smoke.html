@@ -26,6 +26,9 @@ function finish(ok, details) {
 }
 try {
   check((await readState()) === null, "Expected clean browser profile");
+  // An app's service worker must not erase other same-origin application caches.
+  const unrelatedCache = await caches.open("unrelated-app-test-cache");
+  await unrelatedCache.put("./unrelated-test-resource", new Response("preserve"));
   const seed = makeNote({ id: "smoke001", title: "Initial idea" });
   const first = { version: SCHEMA_VERSION, notes: [seed] };
   const rev1 = await writeState(first, 0);
@@ -204,8 +207,10 @@ try {
     delay(8000).then(() => null)
   ]);
   check(Boolean(activeWorker), "PWA service-worker shell did not become ready");
+  check((await caches.keys()).includes("unrelated-app-test-cache"),
+    "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning and validated JSON backup import/export.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
