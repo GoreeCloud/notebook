@@ -23,7 +23,7 @@ try {
     // One byte maps to one Unicode code point; random data defeats most on-disk compression.
     return Array.from(bytes, byte => String.fromCharCode(32 + (byte % 90))).join("");
   };
-  const notes = Array.from({ length: 8 }, (_, i) => ({
+  const notes = Array.from({ length: 60 }, (_, i) => ({
     ...makeNote({ id: "quota" + String(i).padStart(5, "0"), title: "Quota test " + i }),
     body: randomContent()
   }));
@@ -35,7 +35,7 @@ try {
     failed = true;
     failureName = error?.name || error?.code || "UnknownError";
   }
-  check(failed, "Browser wrote 3.6 MB despite a constrained origin quota");
+  check(failed, "Browser wrote roughly 27 MB despite a constrained origin quota");
   check(failureName === "QuotaExceededError" || failureName === "AbortError",
     "Expected quota-related IndexedDB transaction failure, got " + failureName);
   const after = await readState();
