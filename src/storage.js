@@ -3,6 +3,36 @@ const DB_NAME = "goreecloud-notebook-v1";
 const STORE = "app";
 let dbPromise;
 
+// Same-origin advisory only: no note bodies, titles, tags, or backup data leave
+// this tab. The existing IndexedDB revision check remains authoritative.
+const REVISION_CHANNEL = "goreecloud-notebook-revisions-v1";
+let revisionChannel;
+function channel() {
+  if (typeof BroadcastChannel !== "function") return null;
+  try {
+    if (!revisionChannel) revisionChannel = new BroadcastChannel(REVISION_CHANNEL);
+    return revisionChannel;
+  } catch { return null; }
+}
+function announceCommittedRevision(revision) {
+  try { channel()?.postMessage({ kind: "snapshot-committed", revision }); }
+  catch { /* Notifications are optional; transactional writes still succeed. */ }
+}
+export function subscribeToWorkspaceRevisions(listener) {
+  if (typeof listener !== "function") throw new TypeError("A revision callback is required.");
+  const bc = channel();
+  if (!bc) return () => {};
+  const onMessage = event => {
+    const data = event.data;
+    if (data?.kind === "snapshot-committed" &&
+        Number.isSafeInteger(data.revision) && data.revision > 0) {
+      listener(data.revision);
+    }
+  };
+  bc.addEventListener("message", onMessage);
+  return () => bc.removeEventListener("message", onMessage);
+}
+
 export class StorageConflictError extends Error {
   constructor() {
     super("Another Notebook tab changed this workspace. Export your unsaved changes, then reload to review the newer version.");
@@ -91,7 +121,7 @@ async function persistState(state, expectedRevision, preserveCurrent = false) {
     };
     read.onerror = () => fail(read.error || new Error("Could not check the current revision."));
     tx.oncomplete = () => {
-      if (!settled) { settled = true; resolve(nextRevision); }
+      if (!settled) { settled = true; announceCommittedRevision(nextRevision); resolve(nextRevision); }
     };
     tx.onerror = () => fail(tx.error || new Error("Storage transaction failed."));
     tx.onabort = () => fail(tx.error || new Error("Storage transaction was aborted."));
