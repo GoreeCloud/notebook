@@ -1,11 +1,11 @@
 # GoreeCloud Notebook — Implemented Features (Development Preview)
 
-**Status:** Implemented in source in feature branch, with passing JavaScript syntax, twelve model tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42253559934). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
+**Status:** Implemented in source in feature branch, with passing JavaScript syntax, twelve model tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42293110734). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
 
 | Capability | Owning source | Verification |
 | --- | --- | --- |
 | Note creation, title/body editing and debounced local saves | src/app.js, src/storage.js | Chromium smoke: create, edit and persist passed |
-| IndexedDB local persistence with transactional revision conflict rejection | src/storage.js | Chromium: persistence and stale-tab warning passed; failed structured-clone write rejected atomically without changing notes or recovery checkpoint (run 42254868875) |
+| IndexedDB persistence with revision checks and unsaved-exit protection | src/storage.js, src/app.js | Chromium verifies persisted notes, stale-tab conflict warning, atomic clone failure rollback, and leave warning only while unsaved (run 42293110734) |
 | Nested hierarchy, relocation and cycle prevention | src/model.js, src/app.js | Model cycle checks and Chromium nested-note create/move/parent-option regression passed |
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
@@ -14,6 +14,7 @@
 | Safe subset Markdown preview | src/app.js | Syntax checked; not full CommonMark |
 | JSON export, validated import, one-step local pre-import undo and oversized-backup warning | src/model.js, src/storage.js, src/app.js | Chromium valid/invalid import, export content, rollback and stale replacement rejection passed; 22 MB import boundary unit-tested |
 | Responsive dashboard and dark/light design | index.html, assets/styles.css | Six before/after Chromium screenshots reviewed; wrapped mobile title and plus glyph defects corrected; full visual acceptance pending |
+| Approximate browser-origin storage quota and optional persistent-storage request | src/app.js | Chromium verified settings control and browser result reporting; storage persistence is never assumed (run 42293110734) |
 | PWA metadata and offline shell caching | manifest.webmanifest, sw.js | Chromium reopened the cached shell with networking disabled; native/device install pending |
 | No configured server, AI endpoint, telemetry or sync client | Entire source | Static source observation only |
 
