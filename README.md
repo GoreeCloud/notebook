@@ -25,7 +25,7 @@ Run `npm run build:release` to stage **`dist/`** with exactly ten runtime assets
 
 - IndexedDB-backed local note editing with debounced autosave, transactional revision checks, proactive same-origin stale-tab warnings (revision numbers only, checked against IndexedDB), with a tested refocus fallback when BroadcastChannel is unavailable, and a best-effort browser leave confirmation while edits are unsaved.
 - Parent-child hierarchy, nested note tree, move with cycle prevention.
-- Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
+- Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. **Settings → Audit note links** finds missing, duplicate-title and fragile references without modifying notes. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
 - Note duplication, dashboard statistics, safe basic Markdown preview.
 - Portable JSON backups and standard `.json.gz` compressed backups, with bounded decompression, schema checks, a read-only replacement-impact preview and one-step local import undo. The gzip format restores workspaces with more than 22 MB of source JSON, up to a 64 MB uncompressed limit.
@@ -43,6 +43,7 @@ The application uses the verified GoreeCloud UI Foundations 1.0.1 semantic token
 - [Planned features](docs/PLANNED-FEATURES.md)
 - [Competitive objectives](docs/COMPETITIVE-OBJECTIVES.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Link-integrity audit](docs/LINK-INTEGRITY.md) — local report of broken, ambiguous and legacy references.
 - [Security](docs/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Rendered UI review](docs/VISUAL-REVIEW.md)
