@@ -77,6 +77,25 @@ try {
     note.id !== acceptedId && note.title === "Copy of Browser acceptance note" && note.body.includes("local-first")));
 
 
+  // Verify nested notes, visible hierarchy and moving a child to the top level.
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="child"]').click();
+  const childSnapshot = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.find(note => note.parentId === acceptedId) && snapshot;
+  });
+  const childId = childSnapshot.notes.find(note => note.parentId === acceptedId).id;
+  check(Boolean(doc.querySelector('.tree-node.depth-1 [data-note="' + childId + '"]')),
+    "Nested note does not appear beneath its parent");
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  check(![...doc.getElementById("parentSelect").options].some(option => option.value === childId),
+    "Parent editor offers its descendant as a parent (would create a cycle)");
+  doc.querySelector('[data-note="' + childId + '"]').click();
+  const move = doc.getElementById("parentSelect");
+  move.value = "";
+  move.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note => note.id === childId && note.parentId === null));
+
   // Full application search and task controls, not just the pure model.
   const search = doc.getElementById("globalSearch");
   search.value = "Browser acceptance";
@@ -235,7 +254,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
