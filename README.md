@@ -13,7 +13,7 @@ Requirements: a modern browser; Node.js 22+ to run checks; Python 3 to serve the
 1. Clone this repository.
 2. Run **npm run check**, **npm test**, and **npm run test:browser** (Chromium required for the browser smoke).
 3. Run **npm start**, then browse to http://localhost:4173.
-4. Open Settings and export a JSON backup regularly.
+4. Open Settings and export a JSON or gzip-compressed JSON backup regularly. See [Backups and Recovery](docs/BACKUPS.md).
 
 Static HTTP hosting also works. Service workers require localhost or HTTPS; opening the HTML file directly from disk is not supported.
 
@@ -24,11 +24,11 @@ Static HTTP hosting also works. Service workers require localhost or HTTPS; open
 - Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
 - Note duplication, dashboard statistics, safe basic Markdown preview.
-- Portable JSON backups with schema validation, duplicate-ID and cycle checks. Full-workspace imports save a one-step local recovery checkpoint; Settings can undo the most recent import.
+- Portable JSON backups and standard `.json.gz` compressed backups, with bounded decompression, schema checks and one-step local import undo. The gzip format restores workspaces with more than 22 MB of source JSON, up to a 64 MB uncompressed limit.
 - Optional browser persistent-storage request and approximate origin-storage quota display (neither is a backup or a guarantee against user deletion). On quota-rejected saves, Notebook retains the unsaved draft for export and explains the error; tested under a simulated quota failure, not real device exhaustion.
 - Light/dark appearance, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
 
-**Important:** This preview limits JSON imports to 22 MB, but currently allows exports above that size. Oversized exports are labeled as not restorable by this preview; future chunked/streaming backups are planned. The local import recovery checkpoint is plaintext, consumes browser storage and is overwritten by the next full-workspace replacement. It cannot survive clearing the browser profile or device loss. Browser-persistent storage requests may be denied and do not protect against deliberate clearing or device loss. Export protected backups separately. When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
+**Important:** Plain JSON imports remain limited to 22 MB. Standard gzip JSON imports accept up to 66 MB compressed with a 64 MB decompressed cap. Larger exports are explicitly labeled un-restorable by this preview; fully streaming/chunked recovery is still planned. The local import recovery checkpoint is plaintext, consumes browser storage and is overwritten by the next full-workspace replacement. It cannot survive clearing the browser profile or device loss. Browser-persistent storage requests may be denied and do not protect against deliberate clearing or device loss. Export protected backups separately. When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
 
 The application uses GoreeCloud UI semantic roles and layout principles. Fallback colors remain provisional; final visual and accessibility compliance has not been established.
 
