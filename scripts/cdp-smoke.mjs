@@ -1,0 +1,96 @@
+// Self-contained Chrome DevTools Protocol test runner; no npm dependencies.
+import { spawn } from "node:child_process";
+import { createServer } from "node:http";
+import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve, dirname, extname, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const profile = mkdtempSync(join(tmpdir(), "notebook-smoke-"));
+const pause = ms => new Promise(done => setTimeout(done, ms));
+const types = {".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".svg":"image/svg+xml", ".webmanifest":"application/manifest+json"};
+const server = createServer((req, res) => {
+  try {
+    const requested = new URL(req.url, "http://127.0.0.1");
+    const path = resolve(root, "." + (requested.pathname === "/" ? "/index.html" : decodeURIComponent(requested.pathname)));
+    if (!path.startsWith(root + sep) || !statSync(path).isFile()) return res.writeHead(404).end();
+    res.writeHead(200, { "Content-Type": types[extname(path)] || "application/octet-stream", "Cache-Control": "no-store" });
+    createReadStream(path).pipe(res);
+  } catch { res.writeHead(404).end(); }
+});
+let chrome, socket, count = 0;
+const pending = new Map();
+const exceptions = [];
+function command(method, params = {}) {
+  return new Promise((resolve, reject) => {
+    const id = ++count;
+    pending.set(id, { resolve, reject });
+    socket.send(JSON.stringify({ id, method, params }));
+  });
+}
+async function waitFor(check, limit = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < limit) {
+    const result = await check().catch(() => null);
+    if (result) return result;
+    await pause(150);
+  }
+  throw Error("Browser test timed out. " + exceptions.slice(-3).join(" | "));
+}
+try {
+  await new Promise(done => server.listen(0, "127.0.0.1", done));
+  const binary = process.env.CHROME_BIN || "/usr/bin/google-chrome";
+  chrome = spawn(binary, [
+    "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+    "--no-first-run", "--disable-background-networking",
+    "--remote-debugging-port=0", "--remote-allow-origins=http://localhost",
+    "--user-data-dir=" + profile, "about:blank"
+  ], { stdio:"ignore" });
+  const port = await waitFor(async () => {
+    const path = join(profile, "DevToolsActivePort");
+    return existsSync(path) ? Number(readFileSync(path, "utf8").split("\n")[0]) : null;
+  });
+  const target = await waitFor(async () => {
+    const response = await fetch("http://127.0.0.1:" + port + "/json/list");
+    const tabs = await response.json();
+    return tabs.find(tab => tab.type === "page" && tab.webSocketDebuggerUrl);
+  });
+  socket = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    socket.addEventListener("open", resolve, {once:true});
+    socket.addEventListener("error", reject, {once:true});
+  });
+  socket.addEventListener("message", event => {
+    const data = JSON.parse(event.data);
+    if (data.id && pending.has(data.id)) {
+      const waiter = pending.get(data.id);
+      pending.delete(data.id);
+      data.error ? waiter.reject(Error(data.error.message)) : waiter.resolve(data.result);
+    } else if (data.method === "Runtime.exceptionThrown") {
+      exceptions.push(data.params.exceptionDetails?.exception?.description || data.params.exceptionDetails?.text || "Browser exception");
+    }
+  });
+  await command("Runtime.enable");
+  await command("Page.enable");
+  await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/browser-smoke.html" });
+  const result = await waitFor(async () => {
+    const evaluation = await command("Runtime.evaluate", {
+      expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('output')?.textContent||''})",
+      returnByValue:true
+    });
+    const value = evaluation.result?.value;
+    if (value?.status === "PASS" || value?.status === "FAIL") return value;
+    return null;
+  }, 45000);
+  if (result.status !== "PASS") throw Error(result.details);
+  console.log(result.details);
+} catch (error) {
+  console.error("Browser smoke failed:", error.message);
+  for (const detail of exceptions.slice(-3)) console.error(detail);
+  process.exitCode = 1;
+} finally {
+  socket?.close();
+  chrome?.kill();
+  await new Promise(resolve => server.close(resolve));
+}
