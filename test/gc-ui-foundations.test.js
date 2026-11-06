@@ -46,6 +46,7 @@ test("Notebook maps core semantic variables to GC UI versioned tokens", () => {
     assert.ok(bridge.includes(local + ":var(" + canonical + ")"), "Missing " + local + " canonical mapping");
   }
   assert.doesNotMatch(bridge, /--gc-v1-color-\w+\s*:/);
+  assert.match(bridge, /outline:var\(--gc-v1-component-focus-width\) solid var\(--gc-v1-color-focus-ring\)/);
 });
 
 test("PWA loads pinned Foundations before Notebook CSS and syncs dark mode", () => {
