@@ -1,7 +1,7 @@
 // Self-contained Chrome DevTools Protocol test runner; no npm dependencies.
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream, rmSync } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,6 +106,49 @@ try {
     return status?.path === "/index.html" && status.opened && status.offline;
   }, 12000);
   console.log("PASS: PWA opened its cached shell while browser networking was disabled.");
+  // Save screenshots made entirely from synthetic test records, never real user notes.
+  if (process.env.NOTEBOOK_SCREENSHOT_DIR) {
+    const output = resolve(process.env.NOTEBOOK_SCREENSHOT_DIR);
+    mkdirSync(output, { recursive: true });
+    const evaluate = async expression => {
+      const result = await command("Runtime.evaluate", { expression, returnByValue: true });
+      if (result.exceptionDetails) throw Error(result.exceptionDetails.text || "Browser evaluation failed");
+      return result.result?.value;
+    };
+    const tap = async selector => {
+      const success = await evaluate("Boolean(document.querySelector(" + JSON.stringify(selector) + ")?.click() ?? document.querySelector(" + JSON.stringify(selector) + "))");
+      if (!success) throw Error("UI control missing: " + selector);
+    };
+    const viewport = async (width, height, mobile) => {
+      await command("Emulation.setDeviceMetricsOverride", { width, height, mobile, deviceScaleFactor: 1 });
+      await pause(200);
+      const check = await evaluate("({viewport:window.innerWidth,scroll:document.documentElement.scrollWidth})");
+      if (!check || check.scroll > check.viewport + 2) throw Error("Horizontal layout overflow: " + JSON.stringify(check));
+    };
+    const capture = async name => {
+      await pause(150);
+      const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false, fromSurface: true });
+      writeFileSync(join(output, name + ".png"), Buffer.from(screenshot.data, "base64"));
+      console.log("Saved review screenshot: " + name);
+    };
+    await command("Network.emulateNetworkConditions", { offline:false, latency:0, downloadThroughput:0, uploadThroughput:0 });
+    await viewport(1440, 900, false);
+    await command("Page.reload", { ignoreCache: true });
+    await waitFor(async () => evaluate("!!document.querySelector('.content.overview')"));
+    await capture("home-dark-desktop");
+    await tap('.sidebar [data-view="notes"]');
+    await tap(".note-list-item");
+    await capture("editor-dark-desktop");
+    await tap(".theme-button");
+    await capture("editor-light-desktop");
+    await tap('.sidebar [data-view="home"]');
+    await capture("home-light-desktop");
+    await viewport(390, 844, true);
+    await capture("home-light-mobile");
+    await tap('.mobile-bottom [data-view="notes"]');
+    await tap(".note-list-item");
+    await capture("editor-light-mobile");
+  }
 } catch (error) {
   console.error("Browser smoke failed:", error.message);
   for (const detail of exceptions.slice(-3)) console.error(detail);
