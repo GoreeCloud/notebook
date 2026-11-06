@@ -192,12 +192,30 @@ try {
   secondDoc.querySelector('[data-view="notes"]').click();
   check(secondDoc.body.textContent.includes("Browser acceptance note"), "Saved note unavailable after reopen");
 
-  // First tab saves a newer version; stale second tab must show a persistent warning.
+  // Advisory messages are authenticated against actual IndexedDB revisions.
+  // A guessed/invented number alone must not lock an editor.
+  const crossTabBus = new BroadcastChannel("goreecloud-notebook-revisions-v1");
+  const observedRevisions = [];
+  crossTabBus.addEventListener("message", event => observedRevisions.push(event.data));
+  crossTabBus.postMessage({ kind: "snapshot-committed", revision: 987654321 });
+  await delay(150);
+  check(!secondDoc.querySelector(".save-warning"),
+    "An unauthenticated high-revision notification blocked an otherwise current tab");
+
+  // First tab saves a newer version; second should warn before any attempted edit.
   doc.querySelector('[data-note="' + acceptedId + '"]').click();
   const liveBody = doc.getElementById("noteBody");
   liveBody.value = "Changed in first tab after second opened";
   liveBody.dispatchEvent(new Event("input", { bubbles: true }));
   await until(async () => (await readState()).notes.some(note => note.body.includes("Changed in first tab")));
+  await until(() => secondDoc.querySelector(".save-warning"));
+  check(secondDoc.querySelector(".save-warning")?.textContent.includes("read-only"),
+    "Newer committed revision did not proactively make stale tab read-only");
+  check(observedRevisions.some(event => event?.kind === "snapshot-committed" &&
+    Number.isSafeInteger(event.revision) &&
+    Object.keys(event).sort().join(",") === "kind,revision"),
+    "Cross-tab notification exposed more than the revision and event kind");
+  crossTabBus.close();
   secondDoc.querySelector('[data-note="smoke001"]').click();
   const secondTitle = secondDoc.getElementById("noteTitle");
   secondTitle.value = "Outdated title";
@@ -205,6 +223,8 @@ try {
   await until(() => secondDoc.querySelector(".save-warning"));
   check((await readState()).notes.some(note => note.body.includes("Changed in first tab")),
         "Conflict incorrectly overwrote newer data");
+  check(!(await readState()).notes.some(note => note.title === "Outdated title"),
+        "Read-only cross-tab guard allowed a stale editor to replace a note title");
 
   // Browser import: validate the file and replace the snapshot atomically.
   const fromBackup = makeNote({ id: "restored1", title: "Restored from backup" });
