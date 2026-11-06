@@ -127,7 +127,25 @@ try {
   check((await readState()).notes.some(note => note.body.includes("Changed in first tab")),
         "Conflict incorrectly overwrote newer data");
 
-  finish(true, "PASS: IndexedDB revision conflict, autosave/reload, search, tasks, archive/trash recovery, and stale-tab warning.");
+  // Browser import: validate the file and replace the snapshot atomically.
+  const fromBackup = makeNote({ id: "restored1", title: "Restored from backup" });
+  fromBackup.body = "My recovered note";
+  const backupFile = new doc.defaultView.File(
+    [JSON.stringify({ version: SCHEMA_VERSION, notes: [fromBackup] })],
+    "notebook-backup.json", { type: "application/json" }
+  );
+  const data = new doc.defaultView.DataTransfer();
+  data.items.add(backupFile);
+  const importInput = doc.getElementById("importFile");
+  importInput.files = data.files;
+  importInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  const imported = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === 1 && snapshot.notes[0].id === "restored1" && snapshot;
+  });
+  check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
+
+  finish(true, "PASS: IndexedDB revision conflict, autosave, search, tasks, archive/trash recovery, stale-tab warning and JSON import.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
