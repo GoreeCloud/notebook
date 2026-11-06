@@ -3,6 +3,15 @@ import { readState, writeState, readRecoveryState, replaceStateWithRecovery } fr
 import { createBackup, importBackup } from "./backup.js";
 
 const root = document.getElementById("app");
+// Apply the released GC UI high-contrast palette when the user's system requests it.
+// This never changes the saved notebook theme or the user's notes.
+const systemContrast = window.matchMedia?.("(prefers-contrast: more)");
+function syncSystemContrast() {
+  document.documentElement.dataset.gcContrast = systemContrast?.matches ? "high" : "normal";
+}
+syncSystemContrast();
+systemContrast?.addEventListener?.("change", syncSystemContrast);
+
 const icons = {
   home: "⌂", notes: "▤", favorites: "★", tasks: "✓", archive: "◫", trash: "♻",
   add: "+", search: "⌕", settings: "⚙", export: "⇩", shield: "◇"
