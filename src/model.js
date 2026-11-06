@@ -113,8 +113,12 @@ export function auditNoteLinks(notes, maxExamples = 12) {
 export function backlinks(notes, target) {
   const idMarker = stableNoteLink(target).toLocaleLowerCase();
   const titleMarker = "[[" + target.title.toLocaleLowerCase() + "]]";
+  // A legacy title reference to multiple notes cannot be attributed safely.
+  const uniquelyNamed = notes.filter(note =>
+    !note.trashed && note.title.toLocaleLowerCase() === target.title.toLocaleLowerCase()).length === 1;
   return notes.filter(note => !note.trashed && note.id !== target.id && (
-    note.body.toLocaleLowerCase().includes(idMarker) || note.body.toLocaleLowerCase().includes(titleMarker)
+    note.body.toLocaleLowerCase().includes(idMarker) ||
+    (uniquelyNamed && note.body.toLocaleLowerCase().includes(titleMarker))
   ));
 }
 export function stats(notes) {
