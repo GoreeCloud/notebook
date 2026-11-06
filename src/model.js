@@ -8,7 +8,7 @@ const text = (value, max) => typeof value === "string" ? value.slice(0, max) : "
 export function makeNote({ id, title = "Untitled note", parentId = null, type = "note" } = {}) {
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{4,128}$/.test(id)) throw new Error("Invalid note identifier");
   const time = iso();
-  return { id, title: text(title, 180) || "Untitled note", body: "", parentId, type: validTypes.has(type) ? type : "note", tags: [], favorite: false, archived: false, trashed: false, completed: false, dueDate: "", createdAt: time, updatedAt: time };
+  return { id, title: text(title, 180).replace(/[\r\n\t]+/g, " ").trim() || "Untitled note", body: "", parentId, type: validTypes.has(type) ? type : "note", tags: [], favorite: false, archived: false, trashed: false, completed: false, dueDate: "", createdAt: time, updatedAt: time };
 }
 export function childrenOf(notes, parentId) {
   return notes.filter(note => note.parentId === parentId && !note.trashed && !note.archived).sort((a, b) => a.title.localeCompare(b.title));
@@ -35,7 +35,7 @@ export function updateNote(notes, id, changes) {
   if (!notes.some(note => note.id === id)) throw new Error("Note not found");
   const patch = {};
   for (const field of allowed) if (Object.hasOwn(changes, field)) patch[field] = changes[field];
-  if (patch.title !== undefined) patch.title = text(patch.title, 180) || "Untitled note";
+  if (patch.title !== undefined) patch.title = text(patch.title, 180).replace(/[\r\n\t]+/g, " ").trim() || "Untitled note";
   if (patch.body !== undefined) patch.body = text(patch.body, MAX_BODY_LENGTH);
   if (patch.tags !== undefined) patch.tags = Array.isArray(patch.tags) ? [...new Set(patch.tags.filter(t => typeof t === "string").map(t => t.trim().slice(0, 48)).filter(Boolean))].slice(0, 24) : [];
   if (patch.type !== undefined && !validTypes.has(patch.type)) throw new Error("Invalid note type");
