@@ -5,7 +5,7 @@
 | Reference product | Feature inspiration | GoreeCloud target | Current preview |
 | --- | --- | --- | --- |
 | Evernote | Fast capture, web clipping, scanning, tasks, calendars | Premium low-friction creation, capture and productivity with user-controlled data | Basic notes and tasks |
-| TriliumNext | Unlimited-depth trees, attributes, cloning, scripting, graphs, self-hosting | Deep linked knowledge, personal ownership and secure extensibility | Basic tree and title backlinks |
+| TriliumNext | Unlimited-depth trees, attributes, cloning, scripting, graphs, self-hosting | Deep linked knowledge, personal ownership and secure extensibility | Basic hierarchy, stable-ID and title backlinks |
 | OneNote | Freeform documents, pen, notebooks, device use | Expressive canvas and structure | Not implemented |
 | Notion | Structured collections and collaboration | Flexible workspaces and controlled team publishing | Not implemented |
 | Obsidian | Markdown, links, plugins and graph | Open exports, durable links and local-first graph | Basic links and JSON backup |
