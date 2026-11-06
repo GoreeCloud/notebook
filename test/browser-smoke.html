@@ -245,6 +245,21 @@ try {
   check((await readState()).revision === originalRestored.revision,
     "Rejected stale import changed the saved workspace");
 
+  // Keyboard navigation and authoring shortcuts must be functional without a pointer.
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "k", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(doc.activeElement?.id === "globalSearch", "Ctrl+K did not focus note search");
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "n", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(Boolean(doc.getElementById("noteTitle")) && doc.activeElement?.id === "noteTitle",
+    "Ctrl+N did not create and focus a note");
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "s", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  await until(async () => (await readState()).notes.length === originalRestored.notes.length + 1);
+
   // Wait for the service-worker shell installation before the runner emulates offline networking.
   const activeWorker = await Promise.race([
     frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
@@ -254,7 +269,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection, keyboard shortcuts and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
