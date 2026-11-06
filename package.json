@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/model.js && node --check src/storage.js && node --check src/app.js && node --check sw.js",
+    "check": "node --check src/model.js && node --check src/storage.js && node --check src/backup.js && node --check src/app.js && node --check sw.js",
     "start": "python3 -m http.server 4173",
     "test:browser": "node scripts/cdp-smoke.mjs"
   }
