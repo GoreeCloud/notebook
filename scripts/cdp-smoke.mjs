@@ -1,7 +1,7 @@
 // Self-contained Chrome DevTools Protocol test runner; no npm dependencies.
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -112,6 +112,11 @@ try {
   process.exitCode = 1;
 } finally {
   socket?.close();
-  chrome?.kill();
+  if (chrome && chrome.exitCode === null) {
+    const stopped = new Promise(resolve => chrome.once("exit", resolve));
+    chrome.kill();
+    await Promise.race([stopped, pause(2000)]);
+  }
   await new Promise(resolve => server.close(resolve));
+  rmSync(profile, { recursive: true, force: true });
 }
