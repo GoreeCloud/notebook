@@ -1,6 +1,6 @@
 const PREFIX = "goreecloud-notebook-shell-";
-const CACHE = PREFIX + "v2";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./assets/styles.css", "./assets/icon.svg", "./src/app.js", "./src/model.js", "./src/storage.js"];
+const CACHE = PREFIX + "v3";
+const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./assets/styles.css", "./assets/icon.svg", "./src/app.js", "./src/model.js", "./src/storage.js", "./src/backup.js"];
 const ALLOWED = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));
 
 self.addEventListener("install", event => {
