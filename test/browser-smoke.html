@@ -236,10 +236,17 @@ try {
   check(JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeCancelledPreview),
     "Cancelled preview modified the previous recovery checkpoint");
   doc.defaultView.confirm = () => true;
-  importInput.files = data.files;
-  importInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  // Select the backup anew: the app deliberately resets its file input after each attempt.
+  const secondTransfer = new doc.defaultView.DataTransfer();
+  secondTransfer.items.add(backupFile);
+  const secondImportInput = doc.getElementById("importFile");
+  secondImportInput.files = secondTransfer.files;
+  check(secondImportInput.files?.length === 1, "Reselection did not attach the backup file");
+  secondImportInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
   const imported = await until(async () => {
     const snapshot = await readState();
+    const warning = doc.getElementById("toast")?.textContent || "";
+    if (warning.startsWith("Import rejected:")) throw new Error(warning);
     return snapshot.notes.length === 1 && snapshot.notes[0].id === "restored1" && snapshot;
   });
   check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
