@@ -77,7 +77,7 @@ try {
   check(doc.documentElement.dataset.gcMode === "light", "Notebook did not synchronize GC UI light mode");
   check(color("--gc-brand") === "#5145D9", "Notebook light primary is not the pinned GC UI color");
   check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook light theme bypasses GC UI tokens");
-  themeToggle.click();
+  doc.querySelector(".theme-button")?.click();
   check(doc.documentElement.dataset.gcMode === "dark", "Notebook did not return to GC UI dark mode");
 
   const newButton = doc.querySelector('[data-action="new"]');
