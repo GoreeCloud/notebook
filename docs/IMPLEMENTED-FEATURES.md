@@ -5,7 +5,7 @@
 | Capability | Owning source | Verification |
 | --- | --- | --- |
 | Note creation, title/body editing and debounced local saves | src/app.js, src/storage.js | Chromium smoke: create, edit and persist passed |
-| IndexedDB persistence with revision checks, proactive cross-tab staleness warnings, quota-error reporting and unsaved-exit protection | src/storage.js, src/app.js | Chromium confirms revision-only broadcast, forged-message verification, read-only stale tab, stale-write rejection, simulated quota rollback and unsaved-exit protection (run 42306906700). Tab refocus/visibility also checks committed IndexedDB revision; separate fallback acceptance remains pending |
+| IndexedDB persistence with revision checks, proactive cross-tab staleness warnings, quota-error reporting and unsaved-exit protection | src/storage.js, src/app.js | Chromium confirms revision-only broadcast, forged-message verification, read-only stale tab, stale-write rejection, simulated quota rollback and unsaved-exit protection (run 42306906700). Tab refocus/visibility also checks committed IndexedDB revision; Chromium verified the no-BroadcastChannel refocus fallback (run 42307504834) |
 | Nested hierarchy, relocation and cycle prevention | src/model.js, src/app.js | Model cycle checks and Chromium nested-note create/move/parent-option regression passed |
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
