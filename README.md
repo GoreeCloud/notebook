@@ -28,7 +28,7 @@ Run `npm run build:release` to stage **`dist/`** with exactly ten runtime assets
 - Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
 - Note duplication, dashboard statistics, safe basic Markdown preview.
-- Portable JSON backups and standard `.json.gz` compressed backups, with bounded decompression, schema checks and one-step local import undo. The gzip format restores workspaces with more than 22 MB of source JSON, up to a 64 MB uncompressed limit.
+- Portable JSON backups and standard `.json.gz` compressed backups, with bounded decompression, schema checks, a read-only replacement-impact preview and one-step local import undo. The gzip format restores workspaces with more than 22 MB of source JSON, up to a 64 MB uncompressed limit.
 - Optional browser persistent-storage request and approximate origin-storage quota display (neither is a backup or a guarantee against user deletion). On quota-rejected saves, Notebook retains the unsaved draft for export and explains the error; tested under a simulated quota failure, not real device exhaustion.
 - Light/dark appearance and OS-preferred high-contrast colors driven by exact-copy, Apache-2.0 GoreeCloud UI Foundations 1.0.1 semantic tokens, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
 
