@@ -22,14 +22,17 @@ jobs:
       - name: Verify allowlisted static release bundle
         run: |
           npm run build:release
-          for file in LICENSE index.html manifest.webmanifest sw.js assets/styles.css assets/icon.svg src/app.js src/model.js src/storage.js src/backup.js; do
+          for file in LICENSE licenses/GC-UI-APACHE-2.0.txt THIRD_PARTY_NOTICES.md index.html manifest.webmanifest sw.js assets/gc-ui-foundations.v1.css assets/styles.css assets/icon.svg src/app.js src/model.js src/storage.js src/backup.js; do
             test -s "dist/$file"
             cmp "$file" "dist/$file"
           done
-          test "$(find dist -type f | wc -l)" -eq 10
+          test "$(find dist -type f | wc -l)" -eq 13
           test ! -e dist/test
           test ! -e dist/scripts
           test ! -e dist/docs
+          test ! -e dist/test
+          test -s dist/licenses/GC-UI-APACHE-2.0.txt
+          test -s dist/THIRD_PARTY_NOTICES.md
       - name: Browser storage and UI smoke
         env:
           NOTEBOOK_SCREENSHOT_DIR: test-output/screenshots
