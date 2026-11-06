@@ -44,3 +44,6 @@
 .save-warning span{flex:1 1 270px}
 .save-warning button{min-height:40px;border-radius:var(--gc-radius-sm);padding:7px 13px;background:var(--gc-surface);border:1px solid var(--gc-outline);color:var(--gc-text);font-weight:700}
 .save-warning button:first-of-type{background:var(--gc-brand);color:var(--gc-on-brand);border-color:transparent}
+
+/* Read-only note-link audit displayed inside local settings; user text is textContent. */
+.link-audit-results{white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow-y:auto;margin:12px 0;padding:14px 16px;border:1px solid var(--gc-outline);border-radius:var(--gc-radius-md);background:var(--gc-surface-tonal);color:var(--gc-text);font-size:13px;line-height:1.65}
