@@ -3,9 +3,9 @@
 These features are **not implemented** in the v0.1.0 preview. Priority is based on user data safety, required GoreeCloud controls and development dependencies.
 
 ## P0 — Acceptance and data integrity
-- Automated browser smoke tests for editing, search, move, restore and import/export.
+- Expand the existing passing Chromium smoke test beyond note editing, persistence and stale-tab conflict rejection to cover search, move, archive/trash restoration, import/export and installed PWA/offline behavior.
 - Browser/device matrix, keyboard, screen reader and GC UI screenshot-led acceptance.
-- IndexedDB migrations, multi-tab conflict handling, recovery journal and verified backups.
+- IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), recovery journal, quota handling and verified backups.
 - Stable-ID note links with rename-safe cross-references.
 - Canonical GC UI token and component integration.
 - Secure import validation, quotas, export verification and privacy review.
