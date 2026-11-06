@@ -19,15 +19,16 @@ Static HTTP hosting also works. Service workers require localhost or HTTPS; open
 
 ## Foundation capabilities
 
-- IndexedDB-backed local note editing with debounced autosave, transactional revision checks and visible stale-tab conflict warnings.
+- IndexedDB-backed local note editing with debounced autosave, transactional revision checks, visible stale-tab conflict warnings, and a best-effort browser leave confirmation while edits are unsaved.
 - Parent-child hierarchy, nested note tree, move with cycle prevention.
 - Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
 - Note duplication, dashboard statistics, safe basic Markdown preview.
 - Portable JSON backups with schema validation, duplicate-ID and cycle checks. Full-workspace imports save a one-step local recovery checkpoint; Settings can undo the most recent import.
+- Optional browser persistent-storage request and approximate origin-storage quota display (neither is a backup or a guarantee against user deletion).
 - Light/dark appearance, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
 
-**Important:** This preview limits JSON imports to 22 MB, but currently allows exports above that size. Oversized exports are labeled as not restorable by this preview; future chunked/streaming backups are planned. The local import recovery checkpoint is plaintext, consumes browser storage and is overwritten by the next full-workspace replacement. It cannot survive clearing the browser profile or device loss. Export protected backups separately. When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
+**Important:** This preview limits JSON imports to 22 MB, but currently allows exports above that size. Oversized exports are labeled as not restorable by this preview; future chunked/streaming backups are planned. The local import recovery checkpoint is plaintext, consumes browser storage and is overwritten by the next full-workspace replacement. It cannot survive clearing the browser profile or device loss. Browser-persistent storage requests may be denied and do not protect against deliberate clearing or device loss. Export protected backups separately. When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
 
 The application uses GoreeCloud UI semantic roles and layout principles. Fallback colors remain provisional; final visual and accessibility compliance has not been established.
 
