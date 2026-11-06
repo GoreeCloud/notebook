@@ -2,7 +2,7 @@
 
 ## v0.1 browser implementation
 
-GoreeCloud Notebook is a static PWA with zero runtime packages and no server dependencies. index.html starts the UI, src/app.js handles DOM state and actions, src/model.js owns pure note operations and validation, and src/storage.js provides a single IndexedDB adapter. The service worker caches an allowlisted public app shell for offline reopening, updates shell assets through network-first requests while online, and removes only obsolete Notebook cache versions.
+GoreeCloud Notebook is a static PWA with zero runtime packages and no server dependencies. index.html starts the UI, src/app.js handles DOM state and actions, src/model.js owns pure note operations and validation, and src/storage.js provides a single IndexedDB adapter. The UI tracks in-flight and successfully committed edit generations to request confirmation on browser exit only while saves are pending or failed. Settings can display an approximate browser-origin storage estimate and request persistence in a user gesture; this does not constitute off-device backup. The service worker caches an allowlisted public app shell for offline reopening, updates shell assets through network-first requests while online, and removes only obsolete Notebook cache versions.
 
 ## Current data model
 
