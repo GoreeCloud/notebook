@@ -32,6 +32,13 @@ The first two artifacts contain six PNG renders: `home-dark-desktop.png`, `edito
 - The browser screenshot steps check for horizontal overflow at desktop, tablet, 390px mobile and 320px mobile; the heading editor must not clip or scroll horizontally/vertically on the tested mobile widths.
 - This test runner also exercises IndexedDB autosave, stale-tab conflict rejection, import rollback, task controls, archive/trash, search, stable links, keyboard shortcuts and the offline PWA shell.
 
+## Latest GC UI Foundations integration screenshots
+
+- [GitHub Actions #311](https://github.com/GoreeCloud/notebook/actions/runs/42303256940), `notebook-ui-review` artifact **13545261147** (temporary, 7-day retention) contains eight current synthetic desktop, tablet and mobile screenshots after the pinned Foundations 1.0.1 stylesheet was enabled.
+- The current `home-dark-desktop.png` shows the dark GC UI canvas, high-contrast purple-iris primary controls, distinct sidebar and deliberate dark hero. `home-light-mobile.png` shows canonical light surfaces and a five-item bottom navigation without observed horizontal overflow at 390px.
+- The current `editor-light-mobile.png` shows a wrapped note heading, keyboard/touch controls and native form fields with a readable layout at 390px. Automated smoke also checks light/dark canonical primary token values and narrow layout overflow.
+- **Assessment:** These specific screenshots demonstrate a coherent partial foundation integration. The product still includes custom navigation, components, icon glyphs and decorative colors. This is neither a full GC UI component migration nor a finished visual-quality/assistive-technology acceptance review. See [GC UI Adoption](GC-UI-ADOPTION.md) for provenance and limits.
+
 ## Outstanding visual and experience checks
 
 - Compare every screen and state with the **complete** founder-approved 100 GC UI principles and actual canonical design tokens/components; local fallback colors are **not** the canonical palette contract.
