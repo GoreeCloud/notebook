@@ -178,7 +178,7 @@ function editor(note) {
   if (!note) return '<div class="empty-editor"><div class="empty-art">✧</div><h2>A quiet space for your ideas</h2><p>Select a note or create something new.</p><button class="gc-button primary" data-action="new">＋ New note</button></div>';
   const parentChoices = ['<option value="">Top level</option>'].concat(state.notes.filter(n => n.id !== note.id && !n.trashed && !descendantsOf(state.notes, note.id).has(n.id)).map(n => '<option value="' + safe(n.id) + '" ' + (n.id === note.parentId ? "selected" : "") + '>' + safe(n.title) + '</option>')).join("");
   const links = backlinks(state.notes, note);
-  return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">Saved on this device</span></div><div class="editor-actions">' +
+  return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">' + (saveBlocked ? "Unsaved changes" : "Saved on this device") + '</span></div><div class="editor-actions">' +
     '<button class="icon-button ' + (note.favorite ? "on" : "") + '" data-action="favorite" aria-label="' + (note.favorite ? "Remove favorite" : "Add favorite") + '" title="Favorite">★</button>' +
     '<button class="icon-button" data-action="child" aria-label="Create nested note" title="Create nested note">⊕</button>' +
     '<button class="icon-button" data-action="duplicate" aria-label="Duplicate note" title="Duplicate note">⧉</button>' +
