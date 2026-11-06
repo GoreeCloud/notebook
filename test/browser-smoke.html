@@ -65,6 +65,44 @@ try {
     return snapshot.notes.find(note => note.title === "Browser acceptance note" && note.body.includes("local-first")) && snapshot;
   });
   check(persisted.notes.length === 2, "New note was not persisted");
+  const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
+
+  // Full application search and task controls, not just the pure model.
+  const search = doc.getElementById("globalSearch");
+  search.value = "Browser acceptance";
+  search.dispatchEvent(new Event("input", { bubbles: true }));
+  check([...doc.querySelectorAll(".note-list-item")].some(item => item.dataset.note === acceptedId),
+        "Searching did not surface the saved note");
+  const resetSearch = doc.getElementById("globalSearch");
+  resetSearch.value = "";
+  resetSearch.dispatchEvent(new Event("input", { bubbles: true }));
+
+  doc.querySelector('[data-action="new-task"]').click();
+  const due = doc.getElementById("taskDue");
+  check(Boolean(due), "Task due-date control not rendered");
+  due.value = "2026-12-15";
+  due.dispatchEvent(new Event("change", { bubbles: true }));
+  const done = doc.getElementById("taskDone");
+  done.checked = true;
+  done.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.type === "task" && note.completed && note.dueDate === "2026-12-15"));
+
+  // Archive / restore and trash / restore preserve original note ID and body.
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="archive"]').click();
+  doc.querySelector('[data-view="archive"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="restore"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && !note.archived));
+  doc.defaultView.confirm = () => true;
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="trash"]').click();
+  doc.querySelector('[data-view="trash"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="restore"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && !note.trashed));
+
 
   // Reopen the UI in a new page context; persisted edits must survive.
   const second = document.createElement("iframe");
@@ -76,8 +114,10 @@ try {
   check(secondDoc.body.textContent.includes("Browser acceptance note"), "Saved note unavailable after reopen");
 
   // First tab saves a newer version; stale second tab must show a persistent warning.
-  body.value = "Changed in first tab after second opened";
-  body.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const liveBody = doc.getElementById("noteBody");
+  liveBody.value = "Changed in first tab after second opened";
+  liveBody.dispatchEvent(new Event("input", { bubbles: true }));
   await until(async () => (await readState()).notes.some(note => note.body.includes("Changed in first tab")));
   secondDoc.querySelector('[data-note="smoke001"]').click();
   const secondTitle = secondDoc.getElementById("noteTitle");
@@ -87,7 +127,7 @@ try {
   check((await readState()).notes.some(note => note.body.includes("Changed in first tab")),
         "Conflict incorrectly overwrote newer data");
 
-  finish(true, "PASS: IndexedDB revision compare-and-swap, local editor autosave, reload recovery and stale-tab warning.");
+  finish(true, "PASS: IndexedDB revision conflict, autosave/reload, search, tasks, archive/trash recovery, and stale-tab warning.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
