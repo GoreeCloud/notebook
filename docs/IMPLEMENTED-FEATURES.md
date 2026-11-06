@@ -1,6 +1,6 @@
 # GoreeCloud Notebook — Implemented Features (Development Preview)
 
-**Status:** Implemented in source in feature branch, with passing JavaScript syntax, 23 model, backup and GC UI provenance tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42303256940). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
+**Status:** Implemented in source in feature branch, with passing JavaScript syntax, 25 model, backup, import-impact and GC UI provenance tests and expanded Chromium UI/storage/backup/offline-shell smoke tests (passing GitHub Actions run 42305653914). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
 
 | Capability | Owning source | Verification |
 | --- | --- | --- |
