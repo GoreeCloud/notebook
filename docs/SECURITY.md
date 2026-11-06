@@ -10,7 +10,7 @@
 - Markdown preview supports a limited set of formatting patterns without enabling arbitrary user HTML.
 - Portable JSON imports validate the schema, bounded note bodies, unique IDs and cycle-free hierarchy before overwrite confirmation.
 - Remote JavaScript plugins, dynamic execution and public publication are not included.
-- The application shell can cache for offline loading on secure origins.
+- The application shell can cache for offline loading on secure origins. Network-first shell refresh checks for updates while online and caches only a known set of static assets; service-worker activation deletes only older Notebook caches.
 - Failed or conflicting saves show an on-screen warning and let users export unsaved notes before reloading; these behaviors require full browser acceptance testing.
 
 ## Known risks
@@ -19,7 +19,7 @@
 - Anyone with the browser profile/device access may read the notebook.
 - Device loss, browser data clearing, private mode and storage eviction can erase local notes.
 - Snapshot saves now compare a revision number atomically inside an IndexedDB read/write transaction. A stale tab is blocked instead of silently overwriting a newer snapshot. The app does not merge conflicts, maintain historical revisions, or guarantee recovery of edits lost when the browser closes before export.
-- Note links use titles and can break on rename; they are not secure document access controls.
+- Stable-ID wiki links now survive target renaming; existing title-only links can still break on rename and require migration. Neither link form is a document access-control mechanism.
 - Service-worker cache invalidation and upgrade migrations require further device testing.
 - No production-ready auth, authorization, audit, backup automation, antivirus, attachment inspection or encryption currently exists.
 - A browser app cannot protect against compromised extensions or privileged operating system malware.
