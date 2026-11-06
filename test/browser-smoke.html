@@ -110,6 +110,23 @@ try {
   await until(async () => (await readState()).notes.some(note => note.id === acceptedId && !note.trashed));
 
 
+  // A stable-ID wiki link must display and open the renamed target.
+  doc.querySelector('[data-note="smoke001"]').click();
+  const renamedInput = doc.getElementById("noteTitle");
+  renamedInput.value = "Renamed seed note";
+  renamedInput.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const referencingBody = doc.getElementById("noteBody");
+  referencingBody.value = "See the renamed note [[id:smoke001]].";
+  referencingBody.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  const stableLink = doc.querySelector('[data-link="id:smoke001"]');
+  check(stableLink?.textContent.includes("Renamed seed note"), "Stable link did not display renamed title");
+  stableLink.click();
+  check(doc.getElementById("noteTitle")?.value === "Renamed seed note", "Stable link did not open renamed target");
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body.includes("[[id:smoke001]]")));
+
   // Reopen the UI in a new page context; persisted edits must survive.
   const second = document.createElement("iframe");
   second.title = "Notebook second tab test";
@@ -188,7 +205,7 @@ try {
   ]);
   check(Boolean(activeWorker), "PWA service-worker shell did not become ready");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, search, tasks, archive/trash recovery, stale-tab warning and validated JSON backup import/export.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, stable links, search, tasks, archive/trash recovery, stale-tab warning and validated JSON backup import/export.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
