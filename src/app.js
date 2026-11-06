@@ -12,6 +12,7 @@ let saveTimer;
 let savedRevision = 0;
 let changeNumber = 0;
 let enqueuedNumber = 0;
+let persistedGeneration = 0;
 let saveBlocked = false;
 let saveError = "";
 const safe = escapeHtml;
@@ -40,6 +41,46 @@ function showSaveStatus(label) {
   const node = document.getElementById("saveStatus");
   if (node) node.textContent = label;
 }
+function formatStorageBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return "unknown";
+  return (value / (1024 * 1024)).toFixed(1) + " MiB";
+}
+async function refreshStorageStatus() {
+  const indicator = document.getElementById("storageStatus");
+  if (!indicator) return;
+  if (!navigator.storage?.estimate) {
+    indicator.textContent = "This browser does not expose an origin-storage estimate.";
+    return;
+  }
+  try {
+    const [estimate, persistent] = await Promise.all([
+      navigator.storage.estimate(),
+      typeof navigator.storage.persisted === "function" ? navigator.storage.persisted() : Promise.resolve(null)
+    ]);
+    if (!indicator.isConnected) return;
+    indicator.textContent = "Browser origin storage (approximate): " +
+      formatStorageBytes(estimate.usage) + " used of " + formatStorageBytes(estimate.quota) +
+      " quota. Persistence: " + (persistent === true ? "granted" : persistent === false ? "not granted" : "unknown") +
+      ". This is not an external backup or protection from manual data clearing.";
+  } catch {
+    if (indicator.isConnected) indicator.textContent = "Browser storage status is unavailable.";
+  }
+}
+async function requestPersistentStorage() {
+  if (typeof navigator.storage?.persist !== "function") {
+    notify("Persistent storage requests are unsupported by this browser.", true);
+    return;
+  }
+  try {
+    const granted = await navigator.storage.persist();
+    notify(granted
+      ? "This browser granted persistent storage. Keep external backups as well."
+      : "This browser did not grant persistent storage. Export backups regularly.", !granted);
+  } catch {
+    notify("The browser could not process the storage protection request.", true);
+  }
+  await refreshStorageStatus();
+}
 function queueSave() {
   if (saveBlocked) {
     notify("Saving is paused. Export unsaved changes, then reload.", true);
@@ -60,6 +101,7 @@ function flushSave() {
     if (saveBlocked) return;
     try {
       savedRevision = await writeState(snapshot, savedRevision);
+      persistedGeneration = generation;
       if (changeNumber === generation) showSaveStatus("Saved on this device");
     } catch (error) {
       saveBlocked = true;
@@ -144,7 +186,9 @@ function chrome(content) {
       '<p class="muted">Your notes are saved in this browser’s IndexedDB. No GoreeCloud server or AI provider receives this data.</p>' +
       '<div class="settings-grid"><button data-action="export" class="setting-choice">⇩ <strong>Export backup</strong><small>Portable JSON including your entire note hierarchy</small></button>' +
       '<button data-action="import" class="setting-choice">⇧ <strong>Import backup</strong><small>Replace workspace after validation and confirmation</small></button>' +
-      '<button data-action="recover-import" class="setting-choice">↶ <strong>Undo last import</strong><small>Restore your previous locally saved workspace, if available</small></button></div>' +
+      '<button data-action="recover-import" class="setting-choice">↶ <strong>Undo last import</strong><small>Restore your previous locally saved workspace, if available</small></button>' +
+      '<button data-action="protect-storage" class="setting-choice">▣ <strong>Protect local storage</strong><small>Ask this browser to reduce automatic eviction of Notebook data</small></button></div>' +
+      '<p class="muted" id="storageStatus" role="status" aria-live="polite">Browser storage status not yet checked.</p>' +
       '<p class="dialog-note">Browser data clearing, private browsing, or storage eviction can erase local notes. The local pre-import checkpoint is not a backup and may disappear if browser storage is cleared. Keep separate protected backups. Cloud sync, encryption and team sharing are not yet implemented.</p>' +
     '</dialog>';
 }
@@ -335,10 +379,11 @@ root.addEventListener("click", event => {
     case "preview": state.preview = true; render(); break;
     case "edit": state.preview = false; render(); document.getElementById("noteBody")?.focus(); break;
     case "theme": state.theme = state.theme === "dark" ? "light" : "dark"; queueSave(); render(); break;
-    case "settings": document.getElementById("settingsDialog")?.showModal(); break;
+    case "settings": document.getElementById("settingsDialog")?.showModal(); void refreshStorageStatus(); break;
     case "export": exportFile(); break;
     case "import": if (saveBlocked) return notify("Export unsaved changes first.", true); document.getElementById("importFile")?.click(); break;
     case "recover-import": void undoLastImport(); break;
+    case "protect-storage": void requestPersistentStorage(); break;
     case "reload": if (window.confirm("Unsaved edits in this tab will be lost unless you export them. Reload the last successfully saved version?")) window.location.reload(); break;
   }
 });
@@ -391,6 +436,14 @@ async function boot() {
     root.innerHTML = '<div class="fatal"><h1>Could not open your local notebook</h1><p>' + safe(error.message) + '</p><p>No existing data was overwritten. Check browser storage settings and reload.</p></div>';
   }
 } 
+// Warn only when a write is outstanding or has failed; user activation and browser
+// support determine whether an actual leave-confirmation dialog appears.
+window.addEventListener("beforeunload", event => {
+  if (saveBlocked || changeNumber !== persistedGeneration) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
 // Browser backgrounding is a best-effort flush; the revision check still enforces safe writes.
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") void flushSave();
