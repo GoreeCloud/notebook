@@ -68,8 +68,48 @@ export function resolveNoteLink(notes, reference) {
   if (/^id:[A-Za-z0-9_-]{4,128}$/.test(value)) {
     return notes.find(note => !note.trashed && note.id === value.slice(3)) || null;
   }
-  return notes.find(note => !note.trashed && note.title.toLocaleLowerCase() === value.toLocaleLowerCase()) || null;
+  // Duplicate titles are ambiguous: never silently open an arbitrary target.
+  const matches = notes.filter(note => !note.trashed && note.title.toLocaleLowerCase() === value.toLocaleLowerCase());
+  return matches.length === 1 ? matches[0] : null;
 }
+// Read-only audit of links as interpreted by the Markdown preview. Archived notes
+// are included; trashed notes are excluded as sources and targets. Only a bounded
+// sample of issues is returned for UI rendering; every link is still counted.
+export function auditNoteLinks(notes, maxExamples = 12) {
+  const exampleLimit = Number.isSafeInteger(maxExamples) ? Math.max(0, Math.min(30, maxExamples)) : 12;
+  const active = notes.filter(note => !note.trashed);
+  const byId = new Map(active.map(note => [note.id, note]));
+  const byTitle = new Map();
+  for (const note of active) {
+    const key = note.title.toLocaleLowerCase();
+    byTitle.set(key, (byTitle.get(key) || 0) + 1);
+  }
+  const result = { links: 0, stable: 0, legacy: 0, broken: 0, ambiguous: 0, convertible: 0, sourceNotes: 0, examples: [] };
+  for (const source of active) {
+    let countedInSource = false;
+    for (const match of source.body.matchAll(/\[\[([^\]]{1,180})\]\]/g)) {
+      const reference = match[1].trim();
+      result.links++;
+      if (!countedInSource) { result.sourceNotes++; countedInSource = true; }
+      let problem = "";
+      if (/^id:[A-Za-z0-9_-]{4,128}$/.test(reference)) {
+        result.stable++;
+        if (!byId.has(reference.slice(3))) { result.broken++; problem = "Broken ID link"; }
+      } else {
+        result.legacy++;
+        const count = byTitle.get(reference.toLocaleLowerCase()) || 0;
+        if (count === 0) { result.broken++; problem = "Missing title target"; }
+        else if (count > 1) { result.ambiguous++; problem = "Ambiguous title target"; }
+        else result.convertible++;
+      }
+      if (problem && result.examples.length < exampleLimit) {
+        result.examples.push({ sourceId: source.id, sourceTitle: source.title, reference, problem });
+      }
+    }
+  }
+  return result;
+}
+
 export function backlinks(notes, target) {
   const idMarker = stableNoteLink(target).toLocaleLowerCase();
   const titleMarker = "[[" + target.title.toLocaleLowerCase() + "]]";
