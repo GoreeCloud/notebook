@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml, supportedBackupSize, MAX_IMPORT_BYTES } from "../src/model.js";
+import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, describeImportImpact, exportSnapshot, escapeHtml, supportedBackupSize, MAX_IMPORT_BYTES } from "../src/model.js";
 const note = (id, title, parentId = null) => makeNote({ id, title, parentId });
 test("creates safe defaults and IDs", () => {
   const n = note("root001", "Welcome");
@@ -87,4 +87,33 @@ test("backup size guard matches the maximum accepted import size", () => {
   assert.equal(supportedBackupSize(MAX_IMPORT_BYTES + 1), false);
   assert.equal(supportedBackupSize(-1), false);
   assert.equal(supportedBackupSize(Number.NaN), false);
+});
+
+test("import impact reports added, modified, retained and removed notes without mutations", () => {
+  const root = makeNote({ id: "root001", title: "Working note" });
+  const unchanged = makeNote({ id: "kept001", title: "Archive", type: "journal" });
+  unchanged.archived = true;
+  const removed = makeNote({ id: "gone001", title: "Obsolete" });
+  removed.trashed = true;
+  const previous = [root, unchanged, removed];
+  const incoming = [
+    { ...root, title: "Updated", updatedAt: "2099-01-01T00:00:00.000Z" },
+    { ...unchanged, updatedAt: "2099-01-01T00:00:00.000Z" },
+    makeNote({ id: "added01", title: "New" })
+  ];
+  const before = JSON.stringify({ previous, incoming });
+  assert.deepEqual(describeImportImpact(previous, incoming), {
+    existing: 3, incoming: 3, added: 1, changed: 1, unchanged: 1, removed: 1
+  });
+  assert.equal(JSON.stringify({ previous, incoming }), before);
+});
+
+test("import impact rejects invalid incoming hierarchy and duplicate IDs", () => {
+  const current = [makeNote({ id: "root001" })];
+  assert.throws(() => describeImportImpact(current, [
+    makeNote({ id: "dup0001" }), makeNote({ id: "dup0001" })
+  ]), /duplicate/);
+  assert.throws(() => describeImportImpact(current, [
+    makeNote({ id: "child001", parentId: "missing" })
+  ]), /hierarchy/);
 });
