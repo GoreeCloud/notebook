@@ -15,7 +15,7 @@
 1. [Before: CI run #117](https://github.com/GoreeCloud/notebook/actions/runs/42249140184), artifact `notebook-ui-review`, ID `13518293981`, from commit `f2e9e73c786baa76252b83f112463c58e8267aa1`.
 2. [After: CI run #127](https://github.com/GoreeCloud/notebook/actions/runs/42249748922), artifact `notebook-ui-review`, ID `13520210335`, from commit `03126b5147c9c50c9b790f276cbcfffb28aff840`.
 
-Each artifact contains six PNG renders: `home-dark-desktop.png`, `editor-dark-desktop.png`, `editor-light-desktop.png`, `home-light-desktop.png`, `home-light-mobile.png` and `editor-light-mobile.png`. Viewports: **1440 × 900 desktop** and **390 × 844 mobile** in headless Chromium. GitHub Actions screenshots are temporary artifacts, currently configured for **7-day retention**, not immutable release records.
+The first two artifacts contain six PNG renders: `home-dark-desktop.png`, `editor-dark-desktop.png`, `editor-light-desktop.png`, `home-light-desktop.png`, `home-light-mobile.png` and `editor-light-mobile.png`. Viewports: **1440 × 900 desktop** and **390 × 844 mobile** in headless Chromium. A third [expanded CI run #146](https://github.com/GoreeCloud/notebook/actions/runs/42252574578), artifact `notebook-ui-review` ID `13519958829`, adds `editor-light-small-mobile.png` at **320 × 640** and `editor-light-tablet.png` at **768 × 1024**. Both additional screenshots were inspected; the narrow mobile note heading remains readable, and the tablet editor displays its library and editor without horizontal overflow. GitHub Actions screenshots are temporary artifacts, currently configured for **7-day retention**, not immutable release records.
 
 ## Observations and improvements
 
@@ -29,8 +29,8 @@ Each artifact contains six PNG renders: `home-dark-desktop.png`, `editor-dark-de
 ### Browser verification
 
 - `scripts/cdp-smoke.mjs` captures the six screenshots in CI from temporary browser data.
-- The mobile screenshot step checks that the heading editor does not scroll or clip horizontally/vertically at the tested width.
-- This test runner also exercises IndexedDB autosave, stale-tab conflict rejection, import rollback, task controls, archive/trash, search, stable links and the offline PWA shell.
+- The browser screenshot steps check for horizontal overflow at desktop, tablet, 390px mobile and 320px mobile; the heading editor must not clip or scroll horizontally/vertically on the tested mobile widths.
+- This test runner also exercises IndexedDB autosave, stale-tab conflict rejection, import rollback, task controls, archive/trash, search, stable links, keyboard shortcuts and the offline PWA shell.
 
 ## Outstanding visual and experience checks
 
