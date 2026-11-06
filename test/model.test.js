@@ -153,3 +153,15 @@ test("link audit limits examples and ignores deleted source and target notes", (
     links: 0, stable: 0, legacy: 0, broken: 0, ambiguous: 0, convertible: 0, sourceNotes: 0, examples: []
   });
 });
+
+test("ambiguous title backlinks never attach to an arbitrary duplicate note", () => {
+  const original = note("first001", "Same title");
+  const duplicate = note("second01", "same TITLE");
+  const byTitle = { ...note("source01", "References"), body: "[[Same title]]" };
+  const byId = { ...note("source02", "Permanent reference"), body: "[[id:first001]]" };
+  const notes = [original, duplicate, byTitle, byId];
+  assert.deepEqual(backlinks(notes, original).map(n => n.id), ["source02"]);
+  assert.deepEqual(backlinks(notes, duplicate).map(n => n.id), []);
+  assert.deepEqual(backlinks(notes.filter(n => n.id !== duplicate.id), original).map(n => n.id),
+    ["source01", "source02"]);
+});
