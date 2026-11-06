@@ -1,5 +1,6 @@
 // Self-contained Chrome DevTools Protocol test runner; no npm dependencies.
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdtempSync, statSync, createReadStream, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const profile = mkdtempSync(join(tmpdir(), "notebook-smoke-"));
+const smokeToken = randomBytes(24).toString("hex"); // Random per isolated browser run, never a fixed public marker.
 const pause = ms => new Promise(done => setTimeout(done, ms));
 const types = {".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".svg":"image/svg+xml", ".webmanifest":"application/manifest+json"};
 const server = createServer((req, res) => {
@@ -79,7 +81,10 @@ try {
   });
   await command("Runtime.enable");
   await command("Page.enable");
-  await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/browser-smoke.html?notebook-smoke=enabled" });
+  await command("Page.addScriptToEvaluateOnNewDocument", {
+    source: "Object.defineProperty(window, '__goreecloudNotebookSmokeToken', {value: " + JSON.stringify(smokeToken) + ", configurable: false, writable: false});"
+  });
+  await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/browser-smoke.html?notebook-smoke=" + encodeURIComponent(smokeToken) });
   const result = await waitFor(async () => {
     const evaluation = await command("Runtime.evaluate", {
       expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('output')?.textContent||''})",
@@ -194,7 +199,7 @@ try {
     if (!limited.overrideActive || limited.quota > quotaSize + 1) {
       throw Error("Chromium did not activate the test origin quota override");
     }
-    await command("Page.navigate", { url: testOrigin + "/test/quota-smoke.html?notebook-smoke=enabled" });
+    await command("Page.navigate", { url: testOrigin + "/test/quota-smoke.html?notebook-smoke=" + encodeURIComponent(smokeToken) });
     const quotaResult = await waitFor(async () => {
       const evaluation = await command("Runtime.evaluate", {
         expression: "({status:document.documentElement.dataset.testResult||'', details:document.getElementById('result')?.textContent||''})",
