@@ -261,6 +261,7 @@ root.addEventListener("click", event => {
   if (!button) return;
   if (button.dataset.view) return changeView(button.dataset.view);
   const action = button.dataset.action, note = selected();
+  if (saveBlocked && ["new", "new-task", "child", "favorite", "archive", "trash", "restore", "duplicate", "theme"].includes(action)) return notify("Export unsaved changes and reload before editing.", true);
   switch (action) {
     case "new": create(); break;
     case "new-task": create("task"); break;
@@ -300,6 +301,7 @@ root.addEventListener("input", event => {
   }
 });
 root.addEventListener("change", event => {
+  if (saveBlocked && ["taskDone", "taskDue", "parentSelect"].includes(event.target.id)) { notify("Export unsaved changes before editing again.", true); render(); return; }
   if (event.target.id === "importFile") { importFile(event.target.files?.[0]); event.target.value = ""; }
   if (event.target.id === "taskDone") patch({ completed: event.target.checked });
   if (event.target.id === "taskDue") patch({ dueDate: event.target.value });
