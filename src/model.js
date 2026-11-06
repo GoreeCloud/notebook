@@ -54,9 +54,24 @@ export function searchNotes(notes, query, view = "all") {
     return !q || [note.title, note.body, ...note.tags].some(value => value.toLocaleLowerCase().includes(q));
   }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
+// ID links remain valid when titles change; legacy [[Title]] links remain supported.
+export function stableNoteLink(note) {
+  if (!note || typeof note.id !== "string" || !/^[A-Za-z0-9_-]{4,128}$/.test(note.id)) throw new Error("Invalid note for linking");
+  return "[[id:" + note.id + "]]";
+}
+export function resolveNoteLink(notes, reference) {
+  const value = typeof reference === "string" ? reference.trim() : "";
+  if (/^id:[A-Za-z0-9_-]{4,128}$/.test(value)) {
+    return notes.find(note => !note.trashed && note.id === value.slice(3)) || null;
+  }
+  return notes.find(note => !note.trashed && note.title.toLocaleLowerCase() === value.toLocaleLowerCase()) || null;
+}
 export function backlinks(notes, target) {
-  const marker = "[[" + target.title.toLocaleLowerCase() + "]]";
-  return notes.filter(note => !note.trashed && note.id !== target.id && note.body.toLocaleLowerCase().includes(marker));
+  const idMarker = stableNoteLink(target).toLocaleLowerCase();
+  const titleMarker = "[[" + target.title.toLocaleLowerCase() + "]]";
+  return notes.filter(note => !note.trashed && note.id !== target.id && (
+    note.body.toLocaleLowerCase().includes(idMarker) || note.body.toLocaleLowerCase().includes(titleMarker)
+  ));
 }
 export function stats(notes) {
   const visible = notes.filter(note => !note.trashed && !note.archived);
