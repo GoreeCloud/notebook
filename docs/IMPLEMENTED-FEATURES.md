@@ -1,6 +1,6 @@
 # GoreeCloud Notebook — Implemented Features (Development Preview)
 
-**Status:** Implemented in source in feature branch, with passing JavaScript syntax, 25 model, backup, import-impact and GC UI provenance tests and expanded Chromium UI/storage/backup/offline-shell/cross-tab smoke tests (passing GitHub Actions run 42307131425). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
+**Status:** Implemented in source in feature branch, with passing JavaScript syntax, 28 model, backup, import-impact, link-integrity and GC UI provenance tests and expanded Chromium UI/storage/backup/offline-shell/cross-tab smoke tests (passing GitHub Actions run 42309149200). Full browser, platform, security and visual acceptance are not established as of November 6, 2026. **Not a stable release.**
 
 | Capability | Owning source | Verification |
 | --- | --- | --- |
@@ -10,7 +10,7 @@
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
 | Task notes with completion and due dates | src/app.js, src/model.js | Chromium UI task completion/due-date scenario passed |
-| Wiki links, stable-ID references, renamed-note resolution and backlinks | src/model.js, src/app.js | Model unit test and Chromium note-renaming/link-opening scenario passed (run 42245914584) |
+| Stable-ID wiki links, unique-title resolution/backlinks and read-only broken/ambiguous link audit | src/model.js, src/app.js | Unit tests reject duplicate-title navigation and false backlinks, count broken/ambiguous/convertible links and preserve notes; Chromium confirms the Settings audit leaves saved notes and recovery unchanged (run 42309149200) |
 | Safe subset Markdown preview | src/app.js | Syntax checked; not full CommonMark |
 | Portable JSON/gzip backups, read-only import impact review, bounded restore and one-step import undo | src/model.js, src/backup.js, src/storage.js, src/app.js | Node tests verify added/changed/retained/removed counts, corrupt backups and bounded gzip; Chromium verifies preview cancellation and checkpoint preservation, import/undo and offline use. Plain JSON ≤22 MB, gzip ≤64 MB decompressed. Full device-quota acceptance pending |
 | Responsive dashboard and pinned GC UI Foundations 1.0.1 light/dark/system high-contrast token bridge and canonical focus ring | index.html, assets/styles.css, assets/gc-ui-foundations.v1.css, src/app.js | Exact upstream CSS/license SHA tests; Chromium verified light/dark tokens and OS high-contrast preference changes (run 42303955273); screenshot review performed, full visual/accessibility acceptance pending |
