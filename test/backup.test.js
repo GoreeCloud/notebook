@@ -55,3 +55,21 @@ test("invalid gzip, truncated gzip, and oversized plain JSON are rejected", asyn
 test("decompressed-size limit is fixed to prevent gzip bombs", () => {
   assert.equal(MAX_GZIP_RESTORE_BYTES, 64_000_000);
 });
+
+test("gzip decompression refuses data beyond the 64 MB restore ceiling", async () => {
+  if (typeof CompressionStream !== "function" || typeof DecompressionStream !== "function") return;
+  // Repetitive content makes a small gzip container expanding beyond the limit.
+  const huge = new Blob([" ".repeat(MAX_GZIP_RESTORE_BYTES + 8192)]);
+  const zipped = await new Response(huge.stream().pipeThrough(new CompressionStream("gzip"))).blob();
+  assert.ok(zipped.size < 100_000, "Expected highly compressible test fixture");
+  await assert.rejects(importBackup(named(zipped, "bomb.json.gz", "application/gzip")), /64 MB restore limit/);
+});
+
+test("gzip does not bypass per-note snapshot validation", async () => {
+  if (typeof CompressionStream !== "function" || typeof DecompressionStream !== "function") return;
+  const invalid = JSON.stringify({
+    version: 1, notes: [{ ...makeNote({ id: "badbody1" }), body: "x".repeat(1_000_001) }]
+  });
+  const zipped = await new Response(new Blob([invalid]).stream().pipeThrough(new CompressionStream("gzip"))).blob();
+  await assert.rejects(importBackup(named(zipped, "invalid.json.gz", "application/gzip")), /Invalid note body/);
+});
