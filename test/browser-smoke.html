@@ -64,11 +64,18 @@ try {
   check(Boolean(body), "Note editor missing");
   body.value = "A local-first saved idea [[Initial idea]].";
   body.dispatchEvent(new Event("input", { bubbles: true }));
+  const unsavedExit = new doc.defaultView.Event("beforeunload", { cancelable: true });
+  doc.defaultView.dispatchEvent(unsavedExit);
+  check(unsavedExit.defaultPrevented, "Uncommitted edits did not trigger leave protection");
   const persisted = await until(async () => {
     const snapshot = await readState();
     return snapshot.notes.find(note => note.title === "Browser acceptance note" && note.body.includes("local-first")) && snapshot;
   });
   check(persisted.notes.length === 2, "New note was not persisted");
+  await until(() => doc.getElementById("saveStatus")?.textContent === "Saved on this device");
+  const savedExit = new doc.defaultView.Event("beforeunload", { cancelable: true });
+  doc.defaultView.dispatchEvent(savedExit);
+  check(!savedExit.defaultPrevented, "Saved workspace still triggers unsaved-leave warning");
   const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
   doc.querySelector('[data-action="favorite"]').click();
   await until(async () => (await readState()).notes.some(note => note.id === acceptedId && note.favorite));
@@ -279,6 +286,17 @@ try {
   }));
   await until(async () => (await readState()).notes.length === originalRestored.notes.length + 1);
 
+  // Read local storage quota and request eviction resistance without assuming browser approval.
+  const settings = doc.getElementById("settingsDialog");
+  if (!settings.open) doc.querySelector('[data-action="settings"]').click();
+  check(Boolean(doc.querySelector('[data-action="protect-storage"]')),
+    "Persistent storage request control not rendered");
+  await until(() => doc.getElementById("storageStatus")?.textContent.includes("Browser origin storage") ||
+    doc.getElementById("storageStatus")?.textContent.includes("unavailable") ||
+    doc.getElementById("storageStatus")?.textContent.includes("does not expose"));
+  doc.querySelector('[data-action="protect-storage"]').click();
+  await until(() => /persistent storage|storage protection request/i.test(doc.getElementById("toast")?.textContent || ""));
+
   // Wait for the service-worker shell installation before the runner emulates offline networking.
   const activeWorker = await Promise.race([
     frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
@@ -288,7 +306,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts, pending-exit warning, browser-persistence request and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
