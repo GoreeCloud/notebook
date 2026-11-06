@@ -103,6 +103,28 @@ try {
   doc.defaultView.dispatchEvent(savedExit);
   check(!savedExit.defaultPrevented, "Saved workspace still triggers unsaved-leave warning");
   const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
+  // Link integrity audit must be local, read-only and accessible from Settings.
+  const beforeLinkAudit = await readState();
+  const checkpointBeforeLinkAudit = await readRecoveryState();
+  doc.querySelector('[data-action="settings"]').click();
+  check(doc.getElementById("settingsDialog")?.open, "Settings dialog unavailable for link audit");
+  doc.querySelector('[data-action="audit-links"]').click();
+  const report = doc.getElementById("linkAuditResults");
+  check(report && !report.hidden && report.textContent.includes("Note links: 1"),
+    "Note-link audit did not show an actionable link count");
+  check(report.textContent.includes("Legacy title links: 1 (1 have a unique target)"),
+    "Note-link audit did not count the existing resolvable title link");
+  check(report.textContent.includes("Broken links: 0") &&
+    report.textContent.includes("Audit is read-only."),
+    "Read-only link-audit safety message or resolved status missing");
+  const afterLinkAudit = await readState();
+  check(afterLinkAudit.revision === beforeLinkAudit.revision &&
+    JSON.stringify(afterLinkAudit.notes) === JSON.stringify(beforeLinkAudit.notes),
+    "Link audit unexpectedly modified saved notes or the storage revision");
+  check(JSON.stringify(await readRecoveryState()) === JSON.stringify(checkpointBeforeLinkAudit),
+    "Link audit unexpectedly changed the import recovery checkpoint");
+  doc.getElementById("settingsDialog").close();
+
   doc.querySelector('[data-action="favorite"]').click();
   await until(async () => (await readState()).notes.some(note => note.id === acceptedId && note.favorite));
   doc.querySelector('[data-action="duplicate"]').click();
