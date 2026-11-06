@@ -147,6 +147,11 @@ try {
     await capture("home-light-mobile");
     await tap('.mobile-bottom [data-view="notes"]');
     await tap(".note-list-item");
+    const title = await evaluate("(()=>{const e=document.getElementById('noteTitle');return e?{tag:e.tagName,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,scrollHeight:e.scrollHeight,clientHeight:e.clientHeight}:null})()");
+    if (!title || title.tag !== "TEXTAREA" || title.scrollWidth > title.clientWidth + 2 || title.scrollHeight > title.clientHeight + 2) {
+      throw Error("Mobile note title is clipped: " + JSON.stringify(title));
+    }
+    console.log("PASS: Responsive note heading wraps without overflow at 390px.");
     await capture("editor-light-mobile");
   }
 } catch (error) {
