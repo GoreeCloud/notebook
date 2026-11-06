@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
+import { SCHEMA_VERSION, MAX_NOTES, MAX_IMPORT_BYTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "./storage.js";
 
 const root = document.getElementById("app");
@@ -225,13 +225,17 @@ function exportFile() {
     anchor.href = url; anchor.download = "goreecloud-notebook-" + new Date().toISOString().slice(0, 10) + ".json";
     document.body.append(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    notify("Backup exported. Keep it somewhere safe.");
+    if (blob.size > MAX_IMPORT_BYTES) {
+      notify("Backup downloaded, but it exceeds this preview's 22 MB import limit. Do not rely on it as a restorable backup until large-file import is supported.", true);
+    } else {
+      notify("Backup exported. Keep it somewhere safe.");
+    }
   } catch (error) { notify(error.message, true); }
 }
 async function importFile(file) {
   if (saveBlocked) return notify("Export unsaved edits before importing or reloading.", true);
   if (!file) return;
-  if (file.size > 22_000_000) return notify("Backup exceeds the supported size limit.", true);
+  if (file.size > MAX_IMPORT_BYTES) return notify("Backup exceeds this preview’s 22 MB import limit.", true);
   try {
     const backup = validateSnapshot(JSON.parse(await file.text()));
     if (!window.confirm("Replace all notes in this browser with " + backup.notes.length + " imported notes? Export a backup first.")) return;
