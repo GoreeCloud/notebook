@@ -36,7 +36,7 @@ The first two artifacts contain six PNG renders: `home-dark-desktop.png`, `edito
 
 - [GitHub Actions #311](https://github.com/GoreeCloud/notebook/actions/runs/42303256940), `notebook-ui-review` artifact **13545261147** (temporary, 7-day retention) contains eight current synthetic desktop, tablet and mobile screenshots after the pinned Foundations 1.0.1 stylesheet was enabled.
 - The current `home-dark-desktop.png` shows the dark GC UI canvas, high-contrast purple-iris primary controls, distinct sidebar and deliberate dark hero. `home-light-mobile.png` shows canonical light surfaces and a five-item bottom navigation without observed horizontal overflow at 390px.
-- The current `editor-light-mobile.png` shows a wrapped note heading, keyboard/touch controls and native form fields with a readable layout at 390px. Automated smoke also checks light/dark canonical primary token values and narrow layout overflow.
+- The current `editor-light-mobile.png` shows a wrapped note heading, keyboard/touch controls and native form fields with a readable layout at 390px. Automated smoke checks canonical light/dark primary values, system-driven high-contrast palette switching and narrow layout overflow. The high-contrast switch was tested in Chromium run #326, but its full rendered accessibility and contrast acceptance remains open.
 - **Assessment:** These specific screenshots demonstrate a coherent partial foundation integration. The product still includes custom navigation, components, icon glyphs and decorative colors. This is neither a full GC UI component migration nor a finished visual-quality/assistive-technology acceptance review. See [GC UI Adoption](GC-UI-ADOPTION.md) for provenance and limits.
 
 ## Outstanding visual and experience checks
