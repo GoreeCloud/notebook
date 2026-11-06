@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(root, "dist");
 const files = Object.freeze([
+  "LICENSE",
   "index.html",
   "manifest.webmanifest",
   "sw.js",
