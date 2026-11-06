@@ -185,6 +185,31 @@ try {
     console.log("PASS: packaged allowlisted dist/ PWA loads and renders its home screen.");
   }
 
+  // GC UI's released high-contrast token variant follows the OS preference.
+  const contrastProbe = async () => {
+    const evaluation = await command("Runtime.evaluate", {
+      expression: "({state:document.documentElement.dataset.gcContrast||'',primary:getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-primary').trim()})",
+      returnByValue: true
+    });
+    return evaluation.result?.value;
+  };
+  const normalPalette = await contrastProbe();
+  await command("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-contrast", value: "more" }]
+  });
+  const highContrastPalette = await waitFor(async () => {
+    const value = await contrastProbe();
+    return value?.state === "high" ? value : null;
+  }, 7500);
+  if (!highContrastPalette?.primary || highContrastPalette.primary === normalPalette?.primary) {
+    throw Error("GC UI high-contrast system preference did not change semantic primary color");
+  }
+  await command("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-contrast", value: "no-preference" }]
+  });
+  await waitFor(async () => (await contrastProbe())?.state === "normal", 7500);
+  console.log("PASS: GC UI high-contrast variant tracks browser/OS preference.");
+
   // Browser test fixtures contain destructive synthetic-data operations. They must
   // refuse plain URLs on any hosted site, including accidental direct navigation.
   for (const filename of ["browser-smoke.html", "quota-smoke.html"]) {
