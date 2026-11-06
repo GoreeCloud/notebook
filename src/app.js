@@ -400,7 +400,7 @@ root.addEventListener("click", event => {
   const link = event.target.closest("[data-link]");
   if (link) {
     const note = resolveNoteLink(state.notes, link.dataset.link);
-    return note ? openNote(note.id) : notify("Linked note not found. Create it to connect ideas.", true);
+    return note ? openNote(note.id) : notify("Linked note was not found or its title matches multiple notes. Use a permanent ID link for a specific note.", true);
   }
   const item = event.target.closest("[data-note]");
   if (item) {
