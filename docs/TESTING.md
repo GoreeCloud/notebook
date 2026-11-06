@@ -8,11 +8,11 @@
 
 - Scheme is `http:`.
 - Hostname is exactly `127.0.0.1`.
-- Query string contains `notebook-smoke=enabled`.
+- Query parameter `notebook-smoke` matches a **fresh random token injected into that page by the local Chromium DevTools runner**. The token is generated per test session and is not hardcoded in the repository.
 
-The CI runner supplies this explicit marker only for the intended disposable Chromium profile. Opening either page without it fails before local storage access. This is a **guard against accidental execution**, not an authorization system; the test runner should not be used with real user data, and release deployments should exclude `test/` and `scripts/` entirely.
+The CI runner injects a random per-session token with DevTools before navigation, and then supplies that token as the URL marker in its disposable Chromium profile. Opening either page on a normal development/static host without the runner injection fails before local storage access, even if a URL parameter is guessed. This is a **defense against accidental or unauthenticated test execution**, not application authentication; the runner should never be used with real user data, and release deployments should exclude `test/` and `scripts/` entirely.
 
-The regular Chromium suite verifies that unmarked fixture URLs refuse to execute. No note, account, production server, or real user browser profile is used for these tests.
+The regular Chromium suite verifies that unmarked fixture URLs refuse to execute. Both fixture scripts also refuse a guessed marker unless the private runner-injected token matches. No note, account, production server, or real user browser profile is used for these tests.
 
 ## Existing verified tests
 
