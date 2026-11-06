@@ -10,7 +10,7 @@
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
 | Task notes with completion and due dates | src/app.js, src/model.js | Chromium UI task completion/due-date scenario passed |
-| Explicit wiki links and title-based backlinks | src/model.js, src/app.js | Source and model tests supplied |
+| Wiki links, stable-ID references, renamed-note resolution and backlinks | src/model.js, src/app.js | Model unit test and Chromium note-renaming/link-opening scenario passed (run 42245914584) |
 | Safe subset Markdown preview | src/app.js | Syntax checked; not full CommonMark |
 | JSON export and validated import | src/model.js, src/app.js | Chromium valid import, invalid import rejection and export content checks passed |
 | Responsive dashboard and dark/light design | index.html, assets/styles.css | Implemented in source; visual acceptance pending |
