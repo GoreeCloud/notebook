@@ -73,3 +73,26 @@ test("gzip does not bypass per-note snapshot validation", async () => {
   const zipped = await new Response(new Blob([invalid]).stream().pipeThrough(new CompressionStream("gzip"))).blob();
   await assert.rejects(importBackup(named(zipped, "invalid.json.gz", "application/gzip")), /Invalid note body/);
 });
+
+test("gzip failures retain a readable plaintext export and warn it cannot be reimported", async () => {
+  if (typeof CompressionStream !== "function" || typeof DecompressionStream !== "function") return;
+  const originals = Array.from({ length: 24 }, (_, i) => ({
+    ...makeNote({ id: "fallback_" + String(i).padStart(4, "0") }),
+    body: "Y".repeat(950_000)
+  }));
+  const originalConstructor = globalThis.CompressionStream;
+  globalThis.CompressionStream = class {
+    constructor() { throw new Error("Simulated compression failure"); }
+  };
+  try {
+    const backup = await createBackup(originals);
+    assert.equal(backup.extension, ".json");
+    assert.equal(backup.restorable, false);
+    assert.match(backup.reason, /compression failed/i);
+    assert.ok(backup.blob.size > MAX_IMPORT_BYTES);
+    const decoded = JSON.parse(await backup.blob.text());
+    assert.equal(decoded.notes.length, 24);
+  } finally {
+    globalThis.CompressionStream = originalConstructor;
+  }
+});
