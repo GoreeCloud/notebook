@@ -23,7 +23,7 @@ Run `npm run build:release` to stage **`dist/`** with exactly ten runtime assets
 
 ## Foundation capabilities
 
-- IndexedDB-backed local note editing with debounced autosave, transactional revision checks, proactive same-origin stale-tab warnings (revision numbers only, checked against IndexedDB), and a best-effort browser leave confirmation while edits are unsaved.
+- IndexedDB-backed local note editing with debounced autosave, transactional revision checks, proactive same-origin stale-tab warnings (revision numbers only, checked against IndexedDB), with a tested refocus fallback when BroadcastChannel is unavailable, and a best-effort browser leave confirmation while edits are unsaved.
 - Parent-child hierarchy, nested note tree, move with cycle prevention.
 - Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
