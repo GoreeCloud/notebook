@@ -40,9 +40,15 @@ async function waitFor(check, limit = 30000) {
 }
 try {
   await new Promise(done => server.listen(0, "127.0.0.1", done));
-  const binary = process.env.CHROME_BIN || "/usr/bin/google-chrome";
+  const candidates = [
+    process.env.CHROME_BIN, "/usr/bin/google-chrome", "/usr/bin/chromium",
+    "/usr/bin/chromium-browser", "/opt/google/chrome/chrome",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  ];
+  const binary = candidates.find(path => path && existsSync(path));
+  if (!binary) throw Error("Chromium/Chrome not found; set CHROME_BIN to the executable path.");
   chrome = spawn(binary, [
-    "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+    "--headless=new", ...(process.getuid?.() === 0 ? ["--no-sandbox"] : []), "--disable-dev-shm-usage",
     "--no-first-run", "--disable-background-networking",
     "--remote-debugging-port=0", "--remote-allow-origins=http://localhost",
     "--user-data-dir=" + profile, "about:blank"
