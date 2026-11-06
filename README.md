@@ -15,7 +15,11 @@ Requirements: a modern browser; Node.js 22+ to run checks; Python 3 to serve the
 3. Run **npm start**, then browse to http://localhost:4173.
 4. Open Settings and export a JSON or gzip-compressed JSON backup regularly. See [Backups and Recovery](docs/BACKUPS.md).
 
-Static HTTP hosting also works. Service workers require localhost or HTTPS; opening the HTML file directly from disk is not supported.
+Static HTTP hosting also works. `npm start` binds to `127.0.0.1` only, so it does not expose your development server to the local network. Service workers require localhost or HTTPS; opening the HTML file directly from disk is not supported.
+
+## Static release candidate
+
+Run `npm run build:release` to stage **`dist/`** with exactly the nine runtime assets plus the MIT `LICENSE`. The script refuses to overwrite an existing `dist/` directory, and CI checks every bundled file against source while ensuring that `test/`, `scripts/` and `docs/` are absent. `dist/` is a **reviewable release candidate only**; nothing is uploaded, published or deployed. For future static hosting, serve only the reviewed `dist/` directory after explicit release authorization. See [testing and release isolation](docs/TESTING.md).
 
 ## Foundation capabilities
 
