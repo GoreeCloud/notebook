@@ -21,11 +21,11 @@ Static HTTP hosting also works. Service workers require localhost or HTTPS; open
 
 - IndexedDB-backed local note editing with debounced autosave, transactional revision checks and visible stale-tab conflict warnings.
 - Parent-child hierarchy, nested note tree, move with cycle prevention.
-- Title/body/tag search; explicit wiki links and backlinks.
+- Title/body/tag search; legacy [[Note title]] links plus rename-safe [[id:note-id]] links and backlinks. Use the editor's Copy permanent link action.
 - Task notes, due dates, completion; favorites; archive; trash and restore.
 - Note duplication, dashboard statistics, safe basic Markdown preview.
 - Portable JSON backups with schema validation, duplicate-ID and cycle checks.
-- Light/dark appearance, responsive layout, shortcuts and PWA offline shell (reopening tested with Chromium networking disabled; installed-device acceptance pending).
+- Light/dark appearance, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
 
 **Important:** When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
 
