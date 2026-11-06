@@ -5,7 +5,7 @@
 | Capability | Owning source | Verification |
 | --- | --- | --- |
 | Note creation, title/body editing and debounced local saves | src/app.js, src/storage.js | Chromium smoke: create, edit and persist passed |
-| IndexedDB local persistence with transactional revision conflict rejection | src/storage.js | Chromium smoke: persisted reload and stale-tab warning passed |
+| IndexedDB local persistence with transactional revision conflict rejection | src/storage.js | Chromium: persistence and stale-tab warning passed; failed structured-clone write rejected atomically without changing notes or recovery checkpoint (run 42254868875) |
 | Nested hierarchy, relocation and cycle prevention | src/model.js, src/app.js | Model cycle checks and Chromium nested-note create/move/parent-option regression passed |
 | Favorites, archive, soft trash, restore and duplication | src/app.js, src/model.js | Chromium smoke passed for favorite, duplication, archive/restore, and trash/restore |
 | Search by title, body and tags | src/model.js, src/app.js | Chromium UI search scenario passed; model queries tested |
