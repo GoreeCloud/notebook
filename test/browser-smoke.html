@@ -225,6 +225,10 @@ try {
         "Conflict incorrectly overwrote newer data");
   check(!(await readState()).notes.some(note => note.title === "Outdated title"),
         "Read-only cross-tab guard allowed a stale editor to replace a note title");
+  const staleReadOnlyExit = new second.contentWindow.Event("beforeunload", { cancelable: true });
+  second.contentWindow.dispatchEvent(staleReadOnlyExit);
+  check(!staleReadOnlyExit.defaultPrevented,
+    "A clean but outdated tab falsely claimed there were unsaved local edits");
 
   // When BroadcastChannel is unavailable, a returning tab must re-read the
   // authoritative IndexedDB revision before allowing stale edits. This iframe
