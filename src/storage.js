@@ -42,7 +42,20 @@ export async function readState() {
 
 // Atomic compare-and-swap prevents a stale tab from replacing newer edits.
 // Legacy v1 snapshots without a revision are treated as revision zero.
-export async function writeState(state, expectedRevision) {
+const RECOVERY_KEY = "pre-import-recovery";
+
+// Return the last workspace replaced by an import or a recovery. This is local plaintext
+// stored in the same browser profile, not a substitute for an external backup.
+export async function readRecoveryState() {
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE, "readonly").objectStore(STORE).get(RECOVERY_KEY);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error("Could not read the import recovery checkpoint."));
+  });
+}
+
+async function persistState(state, expectedRevision, preserveCurrent = false) {
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
     throw new Error("Saving requires a valid expected revision.");
   }
@@ -66,6 +79,7 @@ export async function writeState(state, expectedRevision) {
         return;
       }
       nextRevision = actual + 1;
+      if (preserveCurrent && read.result) store.put(read.result, RECOVERY_KEY);
       store.put({ ...state, revision: nextRevision }, "snapshot");
     };
     read.onerror = () => fail(read.error || new Error("Could not check the current revision."));
@@ -75,4 +89,16 @@ export async function writeState(state, expectedRevision) {
     tx.onerror = () => fail(tx.error || new Error("Storage transaction failed."));
     tx.onabort = () => fail(tx.error || new Error("Storage transaction was aborted."));
   });
+}
+
+// Ordinary autosaves do not duplicate the entire workspace in recovery storage.
+export function writeState(state, expectedRevision) {
+  return persistState(state, expectedRevision, false);
+}
+
+// A whole-workspace replacement captures the previous snapshot in the SAME
+// IndexedDB transaction, then writes the imported or restored version. Failed
+// transactions leave both keys unchanged.
+export function replaceStateWithRecovery(state, expectedRevision) {
+  return persistState(state, expectedRevision, true);
 }
