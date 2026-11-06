@@ -47,7 +47,9 @@ The application uses the verified GoreeCloud UI Foundations 1.0.1 semantic token
 - [Roadmap](docs/ROADMAP.md)
 - [Rendered UI review](docs/VISUAL-REVIEW.md)
 - [GC UI Foundations adoption and provenance](docs/GC-UI-ADOPTION.md) — pinned tokens, licensing and incomplete design acceptance.
-- [Browser testing and data-safety evidence](docs/TESTING.md) — local-only destructive fixtures; quota limitations. — screenshot-led findings and remaining acceptance gaps.
+- [Browser testing and data-safety evidence](docs/TESTING.md) — synthetic fixtures, cross-tab checks and quota limitations.
+- [Backup and recovery guide](docs/BACKUPS.md) — JSON/gzip limits, import impact preview and local undo.
+- [Third-party notices](THIRD_PARTY_NOTICES.md) — pinned GC UI Apache-2.0 attribution.
 
 GoreeShield governs privacy; Wardveil governs cybersecurity; GoreeCloud Mesh governs interoperability; GoreeCloud UI governs design. GoreeCloud Identity is a separate future identity integration boundary. None of their remote integrations is claimed operational in this preview.
 
