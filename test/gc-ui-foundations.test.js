@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const gitBlobHash = contents => {
   const bytes = Buffer.from(contents, "utf8");
-  return createHash("sha1").update(Buffer.from("blob " + bytes.length + "\\0")).update(bytes).digest("hex");
+  return createHash("sha1").update(Buffer.from("blob " + bytes.length + "\0")).update(bytes).digest("hex");
 };
 
 test("GC UI Foundations 1.0.1 vendored CSS is the exact tagged source", () => {
