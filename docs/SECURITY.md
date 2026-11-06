@@ -15,7 +15,7 @@
 
 ## Known risks
 
-- Notes, local import-recovery checkpoints, and exported JSON are **unencrypted plaintext** at the app level. Checkpoints consume additional browser storage and are not durable offline backups.
+- Notes, local import-recovery checkpoints, and exported JSON are **unencrypted plaintext** at the app level. Import is limited to 22 MB, but export currently has no equivalent cap: oversized exports cannot be restored in this preview, and the UI warns on download. Checkpoints consume additional browser storage and are not durable offline backups.
 - Anyone with the browser profile/device access may read the notebook.
 - Device loss, browser data clearing, private mode and storage eviction can erase local notes.
 - Snapshot saves now compare a revision number atomically inside an IndexedDB read/write transaction. A stale tab is blocked instead of silently overwriting a newer snapshot. The app does not merge conflicts, maintain historical revisions, or guarantee recovery of edits lost when the browser closes before export.
