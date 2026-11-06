@@ -1,4 +1,4 @@
-import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
+import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
 import { readState, writeState } from "./storage.js";
 
 const root = document.getElementById("app");
@@ -163,7 +163,10 @@ function home() {
 function simpleMarkdown(source) {
   return String(source).split("\n").map(line => {
     let content = safe(line);
-    content = content.replace(/\[\[([^\]]{1,180})\]\]/g, (_, title) => '<button class="preview-link" data-link="' + safe(title) + '">↗ ' + title + '</button>');
+    content = content.replace(/\[\[([^\]]{1,180})\]\]/g, (_, reference) => {
+      const note = /^id:[A-Za-z0-9_-]{4,128}$/.test(reference) ? resolveNoteLink(state.notes, reference) : null;
+      return '<button class="preview-link" data-link="' + reference + '">↗ ' + (note ? safe(note.title) : reference) + '</button>';
+    });
     content = content.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\*([^*]+)\*/g, "<em>$1</em>");
     if (/^### /.test(line)) return "<h4>" + content.slice(4) + "</h4>";
     if (/^## /.test(line)) return "<h3>" + content.slice(3) + "</h3>";
@@ -180,6 +183,7 @@ function editor(note) {
   const links = backlinks(state.notes, note);
   return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">' + (saveBlocked ? "Unsaved changes" : "Saved on this device") + '</span></div><div class="editor-actions">' +
     '<button class="icon-button ' + (note.favorite ? "on" : "") + '" data-action="favorite" aria-label="' + (note.favorite ? "Remove favorite" : "Add favorite") + '" title="Favorite">★</button>' +
+    '<button class="icon-button" data-action="copy-link" aria-label="Copy stable note link" title="Copy permanent link">⌁</button>' +
     '<button class="icon-button" data-action="child" aria-label="Create nested note" title="Create nested note">⊕</button>' +
     '<button class="icon-button" data-action="duplicate" aria-label="Duplicate note" title="Duplicate note">⧉</button>' +
     '<button class="icon-button" data-action="archive" aria-label="Archive note" title="Archive note">◫</button>' +
@@ -248,7 +252,7 @@ async function importFile(file) {
 root.addEventListener("click", event => {
   const link = event.target.closest("[data-link]");
   if (link) {
-    const note = state.notes.find(n => n.title.toLocaleLowerCase() === link.dataset.link.toLocaleLowerCase() && !n.trashed);
+    const note = resolveNoteLink(state.notes, link.dataset.link);
     return note ? openNote(note.id) : notify("Linked note not found. Create it to connect ideas.", true);
   }
   const item = event.target.closest("[data-note]");
@@ -267,6 +271,15 @@ root.addEventListener("click", event => {
     case "new-task": create("task"); break;
     case "child": if (note) create("note", note.id); break;
     case "favorite": if (note) patch({ favorite: !note.favorite }); break;
+    case "copy-link":
+      if (note) {
+        const value = stableNoteLink(note);
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(value).then(() => notify("Permanent note link copied.")).catch(() => window.prompt("Copy note link:", value));
+        } else {
+          window.prompt("Copy note link:", value);
+        }
+      } break;
     case "archive": if (note) { patch({ archived: true }, false); state.selectedId = null; render(); } break;
     case "trash": if (note && window.confirm("Move this note to trash? Child notes remain available in the hierarchy when restored.")) { patch({ trashed: true }, false); state.selectedId = null; render(); } break;
     case "restore":
