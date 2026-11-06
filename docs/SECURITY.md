@@ -8,14 +8,14 @@
 - Browser CSP disallows third-party scripts, remote connections, object embeds and uncontrolled form destinations.
 - UI output escapes note titles, content and tags before inserting HTML.
 - Markdown preview supports a limited set of formatting patterns without enabling arbitrary user HTML.
-- Portable JSON imports validate the schema, bounded note bodies, unique IDs and cycle-free hierarchy before overwrite confirmation.
+- Portable JSON imports validate the schema, bounded note bodies, unique IDs and cycle-free hierarchy before overwrite confirmation. Full-workspace replacements also preserve the previous validated snapshot as a one-step local recovery checkpoint in the same IndexedDB transaction.
 - Remote JavaScript plugins, dynamic execution and public publication are not included.
 - The application shell can cache for offline loading on secure origins. Network-first shell refresh checks for updates while online and caches only a known set of static assets; service-worker activation deletes only older Notebook caches.
 - Failed or conflicting saves show an on-screen warning and let users export unsaved notes before reloading; these behaviors require full browser acceptance testing.
 
 ## Known risks
 
-- Notes and exported JSON are **unencrypted plaintext** at the app level.
+- Notes, local import-recovery checkpoints, and exported JSON are **unencrypted plaintext** at the app level. Checkpoints consume additional browser storage and are not durable offline backups.
 - Anyone with the browser profile/device access may read the notebook.
 - Device loss, browser data clearing, private mode and storage eviction can erase local notes.
 - Snapshot saves now compare a revision number atomically inside an IndexedDB read/write transaction. A stale tab is blocked instead of silently overwriting a newer snapshot. The app does not merge conflicts, maintain historical revisions, or guarantee recovery of edits lost when the browser closes before export.
