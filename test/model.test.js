@@ -72,3 +72,10 @@ test("stable note links and backlinks survive target renaming", () => {
   assert.equal(resolveNoteLink(renamed, "Original title"), null);
   assert.equal(resolveNoteLink(renamed, "id:missing"), null);
 });
+
+test("note headings keep one-line semantics even when pasted with line breaks", () => {
+  const created = makeNote({ id: "newlines01", title: "First\nSecond\tPart" });
+  assert.equal(created.title, "First Second Part");
+  const edited = updateNote([created], created.id, { title: "Updated\r\nTitle" })[0];
+  assert.equal(edited.title, "Updated Title");
+});
