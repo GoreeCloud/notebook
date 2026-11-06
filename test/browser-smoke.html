@@ -245,6 +245,25 @@ try {
   check((await readState()).revision === originalRestored.revision,
     "Rejected stale import changed the saved workspace");
 
+  // A failed structured-clone write must abort the entire transaction,
+  // preserving BOTH the active workspace and the pre-import recovery snapshot.
+  const beforeCloneFailure = await readState();
+  const recoveryBeforeCloneFailure = await readRecoveryState();
+  const cannotClone = { ...beforeCloneFailure, functionNotCloneable: () => true };
+  const attempted = replaceStateWithRecovery(cannotClone, beforeCloneFailure.revision);
+  const failure = await Promise.race([
+    attempted.then(() => "unexpected-success", error => error),
+    delay(5000).then(() => "timed-out")
+  ]);
+  check(failure?.name === "DataCloneError", "Invalid IndexedDB write did not reject with DataCloneError");
+  const afterCloneFailure = await readState();
+  const recoveryAfterCloneFailure = await readRecoveryState();
+  check(afterCloneFailure.revision === beforeCloneFailure.revision &&
+    JSON.stringify(afterCloneFailure.notes) === JSON.stringify(beforeCloneFailure.notes),
+    "Failed write changed the active Notebook workspace");
+  check(JSON.stringify(recoveryAfterCloneFailure) === JSON.stringify(recoveryBeforeCloneFailure),
+    "Failed write changed the recovery checkpoint");
+
   // Keyboard navigation and authoring shortcuts must be functional without a pointer.
   doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
     key: "k", ctrlKey: true, bubbles: true, cancelable: true
@@ -269,7 +288,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement rejection, keyboard shortcuts and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
