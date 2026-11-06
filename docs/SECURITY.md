@@ -18,6 +18,7 @@
 - Notes, local import-recovery checkpoints, and exported JSON are **unencrypted plaintext** at the app level. Import is limited to 22 MB, but export currently has no equivalent cap: oversized exports cannot be restored in this preview, and the UI warns on download. Checkpoints consume additional browser storage and are not durable offline backups.
 - Anyone with the browser profile/device access may read the notebook.
 - Device loss, browser data clearing, private mode and storage eviction can erase local notes.
+- Synchronous IndexedDB serialization failures abort the transaction; Chromium tests verified that a failed structured-clone write changes neither stored notes nor the import recovery checkpoint. This does not simulate storage-quota exhaustion or guarantee recovery after device failure.
 - Snapshot saves now compare a revision number atomically inside an IndexedDB read/write transaction. A stale tab is blocked instead of silently overwriting a newer snapshot. The app does not merge conflicts, maintain historical revisions, or guarantee recovery of edits lost when the browser closes before export.
 - Stable-ID wiki links now survive target renaming; existing title-only links can still break on rename and require migration. Neither link form is a document access-control mechanism.
 - Service-worker cache invalidation and upgrade migrations require further device testing.
