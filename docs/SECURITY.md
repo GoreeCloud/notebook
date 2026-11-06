@@ -10,7 +10,7 @@
 - Markdown preview supports a limited set of formatting patterns without enabling arbitrary user HTML.
 - Portable plain JSON and standard gzip-compressed JSON imports validate the schema, bounded note bodies, unique IDs and cycle-free hierarchy before overwrite confirmation. Gzip decompression enforces a 64 MB output cap and a 66 MB compressed input cap to limit decompression bombs. Full-workspace replacements also preserve the previous validated snapshot as a one-step local recovery checkpoint in the same IndexedDB transaction.
 - Remote JavaScript plugins, dynamic execution and public publication are not included.
-- Destructive synthetic browser test fixtures now refuse execution except on an explicitly tagged `http://127.0.0.1` test URL; public deployments should exclude `test/` and `scripts/` entirely. See [Browser Test Isolation](TESTING.md).
+- Destructive synthetic browser test fixtures refuse execution unless they run on `http://127.0.0.1` with a fresh, matching nonce injected through the disposable Chromium test runner. Static site visitors cannot activate them with a guessed URL marker. Public deployments should nevertheless exclude `test/` and `scripts/` entirely. See [Browser Test Isolation](TESTING.md).
 - The application shell can cache for offline loading on secure origins. Network-first shell refresh checks for updates while online and caches only a known set of static assets; service-worker activation deletes only older Notebook caches.
 - Failed/conflicting saves show a warning and allow unsaved exports before reload. Browser exit triggers a leave-confirmation request only while notes are unsaved or saving has failed. Targeted Chromium checks passed, but prompts depend on browser behavior and user interaction.
 
