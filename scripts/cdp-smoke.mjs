@@ -91,6 +91,21 @@ try {
   }, 45000);
   if (result.status !== "PASS") throw Error(result.details);
   console.log(result.details);
+  await command("Network.enable");
+  await command("Network.emulateNetworkConditions", {
+    offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0
+  });
+  const offlineUrl = "http://127.0.0.1:" + server.address().port + "/index.html";
+  await command("Page.navigate", { url: offlineUrl });
+  await waitFor(async () => {
+    const evaluation = await command("Runtime.evaluate", {
+      expression: "({path:location.pathname, opened:!!document.querySelector('.topbar'), offline:!!navigator.serviceWorker.controller})",
+      returnByValue: true
+    });
+    const status = evaluation.result?.value;
+    return status?.path === "/index.html" && status.opened && status.offline;
+  }, 12000);
+  console.log("PASS: PWA opened its cached shell while browser networking was disabled.");
 } catch (error) {
   console.error("Browser smoke failed:", error.message);
   for (const detail of exceptions.slice(-3)) console.error(detail);
