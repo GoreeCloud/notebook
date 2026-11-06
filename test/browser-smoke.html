@@ -216,6 +216,26 @@ try {
   const data = new doc.defaultView.DataTransfer();
   data.items.add(backupFile);
   const importInput = doc.getElementById("importFile");
+  const beforeCancelledPreview = await readState();
+  const recoveryBeforeCancelledPreview = await readRecoveryState();
+  let importPrompt = "";
+  doc.defaultView.confirm = message => { importPrompt = message; return false; };
+  importInput.files = data.files;
+  importInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  await until(() => importPrompt.includes("Removed from current workspace:"));
+  check(importPrompt.includes("Current notes: " + beforeCancelledPreview.notes.length),
+    "Import preview did not show actual workspace size");
+  check(importPrompt.includes("Imported notes: 1") && importPrompt.includes("Added: 1"),
+    "Import preview did not show the incoming impact");
+  check(importPrompt.includes("Removed from current workspace: " + beforeCancelledPreview.notes.length),
+    "Import preview did not disclose the removed notes");
+  const afterCancelledPreview = await readState();
+  check(afterCancelledPreview.revision === beforeCancelledPreview.revision &&
+    JSON.stringify(afterCancelledPreview.notes) === JSON.stringify(beforeCancelledPreview.notes),
+    "Cancelled preview unexpectedly changed persisted notes");
+  check(JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeCancelledPreview),
+    "Cancelled preview modified the previous recovery checkpoint");
+  doc.defaultView.confirm = () => true;
   importInput.files = data.files;
   importInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
   const imported = await until(async () => {
