@@ -3,7 +3,7 @@
 | Milestone | Goal | Verification gate |
 | --- | --- | --- |
 | 0.1 development preview | Offline PWA, note hierarchy, editing, search, tasks, backup | Syntax + 10 model tests + Chromium editor/storage/conflict, task, search, recovery, import/export and offline shell checks verified; multi-device UX and visual review pending |
-| 0.2 durability | Record-level IndexedDB, migrations, conflict recovery, revisions, tested backups | Recovery, quota, cross-tab merge/reload and migration regression tests |
+| 0.2 durability | Extend the passing one-step import undo with record-level IndexedDB, migrations, multi-version recovery and tested off-device backups | Quota, multi-tab, restore history and migration regression tests |
 | 0.3 knowledge | Extend verified stable-ID links with legacy-link migration, attributes, graph, rich Markdown and collections | Link-migration, graph and structure integrity checks |
 | 0.4 capture | Attachments, clipping, OCR, reminders, calendar | Input sanitation, media and accessibility tests |
 | 0.5 AI and Sync | Optional permitted AI, Identity and Mesh adapters | Consent, authorization and secure transport acceptance |
