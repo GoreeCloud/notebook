@@ -164,6 +164,25 @@ try {
     console.log("PASS: Responsive layouts have no horizontal overflow at 320px, 390px and 768px.");
   }
 
+
+  // Browser test fixtures contain destructive synthetic-data operations. They must
+  // refuse plain URLs on any hosted site, including accidental direct navigation.
+  for (const filename of ["browser-smoke.html", "quota-smoke.html"]) {
+    await command("Page.navigate", { url: "http://127.0.0.1:" + server.address().port + "/test/" + filename });
+    await waitFor(async () => {
+      const result = await command("Runtime.evaluate", {
+        expression: "document.documentElement.dataset.testResult || ''",
+        returnByValue: true
+      });
+      return result.result?.value === "REFUSED";
+    }, 7000);
+  }
+  console.log("PASS: destructive test fixtures refuse unmarked URLs.");
+
+  // Experimental, opt-in only: Chromium DevTools reports an active quota override,
+  // but the tested Chrome runner still accepted 3.6 MB and 27 MB IndexedDB writes.
+  // Do not treat this as coverage of real quota exhaustion until reproduced.
+  if (process.env.NOTEBOOK_QUOTA_EXPERIMENT === "1") {
   // Chrom(e|ium)'s real quota manager is constrained only in this disposable profile.
   // This is stronger than mocking IDBObjectStore.put, but not physical disk exhaustion.
   const testOrigin = "http://127.0.0.1:" + server.address().port;
@@ -189,6 +208,8 @@ try {
   } finally {
     await command("Storage.overrideQuotaForOrigin", { origin: testOrigin });
   }
+  }
+
 } catch (error) {
   console.error("Browser smoke failed:", error.message);
   for (const detail of exceptions.slice(-3)) console.error(detail);
