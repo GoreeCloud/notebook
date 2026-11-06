@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>GoreeCloud Notebook real IndexedDB quota regression</title>
+<pre id="result">Running</pre>
+<script type="module">
+import { readState, readRecoveryState, replaceStateWithRecovery } from "../src/storage.js";
+import { makeNote, SCHEMA_VERSION } from "../src/model.js";
+
+const output = document.getElementById("result");
+const check = (value, message) => { if (!value) throw Error(message); };
+try {
+  const saved = await readState();
+  const checkpoint = await readRecoveryState();
+  check(saved && checkpoint, "Expected existing synthetic Notebook snapshot and recovery checkpoint");
+  const revision = saved.revision;
+  const randomContent = () => {
+    const bytes = new Uint8Array(450_000);
+    crypto.getRandomValues(bytes.subarray(0, 60_000));
+    for (let i = 60_000; i < bytes.length; i += 60_000) {
+      crypto.getRandomValues(bytes.subarray(i, Math.min(bytes.length, i + 60_000)));
+    }
+    // One byte maps to one Unicode code point; random data defeats most on-disk compression.
+    return Array.from(bytes, byte => String.fromCharCode(32 + (byte % 90))).join("");
+  };
+  const notes = Array.from({ length: 8 }, (_, i) => ({
+    ...makeNote({ id: "quota" + String(i).padStart(5, "0"), title: "Quota test " + i }),
+    body: randomContent()
+  }));
+  let failed = false;
+  let failureName = "";
+  try {
+    await replaceStateWithRecovery({ version: SCHEMA_VERSION, notes }, revision);
+  } catch (error) {
+    failed = true;
+    failureName = error?.name || error?.code || "UnknownError";
+  }
+  check(failed, "Browser wrote 3.6 MB despite a constrained origin quota");
+  check(failureName === "QuotaExceededError" || failureName === "AbortError",
+    "Expected quota-related IndexedDB transaction failure, got " + failureName);
+  const after = await readState();
+  const afterCheckpoint = await readRecoveryState();
+  check(after?.revision === revision && JSON.stringify(after.notes) === JSON.stringify(saved.notes),
+    "Quota rejection changed the last saved workspace");
+  check(JSON.stringify(afterCheckpoint) === JSON.stringify(checkpoint),
+    "Quota rejection overwrote the pre-import checkpoint");
+  document.documentElement.dataset.testResult = "PASS";
+  output.textContent = "PASS: browser-enforced quota rejection rolled back snapshot and checkpoint atomically.";
+} catch (error) {
+  document.documentElement.dataset.testResult = "FAIL";
+  output.textContent = "FAIL: " + (error?.stack || error);
+}
+</script>
