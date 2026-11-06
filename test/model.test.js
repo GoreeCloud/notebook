@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, describeImportImpact, exportSnapshot, escapeHtml, supportedBackupSize, MAX_IMPORT_BYTES } from "../src/model.js";
+import { SCHEMA_VERSION, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, auditNoteLinks, stats, validateSnapshot, describeImportImpact, exportSnapshot, escapeHtml, supportedBackupSize, MAX_IMPORT_BYTES } from "../src/model.js";
 const note = (id, title, parentId = null) => makeNote({ id, title, parentId });
 test("creates safe defaults and IDs", () => {
   const n = note("root001", "Welcome");
@@ -116,4 +116,40 @@ test("import impact rejects invalid incoming hierarchy and duplicate IDs", () =>
   assert.throws(() => describeImportImpact(current, [
     makeNote({ id: "child001", parentId: "missing" })
   ]), /hierarchy/);
+});
+
+test("link audit distinguishes permanent, unique title, broken and ambiguous links", () => {
+  const first = note("alpha01", "Alpha");
+  const duplicate = note("alpha02", "aLPHa");
+  const beta = note("beta000", "Beta");
+  const source = { ...note("source01", "Source"), archived: true,
+    body: "[[Alpha]] [[Beta]] [[Unknown]] [[id:beta000]] [[id:missing01]]" };
+  const trashed = { ...note("trashed01", "Trash"), trashed: true, body: "[[Unknown]]" };
+  const notes = [first, duplicate, beta, source, trashed];
+  const original = JSON.stringify(notes);
+  assert.equal(resolveNoteLink(notes, "Alpha"), null,
+    "Ambiguous legacy link must not silently open one of two targets");
+  assert.equal(resolveNoteLink(notes, "id:alpha02")?.id, "alpha02");
+  const audit = auditNoteLinks(notes);
+  assert.deepEqual({
+    links: audit.links, stable: audit.stable, legacy: audit.legacy,
+    broken: audit.broken, ambiguous: audit.ambiguous, convertible: audit.convertible,
+    sourceNotes: audit.sourceNotes
+  }, { links: 5, stable: 2, legacy: 3, broken: 2, ambiguous: 1, convertible: 1, sourceNotes: 1 });
+  assert.deepEqual(audit.examples.map(e => e.problem), [
+    "Ambiguous title target", "Missing title target", "Broken ID link"
+  ]);
+  assert.equal(JSON.stringify(notes), original, "Auditing must not mutate any note");
+});
+
+test("link audit limits examples and ignores deleted source and target notes", () => {
+  const live = { ...note("source01", "Active"), body: "[[id:gone001]] [[No title]] [[No title]]" };
+  const trashed = { ...note("gone001", "No title"), trashed: true, body: "[[nope]]" };
+  const report = auditNoteLinks([live, trashed], 1);
+  assert.equal(report.broken, 3);
+  assert.equal(report.examples.length, 1);
+  assert.equal(report.sourceNotes, 1);
+  assert.deepEqual(auditNoteLinks([], 12), {
+    links: 0, stable: 0, legacy: 0, broken: 0, ambiguous: 0, convertible: 0, sourceNotes: 0, examples: []
+  });
 });
