@@ -19,6 +19,17 @@ jobs:
         run: npm run check
       - name: Model unit tests
         run: npm test
+      - name: Verify allowlisted static release bundle
+        run: |
+          npm run build:release
+          for file in index.html manifest.webmanifest sw.js assets/styles.css assets/icon.svg src/app.js src/model.js src/storage.js src/backup.js; do
+            test -s "dist/$file"
+            cmp "$file" "dist/$file"
+          done
+          test "$(find dist -type f | wc -l)" -eq 9
+          test ! -e dist/test
+          test ! -e dist/scripts
+          test ! -e dist/docs
       - name: Browser storage and UI smoke
         env:
           NOTEBOOK_SCREENSHOT_DIR: test-output/screenshots
