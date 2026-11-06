@@ -19,7 +19,7 @@ Static HTTP hosting also works. `npm start` binds to `127.0.0.1` only, so it doe
 
 ## Static release candidate
 
-Run `npm run build:release` to stage **`dist/`** with exactly the nine runtime assets plus the MIT `LICENSE`. The script refuses to overwrite an existing `dist/` directory, and CI checks every bundled file against source while ensuring that `test/`, `scripts/` and `docs/` are absent. `dist/` is a **reviewable release candidate only**; nothing is uploaded, published or deployed. For future static hosting, serve only the reviewed `dist/` directory after explicit release authorization. See [testing and release isolation](docs/TESTING.md).
+Run `npm run build:release` to stage **`dist/`** with exactly ten runtime assets plus MIT `LICENSE`, upstream Apache-2.0 license and `THIRD_PARTY_NOTICES.md`. The script refuses to overwrite an existing `dist/` directory, and CI checks every bundled file against source while ensuring that `test/`, `scripts/` and `docs/` are absent. `dist/` is a **reviewable release candidate only**; nothing is uploaded, published or deployed. For future static hosting, serve only the reviewed `dist/` directory after explicit release authorization. See [testing and release isolation](docs/TESTING.md).
 
 ## Foundation capabilities
 
@@ -30,7 +30,7 @@ Run `npm run build:release` to stage **`dist/`** with exactly the nine runtime a
 - Note duplication, dashboard statistics, safe basic Markdown preview.
 - Portable JSON backups and standard `.json.gz` compressed backups, with bounded decompression, schema checks and one-step local import undo. The gzip format restores workspaces with more than 22 MB of source JSON, up to a 64 MB uncompressed limit.
 - Optional browser persistent-storage request and approximate origin-storage quota display (neither is a backup or a guarantee against user deletion). On quota-rejected saves, Notebook retains the unsaved draft for export and explains the error; tested under a simulated quota failure, not real device exhaustion.
-- Light/dark appearance, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
+- Light/dark appearance driven by exact-copy, Apache-2.0 GoreeCloud UI Foundations 1.0.1 semantic tokens, responsive layout, shortcuts and network-refreshing PWA offline shell (reopening and unrelated-cache isolation tested in Chromium; installed-device acceptance pending).
 
 **Important:** Plain JSON imports remain limited to 22 MB. Standard gzip JSON imports accept up to 66 MB compressed with a 64 MB decompressed cap. Larger exports are explicitly labeled un-restorable by this preview; fully streaming/chunked recovery is still planned. The local import recovery checkpoint is plaintext, consumes browser storage and is overwritten by the next full-workspace replacement. It cannot survive clearing the browser profile or device loss. Browser-persistent storage requests may be denied and do not protect against deliberate clearing or device loss. Export protected backups separately. When another browser tab writes a newer version, stale writes are refused. Export unsaved changes from the blocked tab before reloading; there is no automatic merge. Browser data can be erased. The app does not encrypt local notes or exported JSON. It does not upload data, contact an AI provider, or implement remote synchronization. Keep separate protected backups. This preview does not yet offer full Markdown editing or attachments.
 
@@ -46,6 +46,7 @@ The application uses GoreeCloud UI semantic roles and layout principles. Fallbac
 - [Security](docs/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Rendered UI review](docs/VISUAL-REVIEW.md)
+- [GC UI Foundations adoption and provenance](docs/GC-UI-ADOPTION.md) — pinned tokens, licensing and incomplete design acceptance.
 - [Browser testing and data-safety evidence](docs/TESTING.md) — local-only destructive fixtures; quota limitations. — screenshot-led findings and remaining acceptance gaps.
 
 GoreeShield governs privacy; Wardveil governs cybersecurity; GoreeCloud Mesh governs interoperability; GoreeCloud UI governs design. GoreeCloud Identity is a separate future identity integration boundary. None of their remote integrations is claimed operational in this preview.
