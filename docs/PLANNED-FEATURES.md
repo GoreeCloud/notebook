@@ -7,7 +7,7 @@ These features are **not implemented** in the v0.1.0 preview. Priority is based 
 - Browser/device matrix, keyboard, screen reader and complete GC UI screenshot-led acceptance (a targeted before/after Chromium screenshot review is documented in docs/VISUAL-REVIEW.md).
 - IndexedDB migrations, automatic multi-tab conflict resolution (stale-write detection already exists), multi-version revision recovery beyond the one-step import checkpoint, full storage-quota exhaustion recovery (basic estimate and persistence request now implemented) and verified external backups.
 - Migrate legacy title-based links to the now-verified stable-ID format, with a broken-link report and link-remapping tools; add typed graph relationships.
-- Complete canonical GC UI component/pattern integration and the founder-approved 100-principle visual acceptance review. Foundation-level semantic tokens from the verified 1.0.1 release are already pinned and tested; the full component and experience migration is not finished.
+- Complete canonical GC UI component/pattern integration and the founder-approved 100-principle visual acceptance review. Foundation-level semantic tokens, automatic OS high-contrast palette selection and focus styling from the verified 1.0.1 release are pinned and tested; full component migration and high-contrast interaction/accessibility acceptance are unfinished.
 - Extend the now-implemented standard gzip JSON backup and bounded 64 MB restore with low-memory/record-by-record import, chunked storage and recovery beyond 64 MB; verify archive size limits, real disk/quota behavior and device compatibility.
 
 ## P1 — Rich knowledge management
