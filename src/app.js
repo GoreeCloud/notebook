@@ -1,5 +1,6 @@
-import { SCHEMA_VERSION, MAX_NOTES, supportedBackupSize, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, exportSnapshot, escapeHtml } from "./model.js";
+import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "./storage.js";
+import { createBackup, importBackup } from "./backup.js";
 
 const root = document.getElementById("app");
 const icons = {
@@ -183,7 +184,7 @@ function chrome(content) {
       content +
       '<div class="mobile-bottom" aria-label="Mobile navigation">' + navButton("home", "Home", "⌂") + navButton("notes", "Notes", "▤") + navButton("tasks", "Tasks", "✓") + navButton("favorites", "Saved", "★") + '<button class="nav-link" data-action="settings"><span class="nav-icon">⚙</span>Settings</button></div>' +
     '</div></div><div id="toast" role="status" aria-live="polite" hidden></div>' +
-    '<input id="importFile" type="file" accept="application/json,.json" hidden>' +
+    '<input id="importFile" type="file" accept="application/json,application/gzip,.json,.json.gz,.gz" hidden>' +
     '<dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle"><form method="dialog" class="dialog-head"><h2 id="settingsTitle">Workspace settings</h2><button class="icon-button" aria-label="Close settings">✕</button></form>' +
       '<p class="muted">Your notes are saved in this browser’s IndexedDB. No GoreeCloud server or AI provider receives this data.</p>' +
       '<div class="settings-grid"><button data-action="export" class="setting-choice">⇩ <strong>Export backup</strong><small>Portable JSON including your entire note hierarchy</small></button>' +
@@ -263,27 +264,38 @@ function render() {
   root.innerHTML = chrome(content);
   fitTitleEditor(document.getElementById("noteTitle"));
 }
-function exportFile() {
+let exporting = false;
+async function exportFile() {
+  if (exporting) return notify("A backup is already being prepared.");
+  exporting = true;
   try {
-    const blob = new Blob([exportSnapshot(state.notes)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+    const backup = await createBackup(state.notes);
+    const url = URL.createObjectURL(backup.blob);
     const anchor = document.createElement("a");
-    anchor.href = url; anchor.download = "goreecloud-notebook-" + new Date().toISOString().slice(0, 10) + ".json";
-    document.body.append(anchor); anchor.click(); anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    if (!supportedBackupSize(blob.size)) {
-      notify("Backup downloaded, but it exceeds this preview's 22 MB import limit. Do not rely on it as a restorable backup until large-file import is supported.", true);
+    anchor.href = url;
+    anchor.download = "goreecloud-notebook-" + new Date().toISOString().slice(0, 10) + backup.extension;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    if (!backup.restorable) {
+      notify("Backup downloaded, but cannot be restored by this preview: " + backup.reason + " Keep a separate protected copy.", true);
     } else {
-      notify("Backup exported. Keep it somewhere safe.");
+      notify(backup.extension === ".json.gz"
+        ? "Compressed backup exported. Import this .json.gz file to restore notes."
+        : "Backup exported. Keep it somewhere safe.");
     }
-  } catch (error) { notify(error.message, true); }
+  } catch (error) {
+    notify("Backup export failed: " + error.message, true);
+  } finally {
+    exporting = false;
+  }
 }
 async function importFile(file) {
   if (saveBlocked) return notify("Export unsaved edits before importing or reloading.", true);
   if (!file) return;
-  if (!supportedBackupSize(file.size)) return notify("Backup exceeds this preview’s 22 MB import limit.", true);
   try {
-    const backup = validateSnapshot(JSON.parse(await file.text()));
+    const backup = await importBackup(file);
     if (!window.confirm("Replace all notes in this browser with " + backup.notes.length + " imported notes? Export a backup first.")) return;
     await flushSave();
     if (saveBlocked) return;
