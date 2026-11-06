@@ -1,5 +1,5 @@
 import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
-import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "./storage.js";
+import { readState, writeState, readRecoveryState, replaceStateWithRecovery, subscribeToWorkspaceRevisions } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
 
 const root = document.getElementById("app");
@@ -90,6 +90,24 @@ async function requestPersistentStorage() {
     notify("The browser could not process the storage protection request.", true);
   }
   await refreshStorageStatus();
+}
+async function onOtherTabCommitted(revision) {
+  // Broadcasts are only hints. Re-read IndexedDB to confirm the actual committed
+  // revision, so a forged or delayed message cannot block the editor.
+  if (saveBlocked || revision <= savedRevision) return;
+  try {
+    const latest = await readState();
+    if (saveBlocked || !latest || latest.revision <= savedRevision) return;
+    clearTimeout(saveTimer);
+    saveBlocked = true;
+    saveError = changeNumber !== persistedGeneration
+      ? "Another Notebook tab saved a newer workspace. Your edits remain in this tab but are NOT saved."
+      : "Another Notebook tab saved newer notes. This tab is read-only until you reload the latest workspace.";
+    render();
+    notify(saveError, true);
+  } catch {
+    // If the read fails, the transactional revision check will still reject stale writes.
+  }
 }
 function queueSave() {
   if (saveBlocked) {
@@ -189,7 +207,7 @@ function chrome(content) {
         '<label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search your notes</span><input id="globalSearch" type="search" placeholder="Search anything..." value="' + safe(state.query) + '" autocomplete="off"><kbd>Ctrl K</kbd></label>' +
         '<button class="top-action" data-action="new" aria-label="Create note">+ <span>New note</span></button><button class="icon-button theme-button" data-action="theme" aria-label="Toggle light and dark theme">' + (state.theme === "dark" ? "☼" : "☾") + '</button>' +
       '</header>' +
-      (saveBlocked ? '<div class="save-warning" role="alert"><span>' + safe(saveError) + ' Export a backup before leaving this tab.</span><button data-action="export">Export unsaved notes</button><button data-action="reload">Reload saved version</button></div>' : '') +
+      (saveBlocked ? '<div class="save-warning" role="alert"><span>' + safe(saveError) + ' Export a backup before leaving this tab.</span><button data-action="export">Export local copy</button><button data-action="reload">Reload saved version</button></div>' : '') +
       content +
       '<div class="mobile-bottom" aria-label="Mobile navigation">' + navButton("home", "Home", "⌂") + navButton("notes", "Notes", "▤") + navButton("tasks", "Tasks", "✓") + navButton("favorites", "Saved", "★") + '<button class="nav-link" data-action="settings"><span class="nav-icon">⚙</span>Settings</button></div>' +
     '</div></div><div id="toast" role="status" aria-live="polite" hidden></div>' +
@@ -238,7 +256,7 @@ function editor(note) {
   if (!note) return '<div class="empty-editor"><div class="empty-art">✧</div><h2>A quiet space for your ideas</h2><p>Select a note or create something new.</p><button class="gc-button primary" data-action="new">+ New note</button></div>';
   const parentChoices = ['<option value="">Top level</option>'].concat(state.notes.filter(n => n.id !== note.id && !n.trashed && !descendantsOf(state.notes, note.id).has(n.id)).map(n => '<option value="' + safe(n.id) + '" ' + (n.id === note.parentId ? "selected" : "") + '>' + safe(n.title) + '</option>')).join("");
   const links = backlinks(state.notes, note);
-  return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">' + (saveBlocked ? "Unsaved changes" : "Saved on this device") + '</span></div><div class="editor-actions">' +
+  return '<div class="editor"><div class="editor-header"><div class="editor-label"><span class="editor-dot"></span> ' + safe(note.type === "task" ? "TASK" : note.type.toUpperCase()) + '<span class="editor-separator">·</span><span id="saveStatus">' + (saveBlocked ? (changeNumber !== persistedGeneration ? "Unsaved changes" : "Outdated tab") : "Saved on this device") + '</span></div><div class="editor-actions">' +
     '<button class="icon-button ' + (note.favorite ? "on" : "") + '" data-action="favorite" aria-label="' + (note.favorite ? "Remove favorite" : "Add favorite") + '" title="Favorite">★</button>' +
     '<button class="icon-button" data-action="copy-link" aria-label="Copy stable note link" title="Copy permanent link">⌁</button>' +
     '<button class="icon-button" data-action="child" aria-label="Create nested note" title="Create nested note">⊕</button>' +
@@ -470,6 +488,7 @@ async function boot() {
       state.theme = saved.theme === "light" ? "light" : "dark";
     }
     render();
+    subscribeToWorkspaceRevisions(onOtherTabCommitted);
     if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("./sw.js").catch(() => {});
   } catch (error) {
     root.innerHTML = '<div class="fatal"><h1>Could not open your local notebook</h1><p>' + safe(error.message) + '</p><p>No existing data was overwritten. Check browser storage settings and reload.</p></div>';
@@ -478,7 +497,7 @@ async function boot() {
 // Warn only when a write is outstanding or has failed; user activation and browser
 // support determine whether an actual leave-confirmation dialog appears.
 window.addEventListener("beforeunload", event => {
-  if (saveBlocked || changeNumber !== persistedGeneration) {
+  if (changeNumber !== persistedGeneration) {
     event.preventDefault();
     event.returnValue = "";
   }
