@@ -297,6 +297,40 @@ try {
   doc.querySelector('[data-action="protect-storage"]').click();
   await until(() => /persistent storage|storage protection request/i.test(doc.getElementById("toast")?.textContent || ""));
 
+  // Synthetic QuotaExceededError: a rejected autosave must preserve stored
+  // notes and the recovery checkpoint while retaining unsaved edits in this tab.
+  const beforeQuota = await readState();
+  const recoveryBeforeQuota = await readRecoveryState();
+  const quotaStorePrototype = frame.contentWindow.IDBObjectStore.prototype;
+  const nativePut = quotaStorePrototype.put;
+  quotaStorePrototype.put = function(value, key) {
+    if (key === "snapshot") {
+      throw new frame.contentWindow.DOMException("Simulated quota exhausted", "QuotaExceededError");
+    }
+    return nativePut.call(this, value, key);
+  };
+  try {
+    const draftBody = doc.getElementById("noteBody");
+    check(Boolean(draftBody), "No editor available for quota-rejection regression");
+    draftBody.value = "Unsaved content during simulated quota failure";
+    draftBody.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => doc.querySelector(".save-warning"));
+    check(doc.querySelector(".save-warning")?.textContent.includes("storage quota was exceeded"),
+      "Quota failure warning did not explain the save rejection");
+    check(doc.getElementById("noteBody")?.value.includes("Unsaved content during simulated quota failure"),
+      "Quota rejection discarded the in-memory unsaved draft");
+    check(Boolean(doc.querySelector('.save-warning [data-action="export"]')),
+      "Export recovery is unavailable after a quota failure");
+    const afterQuota = await readState();
+    check(afterQuota.revision === beforeQuota.revision &&
+      JSON.stringify(afterQuota.notes) === JSON.stringify(beforeQuota.notes),
+      "Quota rejection changed the last successfully saved workspace");
+    check(JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeQuota),
+      "Quota rejection changed the import recovery checkpoint");
+  } finally {
+    quotaStorePrototype.put = nativePut;
+  }
+
   // Wait for the service-worker shell installation before the runner emulates offline networking.
   const activeWorker = await Promise.race([
     frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
@@ -306,7 +340,7 @@ try {
   check((await caches.keys()).includes("unrelated-app-test-cache"),
     "Notebook service-worker activation removed an unrelated cache");
 
-  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts, pending-exit warning, browser-persistence request and unrelated-cache isolation.");
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts, pending-exit warning, browser-persistence request, simulated quota rollback and unrelated-cache isolation.");
 } catch (error) {
   console.error(error);
   finish(false, "FAIL: " + (error?.stack || error));
