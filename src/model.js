@@ -105,6 +105,26 @@ export function validateSnapshot(raw) {
   }
   return { version: SCHEMA_VERSION, notes };
 }
+// Read-only, bounded impact summary shown BEFORE a full-workspace backup import.
+// Matching IDs are compared by user-visible content and hierarchy, not volatile
+// updatedAt timestamps. Existing and incoming arrays are never modified here.
+export function describeImportImpact(existingNotes, incomingNotes) {
+  const current = validateSnapshot({ version: SCHEMA_VERSION, notes: existingNotes }).notes;
+  const incoming = validateSnapshot({ version: SCHEMA_VERSION, notes: incomingNotes }).notes;
+  const previous = new Map(current.map(note => [note.id, note]));
+  const nextIds = new Set(incoming.map(note => note.id));
+  const fields = ["title", "body", "parentId", "type", "tags", "favorite", "archived", "trashed", "completed", "dueDate"];
+  let added = 0, changed = 0, unchanged = 0, removed = 0;
+  for (const note of incoming) {
+    const before = previous.get(note.id);
+    if (!before) { added++; continue; }
+    if (fields.every(field => JSON.stringify(before[field]) === JSON.stringify(note[field]))) unchanged++;
+    else changed++;
+  }
+  for (const note of current) if (!nextIds.has(note.id)) removed++;
+  return { existing: current.length, incoming: incoming.length, added, changed, unchanged, removed };
+}
+
 export function exportSnapshot(notes) {
   return JSON.stringify(validateSnapshot({ version: SCHEMA_VERSION, notes }), null, 2);
 }
