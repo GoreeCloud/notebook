@@ -124,11 +124,27 @@ try {
   check(markdownBody.value.includes("**local-first**"), "Formatting control failed to wrap selected text");
   check(doc.activeElement === markdownBody && markdownBody.selectionStart === phraseStart + 2,
     "Formatting did not restore focus and highlighted text");
+  const italicStart = markdownBody.value.indexOf("saved");
+  markdownBody.setSelectionRange(italicStart, italicStart + "saved".length);
+  markdownBody.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "i", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(markdownBody.value.includes("*saved*"), "Ctrl+I did not italicize the selection");
+
   await until(async () => (await readState()).notes.some(note =>
     note.id === acceptedId && note.body.includes("**local-first**")));
   doc.querySelector('[data-action="preview"]').click();
   check(doc.querySelector("#previewOutput strong")?.textContent === "local-first",
     "Markdown preview did not render toolbar bold syntax");
+  doc.querySelector('[data-action="edit"]').click();
+  const enrichedBody = doc.getElementById("noteBody");
+  enrichedBody.value += "\n> Mockup callout\nInline `code` example";
+  enrichedBody.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelector(".preview-quote")?.textContent === "Mockup callout",
+    "Block quote from mockup formatting did not render safely");
+  check(doc.querySelector(".markdown-preview code")?.textContent === "code",
+    "Inline Markdown code from the toolbar did not render");
   doc.querySelector('[data-action="edit"]').click();
   const tagsField = doc.getElementById("noteTags");
   tagsField.value = "project, planning";
