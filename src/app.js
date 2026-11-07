@@ -279,12 +279,22 @@ function editor(note) {
     '<div class="editor-footer"><span>' + note.body.trim().split(/\s+/).filter(Boolean).length + ' words</span><span>Created ' + safe(date(note.createdAt)) + '</span></div>' +
     '<div class="backlinks"><strong>↗ Linked from ' + links.length + ' note' + (links.length === 1 ? "" : "s") + '</strong>' + (links.length ? links.map(n => '<button data-note="' + safe(n.id) + '">' + safe(n.title) + '</button>').join("") : '<small>Write [[ ' + safe(note.title) + ' ]] without spaces in another note to create a backlink.</small>') + '</div></div>';
 }
+function noteListItem(note) {
+  const excerpt = note.body.replace(/[#*_[\\]<>]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 130);
+  const tags = note.tags.slice(0, 3).map(tag => '<span class="list-item-tag"># ' + safe(tag) + '</span>').join("");
+  return '<button class="note-list-item ' + (note.id === state.selectedId ? "selected" : "") +
+    '" data-note="' + safe(note.id) + '">' +
+    '<span class="list-item-title">' + (note.favorite ? "★ " : "") + safe(note.title) + '</span>' +
+    '<span class="list-item-excerpt">' + safe(excerpt || "No content yet") + '</span>' +
+    (tags ? '<span class="list-item-tags">' + tags + '</span>' : "") +
+    '<small>' + safe(date(note.updatedAt)) + '</small></button>';
+}
 function collection() {
   const visible = searchNotes(state.notes, state.query, state.view);
   const title = { notes: "All Notes", tasks: "My Tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
   return '<main class="collection"><section class="list-panel"><div class="list-heading"><span class="overline">YOUR LIBRARY</span><h1>' + title + '</h1><p>' + visible.length + ' item' + (visible.length === 1 ? "" : "s") + '</p></div>' +
     '<div class="list-tools"><button class="gc-button primary compact" data-action="new">+ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
-    '<div class="note-list">' + (visible.length ? visible.map(note => '<button class="note-list-item ' + (note.id === state.selectedId ? "selected" : "") + '" data-note="' + safe(note.id) + '"><span class="list-item-title">' + (note.favorite ? "★ " : "") + safe(note.title) + '</span><span class="list-item-sub">' + safe(note.tags.join(" · ") || (note.body.slice(0, 55).replace(/\n/g, " ") || "No content yet")) + '</span><small>' + safe(date(note.updatedAt)) + '</small></button>').join("") : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
+    '<div class="note-list">' + (visible.length ? visible.map(noteListItem).join("")) : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
     '<section class="editor-panel">' + (state.view === "trash" || state.view === "archive" ? '<div class="empty-editor"><div class="empty-art">◫</div><h2>' + title + '</h2><p>' + (state.view === "trash" ? "Restore a note from the list to continue editing." : "Archived notes stay safe and searchable when restored.") + '</p>' + (selected() ? '<button class="gc-button primary" data-action="restore">' + (state.view === "trash" ? "Restore note" : "Unarchive note") + '</button>' : "") + '</div>' : editor(selected())) + '</section></main>';
 }
 function fitTitleEditor(element) {
