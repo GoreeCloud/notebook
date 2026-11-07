@@ -47,3 +47,66 @@
 
 /* Read-only note-link audit displayed inside local settings; user text is textContent. */
 .link-audit-results{white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow-y:auto;margin:12px 0;padding:14px 16px;border:1px solid var(--gc-outline);border-radius:var(--gc-radius-md);background:var(--gc-surface-tonal);color:var(--gc-text);font-size:13px;line-height:1.65}
+
+
+/* GoreeCloud Notebook — owner-official light workspace mockup, Nov 6 2026.
+ * The green product accent is screenshot-derived; canonical GC UI Foundations
+ * --gc-v1-* variables, typography, contrast and focus ring remain unchanged. */
+:root {
+  --notebook-accent:#197d28;
+  --notebook-accent-soft:#e2f2e3;
+  --notebook-accent-ink:#115924;
+}
+:root[data-gc-mode="dark"] {
+  --notebook-accent:#73d88c;
+  --notebook-accent-soft:#163e27;
+  --notebook-accent-ink:#e2f8e7;
+}
+.brand{align-items:center;padding-bottom:24px}
+.brand-symbol{border-radius:11px;background:linear-gradient(150deg,#229d3e,#156c28);box-shadow:0 5px 16px #16882b29;width:40px;height:40px;font-size:24px;color:#fff}
+.brand strong{font-size:21px;letter-spacing:-.8px;color:var(--gc-text)}
+.brand small{font-size:9px;letter-spacing:1.6px}
+.new-button,.gc-button.primary{background:var(--notebook-accent);color:#fff}
+:root[data-gc-mode="dark"] .new-button,
+:root[data-gc-mode="dark"] .gc-button.primary{color:#082612}
+.new-button{border-radius:10px;box-shadow:0 6px 18px #14833324;height:44px}
+.new-button:hover{filter:brightness(.96)}
+.nav-link.active{background:var(--notebook-accent-soft);color:var(--notebook-accent-ink);box-shadow:none}
+.nav-link:hover,.tree-item:hover{background:var(--gc-surface-tonal)}
+:root[data-gc-mode="light"] .sidebar{background:#fdfefc}
+:root[data-gc-mode="light"] .list-panel{background:#fff}
+:root[data-gc-mode="light"] .note-list-item.selected{background:#e5f4e7}
+.note-list-item.selected{box-shadow:inset 3px 0 var(--notebook-accent)}
+.note-list-item{gap:7px}
+.list-item-title{font-size:15px;letter-spacing:-.25px}
+.list-item-excerpt{font-size:12px;color:var(--gc-text-soft);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;overflow-wrap:anywhere}
+.list-item-tags{display:flex;gap:5px;flex-wrap:wrap}
+.list-item-tag{font-size:10px;line-height:1.45;border-radius:999px;padding:2px 7px;background:var(--gc-surface-tonal);color:var(--gc-text-soft);border:1px solid var(--gc-outline)}
+.editor-title{font-weight:800;letter-spacing:-1.35px}
+.editor-header{border-bottom:1px solid var(--gc-outline);padding-bottom:14px}
+.editor-label .editor-dot{background:var(--notebook-accent)}
+.editor-meta label{letter-spacing:.6px}
+.search-box{border-radius:12px}
+.topbar{background:var(--gc-surface)}
+@media(min-width:1101px){
+  .sidebar{width:292px;flex-basis:292px;padding:20px 16px 18px}
+  .topbar{height:64px;gap:18px;padding:0 20px}
+  .topbar .breadcrumb{display:none}
+  .search-box{width:min(620px,70%);margin-right:auto;height:42px}
+  .collection{grid-template-columns:minmax(296px,360px) minmax(0,1fr);height:calc(100vh - 64px)}
+  .list-heading{padding:22px 20px 9px}
+  .list-heading .overline{display:none}
+  .list-heading h1{font-size:23px;margin:0 0 8px}
+  .list-tools{padding:9px 20px 13px}
+  .note-list-item{padding:18px 20px 15px}
+  .editor{max-width:1000px;padding:26px clamp(25px,3vw,62px) 65px}
+}
+@media(min-width:851px) and (max-width:1100px){
+  .sidebar{width:232px;flex-basis:232px}
+  .collection{grid-template-columns:260px minmax(0,1fr)}
+}
+@media(max-width:620px){
+  .note-list-item{gap:5px}
+  .list-item-excerpt{font-size:11px;-webkit-line-clamp:1}
+  .list-item-tags{display:none}
+}
