@@ -27,7 +27,7 @@ export function formatMarkdownSelection(source, start, end, command) {
     rangeEnd = rangeStart + text.length;
   } else {
     const prefix = prefixes[command];
-    const lineStart = source.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const lineStart = start === 0 ? 0 : source.lastIndexOf("\n", start - 1) + 1;
     // Exclude an additional line when selection ends exactly at its beginning.
     const selectionEnd = end > start && source[end - 1] === "\n" ? end - 1 : end;
     const following = source.indexOf("\n", selectionEnd);
