@@ -280,7 +280,7 @@ function editor(note) {
     '<div class="backlinks"><strong>↗ Linked from ' + links.length + ' note' + (links.length === 1 ? "" : "s") + '</strong>' + (links.length ? links.map(n => '<button data-note="' + safe(n.id) + '">' + safe(n.title) + '</button>').join("") : '<small>Write [[ ' + safe(note.title) + ' ]] without spaces in another note to create a backlink.</small>') + '</div></div>';
 }
 function noteListItem(note) {
-  const excerpt = note.body.replace(/[#*_[\\]<>]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 130);
+  const excerpt = note.body.replace(/[#*<>\[\]]/g, " ").replace(/\s+/g, " ").trim().slice(0, 130);
   const tags = note.tags.slice(0, 3).map(tag => '<span class="list-item-tag"># ' + safe(tag) + '</span>').join("");
   return '<button class="note-list-item ' + (note.id === state.selectedId ? "selected" : "") +
     '" data-note="' + safe(note.id) + '">' +
