@@ -1,6 +1,7 @@
 import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, auditNoteLinks, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery, subscribeToWorkspaceRevisions } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
+import { formatMarkdownSelection } from "./formatting.js";
 
 const root = document.getElementById("app");
 // Apply the released GC UI high-contrast palette when the user's system requests it.
@@ -270,6 +271,16 @@ function editor(note) {
     '<button class="icon-button" data-action="duplicate" aria-label="Duplicate note" title="Duplicate note">⧉</button>' +
     '<button class="icon-button" data-action="archive" aria-label="Archive note" title="Archive note">◫</button>' +
     '<button class="icon-button danger" data-action="trash" aria-label="Move note to trash" title="Move to trash">♻</button></div></div>' +
+    (!state.preview ? '<div class="formatting-toolbar" role="toolbar" aria-label="Markdown formatting">' +
+      '<span class="formatting-caption">FORMAT</span>' +
+      '<button type="button" data-format="heading" aria-label="Heading level two" title="Heading">H₂</button>' +
+      '<button type="button" data-format="bold" aria-label="Bold selection" title="Bold (Ctrl+B)"><strong>B</strong></button>' +
+      '<button type="button" data-format="italic" aria-label="Italic selection" title="Italic (Ctrl+I)"><em>I</em></button>' +
+      '<button type="button" data-format="bullet" aria-label="Bulleted list" title="Bulleted list">☷</button>' +
+      '<button type="button" data-format="checklist" aria-label="Checklist" title="Checklist">☑</button>' +
+      '<button type="button" data-format="quote" aria-label="Block quote" title="Block quote">❝</button>' +
+      '<button type="button" data-format="code" aria-label="Inline code" title="Inline code"><span aria-hidden="true">&lt;/&gt;</span></button>' +
+      '</div>' : '') +
     '<textarea class="editor-title" id="noteTitle" rows="1" maxlength="180" aria-label="Note title" placeholder="Untitled note" ' + (saveBlocked ? 'disabled' : '') + '>' + safe(note.title) + '</textarea>' +
     '<div class="editor-meta"><label>FOLDER <select id="parentSelect" aria-label="Parent note">' + parentChoices + '</select></label>' +
     '<label>TAGS <input id="noteTags" aria-label="Comma-separated tags" value="' + safe(note.tags.join(", ")) + '" placeholder="Add tags, separated by commas" ' + (saveBlocked ? 'disabled' : '') + '></label></div>' +
@@ -406,7 +417,25 @@ async function undoLastImport() {
     notify("Recovery failed: " + error.message, true);
   }
 }
-root.addEventListener("click", event => {
+function applyMarkdownCommand(command) {
+  const field = document.getElementById("noteBody");
+  if (saveBlocked || !field || field.disabled || !selected()) {
+    notify("Open a writable note before formatting.", true);
+    return;
+  }
+  try {
+    const result = formatMarkdownSelection(field.value, field.selectionStart, field.selectionEnd, command);
+    field.value = result.value;
+    // Route through the existing debounced autosave and revision conflict checks.
+    patch({ body: result.value }, false);
+    field.focus();
+    field.setSelectionRange(result.start, result.end);
+  } catch (error) { notify(error.message, true); }
+}
+root.addEventListener("click", event => { 
+  const formatControl = event.target.closest("[data-format]");
+  if (formatControl) { event.preventDefault(); return applyMarkdownCommand(formatControl.dataset.format); }
+
   const link = event.target.closest("[data-link]");
   if (link) {
     const note = resolveNoteLink(state.notes, link.dataset.link);
@@ -508,6 +537,12 @@ document.addEventListener("keydown", event => {
   if (event.target.id === "noteTitle" && event.key === "Enter") {
     event.preventDefault();
     document.getElementById("noteBody")?.focus();
+    return;
+  }
+  if (event.target.id === "noteBody" && (event.ctrlKey || event.metaKey) && !event.altKey &&
+      ["b", "i"].includes(event.key.toLowerCase())) {
+    event.preventDefault();
+    applyMarkdownCommand(event.key.toLowerCase() === "b" ? "bold" : "italic");
     return;
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); create(); }
