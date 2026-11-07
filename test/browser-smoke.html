@@ -569,7 +569,7 @@ try {
     "Table control did not preserve the original table and add a second table");
   await until(async () => (await readState()).notes.some(note =>
     note.title === "Project plan" && note.body.split("| Phase | Status | Timeline |").length === 3));
-  tableEditor.value += "\\n| Unsafe | Values |\\n| --- | --- |\\n| <img src=x onerror=alert(1)> | safe |";
+  tableEditor.value += "\n| Unsafe | Values |\n| --- | --- |\n| <img src=x onerror=alert(1)> | safe |";
   tableEditor.dispatchEvent(new Event("input", { bubbles: true }));
   doc.querySelector('[data-action="preview"]').click();
   check(doc.querySelectorAll(".preview-table").length === 3 &&
