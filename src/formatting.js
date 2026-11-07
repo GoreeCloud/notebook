@@ -49,3 +49,15 @@ export function formatMarkdownSelection(source, start, end, command) {
   if (value.length > MAX_BODY_LENGTH) throw new RangeError("Formatted note would exceed the local note size limit");
   return { value, start: rangeStart, end: rangeEnd };
 }
+
+/** Toggle exactly one Markdown checklist line; no mutations or broad text rewrites. */
+export function toggleMarkdownChecklist(source, lineIndex, checked) {
+  if (typeof source !== "string" || !Number.isSafeInteger(lineIndex) ||
+      lineIndex < 0 || typeof checked !== "boolean") throw new TypeError("Invalid checklist update");
+  const lines = source.split("\n");
+  if (lineIndex >= lines.length || !/^- \[([ xX])\] /.test(lines[lineIndex])) {
+    throw new RangeError("Checklist item was not found");
+  }
+  lines[lineIndex] = lines[lineIndex].replace(/^- \[([ xX])\] /, checked ? "- [x] " : "- [ ] ");
+  return lines.join("\n");
+}
