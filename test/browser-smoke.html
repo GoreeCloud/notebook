@@ -67,18 +67,18 @@ try {
   // GC UI Foundations v1.0.1 must be applied, not merely copied to the repository.
   const gcStyles = () => frame.contentWindow.getComputedStyle(doc.documentElement);
   const color = name => gcStyles().getPropertyValue(name).trim().toUpperCase();
-  check(doc.documentElement.dataset.gcMode === "dark", "Notebook default does not request GC UI dark mode");
+  check(doc.documentElement.dataset.gcMode === "light", "Notebook default does not request its owner-approved light mockup mode");
   check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook dark brand does not follow GC UI tokens");
   check(color("--gc-canvas") === color("--gc-v1-color-canvas"), "Notebook dark canvas bypasses GC UI tokens");
-  check(color("--gc-brand") === "#C5BFFF", "Unexpected pinned GC UI dark primary token");
+  check(color("--gc-brand") === "#5145D9", "Unexpected pinned GC UI light primary token");
   const themeToggle = doc.querySelector(".theme-button");
   check(Boolean(themeToggle), "GC UI theme control was not rendered");
   themeToggle.click();
-  check(doc.documentElement.dataset.gcMode === "light", "Notebook did not synchronize GC UI light mode");
-  check(color("--gc-brand") === "#5145D9", "Notebook light primary is not the pinned GC UI color");
-  check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook light theme bypasses GC UI tokens");
+  check(doc.documentElement.dataset.gcMode === "dark", "Notebook did not synchronize GC UI dark mode");
+  check(color("--gc-brand") === "#C5BFFF", "Notebook dark primary is not the pinned GC UI color");
+  check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook dark theme bypasses GC UI tokens");
   doc.querySelector(".theme-button")?.click();
-  check(doc.documentElement.dataset.gcMode === "dark", "Notebook did not return to GC UI dark mode");
+  check(doc.documentElement.dataset.gcMode === "light", "Notebook did not return to official mockup light mode");
 
   const newButton = doc.querySelector('[data-action="new"]');
   check(Boolean(newButton), "New-note button not rendered");
