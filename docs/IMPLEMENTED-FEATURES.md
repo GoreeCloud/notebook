@@ -4,6 +4,7 @@
 
 | Capability | Owning source | Verification |
 | --- | --- | --- |
+| Owner-official Notebook mockup first-pass design alignment | docs/OFFICIAL-MOCKUP.md, assets/styles.css, assets/icon.svg, index.html, src/app.js | New workspace starts light, existing dark choice remains, screenshot-derived accessible green accent and notebook mark, responsive three-pane proportions, real note excerpts/tags; tested Chromium and released GC UI Foundations retained. Not a full rich-editor or pixel-match implementation | 
 | Note creation, title/body editing and debounced local saves | src/app.js, src/storage.js | Chromium smoke: create, edit and persist passed |
 | IndexedDB persistence with revision checks, proactive cross-tab staleness warnings, quota-error reporting and unsaved-exit protection | src/storage.js, src/app.js | Chromium confirms revision-only broadcast, forged-message verification, read-only stale tab, stale-write rejection, simulated quota rollback and unsaved-exit protection (run 42306906700). Tab refocus/visibility also checks committed IndexedDB revision; Chromium verified the no-BroadcastChannel refocus fallback (run 42307504834) |
 | Nested hierarchy, relocation and cycle prevention | src/model.js, src/app.js | Model cycle checks and Chromium nested-note create/move/parent-option regression passed |
