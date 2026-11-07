@@ -41,7 +41,7 @@ The first two artifacts contain six PNG renders: `home-dark-desktop.png`, `edito
 
 ## Owner-official mockup — initial implementation review (November 6, 2026)
 
-The founder supplied the official Notebook workspace mockup, preserved privately in [GoreeCloud's Notebook project folder](https://drive.google.com/file/d/1D6zG9nZ5NEGeFVpfhTI9Rgke6PmFsshV/view). Design decisions and remaining functional gaps are documented in [Official Mockup](OFFICIAL-MOCKUP.md).
+The founder supplied the official Notebook workspace mockup, preserved privately in the private canonical `GoreeCloud/Projects/GoreeCloud Notebook/` folder. Design decisions and remaining functional gaps are documented in [Official Mockup](OFFICIAL-MOCKUP.md).
 
 - [GitHub Actions #443](https://github.com/GoreeCloud/notebook/actions/runs/42318251197) succeeded after the mockup's first alignment pass. Its `notebook-ui-review` artifact ID `13552165750` contains eight correctly labeled light/dark desktop, tablet and mobile synthetic screenshots. Screenshots are temporary and do **not** contain user data.
 - **Verified in source and review:** the first screen now defaults to light for a new workspace, Notebook's emblem and primary actions have a green product accent, a wider middle note list shows real excerpts, tags and timestamps when present, and the desktop editor retains a usable dedicated pane. Existing GC UI Foundations tokens, dark-mode option, keyboard focus and storage safeguards remain.
