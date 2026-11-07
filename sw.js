@@ -1,5 +1,5 @@
 const PREFIX = "goreecloud-notebook-shell-";
-const CACHE = PREFIX + "v4";
+const CACHE = PREFIX + "v5";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./assets/gc-ui-foundations.v1.css", "./assets/styles.css", "./assets/icon.svg", "./src/app.js", "./src/model.js", "./src/storage.js", "./src/backup.js"];
 const ALLOWED = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));
 
