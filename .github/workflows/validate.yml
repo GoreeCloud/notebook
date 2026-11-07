@@ -22,11 +22,11 @@ jobs:
       - name: Verify allowlisted static release bundle
         run: |
           npm run build:release
-          for file in LICENSE licenses/GC-UI-APACHE-2.0.txt THIRD_PARTY_NOTICES.md index.html manifest.webmanifest sw.js assets/gc-ui-foundations.v1.css assets/styles.css assets/icon.svg src/app.js src/templates.js src/formatting.js src/model.js src/storage.js src/backup.js; do
+          for file in LICENSE licenses/GC-UI-APACHE-2.0.txt THIRD_PARTY_NOTICES.md index.html manifest.webmanifest sw.js assets/gc-ui-foundations.v1.css assets/styles.css assets/icon.svg src/app.js src/tables.js src/templates.js src/formatting.js src/model.js src/storage.js src/backup.js; do
             test -s "dist/$file"
             cmp "$file" "dist/$file"
           done
-          test "$(find dist -type f | wc -l)" -eq 15
+          test "$(find dist -type f | wc -l)" -eq 16
           test ! -e dist/test
           test ! -e dist/scripts
           test ! -e dist/docs
