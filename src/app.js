@@ -1,7 +1,7 @@
 import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, descendantsOf, searchNotes, backlinks, stableNoteLink, resolveNoteLink, auditNoteLinks, stats, validateSnapshot, describeImportImpact, escapeHtml } from "./model.js";
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery, subscribeToWorkspaceRevisions } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
-import { formatMarkdownSelection } from "./formatting.js";
+import { formatMarkdownSelection, toggleMarkdownChecklist } from "./formatting.js";
 
 const root = document.getElementById("app");
 // Apply the released GC UI high-contrast palette when the user's system requests it.
@@ -268,7 +268,7 @@ function home() {
     '<div class="tips"><span class="tip-icon">⌘</span><div><strong>A little tip</strong><p>Try [[Note title]] in any note to link ideas together. You can also nest notes, tag topics, and export everything at any time.</p></div></div></main>';
 }
 function simpleMarkdown(source) {
-  return String(source).split("\n").map(line => {
+  return String(source).split("\n").map((line, index) => {
     let content = safe(line);
     content = content.replace(/\[\[([^\]]{1,180})\]\]/g, (_, reference) => {
       const note = /^id:[A-Za-z0-9_-]{4,128}$/.test(reference) ? resolveNoteLink(state.notes, reference) : null;
@@ -279,8 +279,12 @@ function simpleMarkdown(source) {
     if (/^### /.test(line)) return "<h4>" + content.slice(4) + "</h4>";
     if (/^## /.test(line)) return "<h3>" + content.slice(3) + "</h3>";
     if (/^# /.test(line)) return "<h2>" + content.slice(2) + "</h2>";
-    if (/^- \[x\] /i.test(line)) return '<p class="preview-check">☑ ' + content.slice(6) + "</p>";
-    if (/^- \[ \] /.test(line)) return '<p class="preview-check">☐ ' + content.slice(6) + "</p>";
+    if (/^- \[([ xX])\] /.test(line)) {
+      const checked = /^- \[[xX]\] /.test(line);
+      return '<label class="preview-check"><input type="checkbox" data-check-line="' + index +
+        '" ' + (checked ? "checked " : "") + (saveBlocked ? "disabled " : "") +
+        'aria-label="Mark checklist item ' + (index + 1) + ' complete"><span>' + content.slice(6) + '</span></label>';
+    }
     if (/^- /.test(line)) return "<p>• " + content.slice(2) + "</p>";
     if (/^> /.test(line)) return '<blockquote class="preview-quote">' + content.slice(5) + "</blockquote>";
     return content ? "<p>" + content + "</p>" : '<p class="blank-line"></p>';
@@ -570,6 +574,14 @@ root.addEventListener("input", event => {
   }
 });
 root.addEventListener("change", event => {
+  if (event.target.matches("input[data-check-line]")) {
+    if (saveBlocked || !selected()) { render(); return notify("This note is read-only until you reload.", true); }
+    try {
+      const next = toggleMarkdownChecklist(selected().body, Number(event.target.dataset.checkLine), event.target.checked);
+      patch({ body: next });
+    } catch (error) { render(); notify(error.message, true); }
+    return;
+  }
   if (saveBlocked && ["taskDone", "taskDue", "parentSelect"].includes(event.target.id)) { notify("Export unsaved changes before editing again.", true); render(); return; }
   if (event.target.id === "importFile") { importFile(event.target.files?.[0]); event.target.value = ""; }
   if (event.target.id === "taskDone") patch({ completed: event.target.checked });
