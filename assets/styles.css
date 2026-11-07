@@ -75,6 +75,7 @@
 .nav-link:hover,.tree-item:hover{background:var(--gc-surface-tonal)}
 :root[data-gc-mode="light"] .sidebar{background:#fdfefc}
 :root[data-gc-mode="light"] .list-panel{background:#fff}
+:root[data-gc-mode="light"] .editor-panel{background:var(--gc-surface)}
 :root[data-gc-mode="light"] .note-list-item.selected{background:#e5f4e7}
 .note-list-item.selected{box-shadow:inset 3px 0 var(--notebook-accent)}
 .note-list-item{gap:7px}
