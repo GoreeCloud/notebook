@@ -294,7 +294,7 @@ function collection() {
   const title = { notes: "All Notes", tasks: "My Tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
   return '<main class="collection"><section class="list-panel"><div class="list-heading"><span class="overline">YOUR LIBRARY</span><h1>' + title + '</h1><p>' + visible.length + ' item' + (visible.length === 1 ? "" : "s") + '</p></div>' +
     '<div class="list-tools"><button class="gc-button primary compact" data-action="new">+ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
-    '<div class="note-list">' + (visible.length ? visible.map(noteListItem).join("")) : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
+    '<div class="note-list">' + (visible.length ? visible.map(noteListItem).join("") : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
     '<section class="editor-panel">' + (state.view === "trash" || state.view === "archive" ? '<div class="empty-editor"><div class="empty-art">◫</div><h2>' + title + '</h2><p>' + (state.view === "trash" ? "Restore a note from the list to continue editing." : "Archived notes stay safe and searchable when restored.") + '</p>' + (selected() ? '<button class="gc-button primary" data-action="restore">' + (state.view === "trash" ? "Restore note" : "Unarchive note") + '</button>' : "") + '</div>' : editor(selected())) + '</section></main>';
 }
 function fitTitleEditor(element) {
