@@ -204,3 +204,27 @@
   .top-action{background:var(--notebook-accent);color:#fff}
   :root[data-gc-mode="dark"] .top-action{color:#082612}
 }
+
+
+/* Owner-mockup Templates library: real local actions, never placeholder accounts. */
+.template-library{padding:clamp(18px,4vw,48px) clamp(20px,5vw,64px);overflow-y:auto}
+.template-header{max-width:720px;margin-bottom:26px}
+.template-header h1{font-size:clamp(27px,3vw,38px);margin:10px 0;letter-spacing:-1px}
+.template-header p,.template-privacy{max-width:670px;color:var(--gc-text-soft);font-size:14px;line-height:1.65}
+.template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:930px}
+.template-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;
+  min-height:195px;padding:23px;background:var(--gc-surface);border:1px solid var(--gc-outline);
+  border-radius:var(--gc-radius-lg);color:var(--gc-text);
+  box-shadow:0 5px 20px #00000007;transition:transform .15s ease,border-color .15s ease}
+.template-card:hover{transform:translateY(-2px);border-color:var(--notebook-accent)}
+.template-card:focus-visible{outline:var(--gc-v1-component-focus-width) solid var(--gc-v1-color-focus-ring);
+  outline-offset:var(--gc-v1-component-focus-offset)}
+.template-card strong{font-size:18px;letter-spacing:-.25px}
+.template-card>span:not(.template-icon){font-size:13px;line-height:1.5;color:var(--gc-text-soft)}
+.template-icon{font-size:22px;display:grid;place-items:center;width:45px;height:45px;
+  border-radius:13px;background:var(--notebook-accent-soft);color:var(--notebook-accent-ink)}
+.template-card small{color:var(--notebook-accent-ink);font-weight:750;font-size:12px;margin-top:auto}
+.template-privacy{margin-top:22px;font-size:12px}
+@media(max-width:670px){.template-grid{grid-template-columns:1fr}
+  .template-card{min-height:165px;padding:19px}.template-library{padding-bottom:90px}}
+@media(prefers-reduced-motion:reduce){.template-card{transition:none}.template-card:hover{transform:none}}
