@@ -519,6 +519,37 @@ try {
   }));
   await until(async () => (await readState()).notes.length === originalRestored.notes.length + 1);
 
+  // The official-mockup Templates library is opt-in. Viewing it cannot insert
+  // starter records into an existing workspace, alter revisions or change undo.
+  const beforeTemplates = await readState();
+  const recoveryBeforeTemplates = await readRecoveryState();
+  const templatesNav = doc.querySelector('.sidebar [data-view="templates"]');
+  check(Boolean(templatesNav), "Templates navigation not present");
+  templatesNav.click();
+  check(doc.querySelector(".template-header h1")?.textContent === "Templates",
+    "Templates navigation did not open its real local library");
+  check(doc.querySelectorAll(".template-card[data-template-id]").length === 4,
+    "Expected four accessible bundled starter layouts");
+  const afterPreview = await readState();
+  check(afterPreview.revision === beforeTemplates.revision &&
+    JSON.stringify(afterPreview.notes) === JSON.stringify(beforeTemplates.notes) &&
+    JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeTemplates),
+    "Browsing templates unexpectedly changed notes or the recovery checkpoint");
+  doc.querySelector('[data-template-id="project-plan"]').click();
+  check(doc.getElementById("noteTitle")?.value === "Project plan",
+    "Selecting a project starter did not open a real editable note");
+  const createdFromTemplate = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === beforeTemplates.notes.length + 1 &&
+      snapshot.notes.some(note => note.title === "Project plan" &&
+        note.body.includes("## Milestones") && note.tags.includes("planning")) && snapshot;
+  });
+  check(createdFromTemplate.notes.some(note => note.title === "Browser acceptance note"),
+    "Template creation replaced an existing user note");
+  check(createdFromTemplate.revision > beforeTemplates.revision,
+    "Template creation did not commit through revision-checked IndexedDB");
+
+
   // Read local storage quota and request eviction resistance without assuming browser approval.
   const settings = doc.getElementById("settingsDialog");
   if (!settings.open) doc.querySelector('[data-action="settings"]').click();
