@@ -11,11 +11,23 @@ export function formatMarkdownSelection(source, start, end, command) {
   if (typeof source !== "string" ||
       !Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
       start < 0 || end < start || end > source.length) throw new TypeError("Invalid text selection");
-  if (!Object.hasOwn(markers, command) && !Object.hasOwn(prefixes, command)) {
+  if (command !== "table" && !Object.hasOwn(markers, command) && !Object.hasOwn(prefixes, command)) {
     throw new TypeError("Unknown formatting command");
   }
   let before, replacement, after, rangeStart, rangeEnd;
-  if (Object.hasOwn(markers, command)) {
+  if (command === "table") {
+    // Append a starter table at the selection's end, preserving any selected text.
+    // This avoids destructive replacement of existing content when inserting a block.
+    const at = end;
+    before = source.slice(0, at);
+    after = source.slice(at);
+    const prefix = before && !before.endsWith("\\n") ? "\\n\\n" : "";
+    const suffix = after && !after.startsWith("\\n") ? "\\n\\n" : "";
+    const table = "| Phase | Status | Timeline |\\n| --- | --- | --- |\\n| Planning | Not started | [Dates] |";
+    replacement = prefix + table + suffix;
+    rangeStart = at + prefix.length + 2;
+    rangeEnd = rangeStart + "Phase".length;
+  } else if (Object.hasOwn(markers, command)) {
     const [open, close, placeholder] = markers[command];
     const selected = source.slice(start, end);
     // Highlight a meaningful placeholder if nothing was selected.
