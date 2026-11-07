@@ -140,14 +140,24 @@ try {
     await viewport(1440, 900, false);
     await command("Page.reload", { ignoreCache: true });
     await waitFor(async () => evaluate("!!document.querySelector('.content.overview')"));
-    await capture("home-dark-desktop");
+    if (await evaluate("document.documentElement.dataset.gcMode") !== "light") {
+      throw Error("Official Notebook light-mode screenshot precondition failed");
+    }
+    await capture("home-light-desktop");
     await tap('.sidebar [data-view="notes"]');
     await tap(".note-list-item");
-    await capture("editor-dark-desktop");
-    await tap(".theme-button");
     await capture("editor-light-desktop");
+    await tap(".theme-button");
+    if (await evaluate("document.documentElement.dataset.gcMode") !== "dark") {
+      throw Error("Notebook dark-mode screenshot precondition failed");
+    }
+    await capture("editor-dark-desktop");
     await tap('.sidebar [data-view="home"]');
-    await capture("home-light-desktop");
+    await capture("home-dark-desktop");
+    await tap(".theme-button");
+    if (await evaluate("document.documentElement.dataset.gcMode") !== "light") {
+      throw Error("Mobile screenshot must use the official light-mode appearance");
+    }
     await viewport(390, 844, true);
     await capture("home-light-mobile");
     await tap('.mobile-bottom [data-view="notes"]');
