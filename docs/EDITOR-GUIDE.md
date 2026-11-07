@@ -4,7 +4,7 @@
 
 ## Working editor toolbar
 
-When editing a local note, the toolbar above the title provides seven functional commands:
+When editing a local note, the toolbar above the title provides eight functional commands:
 
 | Control | Saved Markdown | Behavior |
 | --- | --- | --- |
@@ -15,12 +15,15 @@ When editing a local note, the toolbar above the title provides seven functional
 | Checklist | `- [ ] text` | Prefixes selected lines |
 | Block quote | `> text` | Prefixes selected lines |
 | Inline code | Backticks around selected text | Wraps selection or selects a placeholder |
+| Markdown table | Pipe header, separator and starter data row | Inserts a bounded table after the selection without deleting highlighted text |
 
 **Keyboard shortcuts:** Ctrl/Cmd+B for bold, Ctrl/Cmd+I for italic while the note body has focus. Controls use native buttons with labels and preserve the textarea selection. All modifications use the existing revision-checked debounced IndexedDB autosave path, with size limits and stale-tab read-only protections. The formatting helper is pure and has no dependencies.
 
-**Write / Preview:** Write uses an accessible native textarea. Preview escapes untrusted note text before rendering a **limited Markdown subset**: headings, bold, italic, list lines, interactive checkboxes, block quotes, inline code and local wiki links. A checked preview checkbox updates **one validated Markdown line**, then autosaves locally. There is no remote renderer, script execution or arbitrary HTML support. The preview is not CommonMark-complete; combinations of formatting markers may be handled imperfectly.
+**Write / Preview:** Write uses an accessible native textarea. Preview escapes untrusted note text before rendering a **limited Markdown subset**: headings, bold, italic, list lines, interactive checkboxes, block quotes, inline code, simple pipe tables and local wiki links. A checked preview checkbox updates **one validated Markdown line**, then autosaves locally. There is no remote renderer, script execution or arbitrary HTML support. The preview is not CommonMark-complete; combinations of formatting markers may be handled imperfectly.
 
-**Not yet delivered:** Rich contenteditable/block editing, tables, cover-image uploads, image attachments and thumbnails, undo/redo toolbar, full Markdown/CommonMark compliance, media embeds, complete native rich-text accessibility review, and the rest of the mockup's advanced controls.
+**Not yet delivered:** Rich contenteditable/block editing, fully interactive spreadsheet-like tables, cover-image uploads, attachments and thumbnails, undo/redo toolbar, full Markdown/CommonMark compliance, media embeds, complete native rich-text accessibility review, and the rest of the mockup's advanced controls.
+
+For the built-in project, meeting, journal and reading starter library, along with the bounded table syntax and privacy limits, see [Templates and Markdown Tables](TEMPLATES-AND-TABLES.md).
 
 ## Working workspace navigation
 
