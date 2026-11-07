@@ -1,0 +1,42 @@
+# GoreeCloud Notebook — Official Owner-Provided UI Mockup
+
+**Authority:** Official product mockup supplied directly by the GoreeCloud founder on **November 6, 2026**. This document describes **visual direction**, not a claim that the pictured features are already implemented.
+
+**Private source image:** [OFFICIAL-NOTEBOOK-UI-MOCKUP.png](https://drive.google.com/file/d/1D6zG9nZ5NEGeFVpfhTI9Rgke6PmFsshV/view), stored in the authorized canonical GoreeCloud Notebook project folder. Do not publish the image to the public GitHub repository or external image hosts without separate approval.
+
+## Screen description — founder reference
+
+The supplied desktop mockup shows a polished, light visual treatment with a white canvas, subtle dividers, rounded controls, and a **distinct green Notebook accent**. The UI is organized into:
+
+1. **Left workspace sidebar:** Notebook symbol and **Notebook** wordmark, strong green **New Note** split-style control, Home, Notes, Notebooks, Tags, Favorites, Recent, Templates and Trash; notebook folder tree and tag chips below.
+2. **Middle note list:** “All Notes” heading, note count, sort/view affordances, stacked selectable notes showing title, excerpts, tag pills, edit time, optional thumbnails, and a soft green selected state.
+3. **Right note canvas:** compact formatting toolbar; breadcrumb path, wide image cover, prominent note title, notebook and tag chips, edited timestamp, formatted headings, a highlighted callout, goals list, interactive task checkboxes, table, and block-entry prompt.
+4. **Global header:** long search field, shortcut hint and right-aligned notifications/help/profile affordances.
+
+**Owner-specified composition and visual hierarchy** are binding design direction for the Notebook product. The mockup does not supply exact font files, CSS variables, spacing measurements, interaction contracts, backend services, or a native-device layout, so those must be designed and tested against the current **GoreeCloud UI** foundational design authority; do not invent an official token set.
+
+### Example content is illustrative, not actual user data
+
+“Project Planning”, “Project Alpha”, “Meeting Notes”, the 42-note count, dates, checklist rows, imagery, tags and project timeline are **sample content** in the mockup. Never prepopulate a real user workspace with these examples or represent their statuses as genuine.
+
+## Implementation matrix (v0.1 draft PR)
+
+| Owner-mockup element | Existing implementation | Next step |
+| --- | --- | --- |
+| Three-pane desktop workspace | Existing sidebar, note list and editor | Bring panel proportions, visual density and selected state closer to screenshot |
+| Light canvas and Notebook green accent | Existing GC UI Foundation 1.0.1 light/dark tokens and product CSS | Use the official light mockup as initial visual direction while retaining optional dark/high contrast; ensure control contrast |
+| Navigation, notebooks, tags and tree | Existing Home/Notes/Favorites/Tasks/Archive/Trash plus nested note hierarchy and tags | Evolve without inert controls; tag browsing, dedicated notebooks, Recent and Templates remain roadmap |
+| Selectable note cards | Existing list with title, tag text, excerpt and modified date | Add tag pills, optional visuals and richer selection states after model/a11y checks |
+| Rich document canvas | Existing textarea Markdown writer and simple preview, note title, parent and tags | Plan rich blocks, table, cover images, inline checkboxes, editing history and format toolbar as actual working features |
+| Global search | Existing local search over title/body/tags | Expand to notebooks, saved filters and keyboard shortcuts with testing |
+| User account / notifications | Not present; local-first preview | Do not add fake online-account, notification, or cloud affordances |
+| Responsive / accessibility | Basic mobile view and Chromium checks | Verify tablet/mobile compositions, keyboard/screen-reader and contrast against official reference |
+
+## Delivery boundaries
+
+- Preserve data protection: IndexedDB revision checks, autosave, import recovery, privacy-first local operation and portable backup controls are mandatory.
+- The shared GC UI Foundations stylesheet remains pinned and attributed. Notebook-specific **green accent** comes from the founder's product mockup; the founder screenshot's green is approximately `#1e8b2d` in its New Note button. Interactive foregrounds may use a **darker accessibility-adjusted variant**, not an unverified claim of an official brand color.
+- Use actual working behavior for controls; do not build dead formatting buttons, pretend collaboration exists or imitate a real account identity when none is configured.
+- Treat each implementation and rendered verification separately. Source changes or screenshot similarity do not establish full rich-editor capability or a production release.
+
+**Status:** Accepted as design reference and stored privately. Foundational layout/brand alignment may be developed on the open draft PR. Rich block editing and advanced notebook navigation are planned, not delivered or deployed.
