@@ -16,6 +16,7 @@ const files = Object.freeze([
   "assets/styles.css",
   "assets/icon.svg",
   "src/app.js",
+  "src/formatting.js",
   "src/model.js",
   "src/storage.js",
   "src/backup.js"
