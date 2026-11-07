@@ -165,3 +165,17 @@
   .formatting-toolbar button{min-width:40px;min-height:40px}
   .tag-filter-row{padding:4px 18px 12px;max-height:115px}
 }
+
+
+/* Preview semantics for owner-mockup formatting actions. */
+.markdown-preview code{
+  display:inline;background:var(--gc-surface-tonal);
+  color:var(--gc-text);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  border:1px solid var(--gc-outline);border-radius:5px;padding:2px 5px;
+  font-size:.92em;overflow-wrap:anywhere
+}
+.markdown-preview .preview-quote{
+  margin:9px 0 12px;padding:10px 14px;border-left:3px solid var(--notebook-accent);
+  background:var(--gc-surface-tonal);border-radius:0 9px 9px 0;
+  color:var(--gc-text);overflow-wrap:anywhere
+}
