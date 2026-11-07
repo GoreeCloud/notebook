@@ -138,13 +138,21 @@ try {
     "Markdown preview did not render toolbar bold syntax");
   doc.querySelector('[data-action="edit"]').click();
   const enrichedBody = doc.getElementById("noteBody");
-  enrichedBody.value += "\n> Mockup callout\nInline `code` example";
+  enrichedBody.value += "\n> Mockup callout\nInline `code` example\n- [ ] Complete milestone";
   enrichedBody.dispatchEvent(new Event("input", { bubbles: true }));
   doc.querySelector('[data-action="preview"]').click();
   check(doc.querySelector(".preview-quote")?.textContent === "Mockup callout",
     "Block quote from mockup formatting did not render safely");
   check(doc.querySelector(".markdown-preview code")?.textContent === "code",
     "Inline Markdown code from the toolbar did not render");
+  const checklist = doc.querySelector(".markdown-preview input[data-check-line]");
+  check(checklist && !checklist.checked && !checklist.disabled,
+    "New checklist control must be editable in the local Markdown preview");
+  checklist.click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId &&
+    note.body.includes("- [x] Complete milestone")));
+  check(doc.querySelector(".markdown-preview input[data-check-line]")?.checked,
+    "Toggling the checklist did not update the preview state");
   doc.querySelector('[data-action="edit"]').click();
   const tagsField = doc.getElementById("noteTags");
   tagsField.value = "project, planning";
