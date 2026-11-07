@@ -111,3 +111,57 @@
   .list-item-excerpt{font-size:11px;-webkit-line-clamp:1}
   .list-item-tags{display:none}
 }
+
+
+/* Real, keyboard-operable editor formatting toolbar and note navigation.
+ * The control set is deliberately limited to implemented Markdown commands. */
+.formatting-toolbar{
+  display:flex;align-items:center;gap:5px;overflow-x:auto;max-width:100%;
+  padding:8px 2px;margin:0 0 22px;border-bottom:1px solid var(--gc-outline);
+  scrollbar-width:thin
+}
+.formatting-caption{font-size:10px;font-weight:750;letter-spacing:1px;
+  color:var(--gc-text-soft);margin-right:8px}
+.formatting-toolbar button{
+  flex:none;min-width:36px;min-height:36px;padding:5px 10px;
+  border:1px solid transparent;border-radius:8px;background:transparent;
+  color:var(--gc-text);font-size:14px;font-weight:650
+}
+.formatting-toolbar button:hover{
+  background:var(--gc-surface-tonal);border-color:var(--gc-outline)
+}
+.formatting-toolbar button:focus-visible{
+  outline:var(--gc-v1-component-focus-width) solid var(--gc-v1-color-focus-ring);
+  outline-offset:var(--gc-v1-component-focus-offset)
+}
+.sidebar-tags{
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;
+  max-height:126px;overflow-y:auto;flex-shrink:0;padding:0 9px 13px
+}
+.sidebar-tags-heading{margin-top:14px}
+.sidebar-tags small{font-size:11px;color:var(--gc-text-soft);line-height:1.5}
+.tag-chip{
+  display:inline-flex;align-items:center;justify-content:center;min-height:31px;
+  border:1px solid var(--gc-outline);border-radius:99px;padding:4px 10px;
+  background:var(--gc-surface);color:var(--gc-text-soft);
+  font-size:11px;line-height:1.3;font-weight:600;max-width:100%;
+  overflow-wrap:anywhere
+}
+.tag-chip:hover,.tag-chip.active{
+  background:var(--notebook-accent-soft);color:var(--notebook-accent-ink);
+  border-color:var(--notebook-accent)
+}
+.tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;padding:5px 20px 15px;
+  max-height:144px;overflow:auto}
+.list-view-hint{margin:4px 20px 16px;color:var(--gc-text-soft);
+  font-size:12px;line-height:1.5}
+@media(max-width:1100px){
+  .sidebar-tags{max-height:110px}
+  .formatting-toolbar{margin-bottom:16px}
+}
+@media(max-width:620px){
+  .formatting-caption{display:none}
+  .formatting-toolbar{margin:0 0 13px}
+  .formatting-toolbar button{min-width:40px;min-height:40px}
+  .tag-filter-row{padding:4px 18px 12px;max-height:115px}
+}
