@@ -3,6 +3,7 @@ import { readState, writeState, readRecoveryState, replaceStateWithRecovery, sub
 import { createBackup, importBackup } from "./backup.js";
 import { formatMarkdownSelection, toggleMarkdownChecklist } from "./formatting.js";
 import { BUILTIN_TEMPLATES, createNoteFromTemplate } from "./templates.js";
+import { parseMarkdownTable } from "./tables.js";
 
 const root = document.getElementById("app");
 // Apply the released GC UI high-contrast palette when the user's system requests it.
@@ -297,7 +298,15 @@ function startFromTemplate(templateId) {
   } catch (error) { notify(error.message, true); }
 }
 function simpleMarkdown(source) {
-  return String(source).split("\n").map((line, index) => {
+  const lines = String(source).split("\n");
+  let skipThrough = -1;
+  return lines.map((line, index) => {
+    if (index <= skipThrough) return "";
+    const table = parseMarkdownTable(lines, index);
+    if (table) {
+      skipThrough = table.endIndex;
+      return table.html;
+    }
     let content = safe(line);
     content = content.replace(/\[\[([^\]]{1,180})\]\]/g, (_, reference) => {
       const note = /^id:[A-Za-z0-9_-]{4,128}$/.test(reference) ? resolveNoteLink(state.notes, reference) : null;
@@ -338,7 +347,7 @@ function editor(note) {
       '<button type="button" data-format="bullet" aria-label="Bulleted list" title="Bulleted list">☷</button>' +
       '<button type="button" data-format="checklist" aria-label="Checklist" title="Checklist">☑</button>' +
       '<button type="button" data-format="quote" aria-label="Block quote" title="Block quote">❝</button>' +
-      '<button type="button" data-format="code" aria-label="Inline code" title="Inline code"><span aria-hidden="true">&lt;/&gt;</span></button>' +
+      '<button type="button" data-format="code" aria-label="Inline code" title="Inline code"><span aria-hidden="true">&lt;/&gt;</span></button><button type="button" data-format="table" aria-label="Insert Markdown table" title="Insert table">▦</button>' +
       '</div>' : '') +
     '<textarea class="editor-title" id="noteTitle" rows="1" maxlength="180" aria-label="Note title" placeholder="Untitled note" ' + (saveBlocked ? 'disabled' : '') + '>' + safe(note.title) + '</textarea>' +
     '<div class="editor-meta"><label>FOLDER <select id="parentSelect" aria-label="Parent note">' + parentChoices + '</select></label>' +
