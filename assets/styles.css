@@ -193,3 +193,14 @@
   color:var(--gc-text-soft);text-decoration:line-through
 }
 .markdown-preview label.preview-check input:disabled{cursor:not-allowed;opacity:.6}
+
+
+/* Match official Notebook green accent in compact/mobile app chrome. */
+@media(max-width:850px){
+  .mobile-brand{background:linear-gradient(140deg,#229d3e,#156c28);color:#fff;
+    box-shadow:0 4px 14px #16882b24}
+}
+@media(max-width:620px){
+  .top-action{background:var(--notebook-accent);color:#fff}
+  :root[data-gc-mode="dark"] .top-action{color:#082612}
+}
