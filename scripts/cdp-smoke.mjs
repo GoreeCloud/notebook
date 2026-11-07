@@ -159,6 +159,12 @@ try {
       throw Error("Mobile screenshot must use the official light-mode appearance");
     }
     await viewport(390, 844, true);
+    const mobileAccent = await evaluate("(()=>{const brand=document.querySelector('.mobile-brand');const action=document.querySelector('.top-action');return brand&&action?{brand:getComputedStyle(brand).backgroundImage,action:getComputedStyle(action).backgroundColor}:null})()");
+    if (!mobileAccent || !mobileAccent.brand.includes("34, 157, 62") ||
+        mobileAccent.action !== "rgb(25, 125, 40)") {
+      throw Error("Official Notebook green accent is missing from mobile app chrome: " + JSON.stringify(mobileAccent));
+    }
+    console.log("PASS: mobile brand and create-note action follow official Notebook green palette.");
     await capture("home-light-mobile");
     await tap('.mobile-bottom [data-view="notes"]');
     await tap(".note-list-item");
