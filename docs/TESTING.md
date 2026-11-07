@@ -16,7 +16,7 @@ The regular Chromium suite verifies that unmarked fixture URLs refuse to execute
 
 ## Existing verified tests
 
-The required CI suite runs `npm run check`, `npm test`, and the Chromium browser smoke with a temporary profile. It covers note editing, revision conflicts, search, hierarchy, backups (including bounded gzip), invalid imports, one-step undo, simulated synchronous quota errors, offline shell reopening, and responsive layouts. Tests use synthetic notes.
+The required CI suite runs `npm run check`, `npm test`, and the Chromium browser smoke in a disposable profile. The **34 Node tests** cover model, backup, formatting/checklist, link integrity, import-impact and pinned GC UI Foundations behavior. Chromium verifies real toolbar clicks, Ctrl/Cmd shortcuts, preview/checklist persistence, Tags/Recent/top-level Notebooks navigation, revision conflicts, backups (bounded gzip), invalid imports, one-step undo, simulated synchronous quota errors, cached-shell reopening, high-contrast/green mobile-brand assertions and responsive layouts. All browser fixtures use synthetic notes, never user workspaces.
 
 ## Experimental quota enforcement
 
@@ -31,7 +31,7 @@ A device-level true-quota test should use an isolated profile and a controlled s
 
 ## Verified release-candidate staging
 
-`npm run build:release` copies an explicit allowlist of **nine PWA runtime assets** and the required MIT `LICENSE` into a new `dist/`. The script refuses to overwrite an existing `dist/`, verifies source paths are regular files, stages into a temporary directory and renames that directory only when every copy succeeded. CI verifies exactly ten resulting files with byte-for-byte comparisons, and checks that no `test/`, `scripts/`, or `docs/` directory is included. No external dependency, upload, hosting or deployment is performed.
+`npm run build:release` copies an explicit allowlist of **eleven PWA runtime assets** plus MIT `LICENSE`, the upstream Apache-2.0 license and `THIRD_PARTY_NOTICES.md` into a new `dist/`. The pure `src/formatting.js` helper is included in the offline and release allowlists. The script refuses to overwrite an existing `dist/`, verifies source paths are regular files, stages into a temporary directory and renames that directory only when every copy succeeded. CI verifies exactly **fourteen** resulting files with byte-for-byte comparisons and checks that no `test/`, `scripts/`, or `docs/` directory is included. No external dependency, upload, hosting or deployment is performed.
 
 The development HTTP server is bound to `127.0.0.1` by default. Reviewing or testing `dist/` is not equivalent to approving a production launch. Any future release review must use the intended hosting controls, validate actual service worker behavior at that scope, and retain rollback options.
 
