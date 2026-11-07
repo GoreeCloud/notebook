@@ -47,6 +47,7 @@ The application uses the verified GoreeCloud UI Foundations 1.0.1 semantic token
 - [Security](docs/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Rendered UI review](docs/VISUAL-REVIEW.md)
+- [Official Notebook UI mockup](docs/OFFICIAL-MOCKUP.md) — founder-approved visual reference, current alignment and unimplemented controls.
 - [GC UI Foundations adoption and provenance](docs/GC-UI-ADOPTION.md) — pinned tokens, licensing and incomplete design acceptance.
 - [Browser testing and data-safety evidence](docs/TESTING.md) — synthetic fixtures, cross-tab checks and quota limitations.
 - [Backup and recovery guide](docs/BACKUPS.md) — JSON/gzip limits, import impact preview and local undo.
