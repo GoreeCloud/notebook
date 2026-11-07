@@ -7,7 +7,7 @@ export const BUILTIN_TEMPLATES = Object.freeze([
     id: "project-plan", icon: "▣", title: "Project plan",
     description: "Define your goal, scope, milestones, and next actions.",
     type: "note", tags: Object.freeze(["project", "planning"]),
-    body: "## Overview\n[What are you creating, and why?]\n\n## Goals\n- [ ] Define scope and success criteria\n- [ ] Identify the first deliverable\n\n## Milestones\n- Planning — [dates]\n- Development — [dates]\n- Review — [dates]\n\n## Next steps\n- [ ] [First action]\n\n## Notes and ideas\n- [Additional context]"
+    body: "## Overview\n[What are you creating, and why?]\n\n## Goals\n- [ ] Define scope and success criteria\n- [ ] Identify the first deliverable\n\n## Milestones\n| Phase | Status | Timeline |\n| --- | --- | --- |\n| Planning | Not started | [Dates] |\n| Development | Not started | [Dates] |\n| Review | Not started | [Dates] |\n\n## Next steps\n- [ ] [First action]\n\n## Notes and ideas\n- [Additional context]"
   }),
   Object.freeze({
     id: "meeting", icon: "▤", title: "Meeting notes",
