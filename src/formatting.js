@@ -21,9 +21,9 @@ export function formatMarkdownSelection(source, start, end, command) {
     const at = end;
     before = source.slice(0, at);
     after = source.slice(at);
-    const prefix = before && !before.endsWith("\\n") ? "\\n\\n" : "";
-    const suffix = after && !after.startsWith("\\n") ? "\\n\\n" : "";
-    const table = "| Phase | Status | Timeline |\\n| --- | --- | --- |\\n| Planning | Not started | [Dates] |";
+    const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
+    const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+    const table = "| Phase | Status | Timeline |\n| --- | --- | --- |\n| Planning | Not started | [Dates] |";
     replacement = prefix + table + suffix;
     rangeStart = at + prefix.length + 2;
     rangeEnd = rangeStart + "Phase".length;
