@@ -110,6 +110,50 @@ try {
   doc.defaultView.dispatchEvent(savedExit);
   check(!savedExit.defaultPrevented, "Saved workspace still triggers unsaved-leave warning");
   const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
+
+  // Every pictured toolbar control is a working local operation, never a fake
+  // rich-text affordance. The save must pass through the normal IndexedDB path.
+  const formatter = doc.querySelector('[data-format="bold"]');
+  check(formatter && formatter.getAttribute("aria-label") === "Bold selection",
+    "Accessible formatting toolbar missing");
+  const markdownBody = doc.getElementById("noteBody");
+  const phraseStart = markdownBody.value.indexOf("local-first");
+  check(phraseStart >= 0, "Formatting regression fixture missing selected text");
+  markdownBody.setSelectionRange(phraseStart, phraseStart + "local-first".length);
+  formatter.click();
+  check(markdownBody.value.includes("**local-first**"), "Formatting control failed to wrap selected text");
+  check(doc.activeElement === markdownBody && markdownBody.selectionStart === phraseStart + 2,
+    "Formatting did not restore focus and highlighted text");
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body.includes("**local-first**")));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelector("#previewOutput strong")?.textContent === "local-first",
+    "Markdown preview did not render toolbar bold syntax");
+  doc.querySelector('[data-action="edit"]').click();
+  const tagsField = doc.getElementById("noteTags");
+  tagsField.value = "project, planning";
+  tagsField.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.tags.includes("project")));
+  doc.querySelector('[data-view="tags"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Tags",
+    "Owner-mockup Tags navigation not functional");
+  const projectChip = doc.querySelector('.tag-filter-row [data-tag="project"]');
+  check(projectChip, "Tag browser did not discover real user-applied tags");
+  projectChip.click();
+  check(doc.querySelector(".list-heading p")?.textContent.includes("1 item"),
+    "Filtering to a tag did not narrow to its matching note");
+  doc.querySelector('[data-view="notebooks"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Notebooks" &&
+    doc.querySelector(".list-view-hint")?.textContent.includes("Top-level notes"),
+    "Notebook hierarchy navigation did not disclose its actual local model");
+  doc.querySelector('[data-view="recent"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Recent Notes" &&
+    doc.querySelector(".note-list-item"),
+    "Recent notes navigation did not list saved notes");
+  doc.querySelector('[data-view="notes"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+
   // Link integrity audit must be local, read-only and accessible from Settings.
   const beforeLinkAudit = await readState();
   const checkpointBeforeLinkAudit = await readRecoveryState();
