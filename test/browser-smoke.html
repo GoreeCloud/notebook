@@ -549,6 +549,38 @@ try {
   check(createdFromTemplate.revision > beforeTemplates.revision,
     "Template creation did not commit through revision-checked IndexedDB");
 
+  // Tables from the official project mockup are real sanitized Markdown blocks.
+  const tablePreviewButton = doc.querySelector('[data-action="preview"]');
+  tablePreviewButton.click();
+  const previewTable = doc.querySelector(".preview-table");
+  check(previewTable && previewTable.querySelectorAll("th").length === 3 &&
+    previewTable.querySelectorAll("tbody tr").length === 3,
+    "Project starter milestone table did not render with semantic table cells");
+  check(doc.querySelector(".preview-table-scroll")?.getAttribute("role") === "region",
+    "Markdown table is not in an accessible scrollable region");
+  doc.querySelector('[data-action="edit"]').click();
+  const tableEditor = doc.getElementById("noteBody");
+  tableEditor.setSelectionRange(tableEditor.value.length, tableEditor.value.length);
+  const tableButton = doc.querySelector('[data-format="table"]');
+  check(tableButton?.getAttribute("aria-label") === "Insert Markdown table",
+    "Working table-insertion toolbar control not found");
+  tableButton.click();
+  check(tableEditor.value.split("| Phase | Status | Timeline |").length === 3,
+    "Table control did not preserve the original table and add a second table");
+  await until(async () => (await readState()).notes.some(note =>
+    note.title === "Project plan" && note.body.split("| Phase | Status | Timeline |").length === 3));
+  tableEditor.value += "\\n| Unsafe | Values |\\n| --- | --- |\\n| <img src=x onerror=alert(1)> | safe |";
+  tableEditor.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelectorAll(".preview-table").length === 3 &&
+    !doc.querySelector(".markdown-preview img") &&
+    doc.querySelector(".markdown-preview")?.textContent.includes("<img src=x onerror=alert(1)>"),
+    "Markdown table rendered unsafe HTML or lost escaped cell content");
+  doc.querySelector('[data-action="edit"]').click();
+  await until(async () => (await readState()).notes.some(note =>
+    note.title === "Project plan" && note.body.includes("<img src=x onerror=alert(1)>")));
+
+
 
   // Read local storage quota and request eviction resistance without assuming browser approval.
   const settings = doc.getElementById("settingsDialog");
