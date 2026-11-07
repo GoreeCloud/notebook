@@ -39,6 +39,15 @@ The first two artifacts contain six PNG renders: `home-dark-desktop.png`, `edito
 - The current `editor-light-mobile.png` shows a wrapped note heading, keyboard/touch controls and native form fields with a readable layout at 390px. Automated smoke checks canonical light/dark primary values, system-driven high-contrast palette switching and narrow layout overflow. The high-contrast switch was tested in Chromium run #326, but its full rendered accessibility and contrast acceptance remains open.
 - **Assessment:** These specific screenshots demonstrate a coherent partial foundation integration. The product still includes custom navigation, components, icon glyphs and decorative colors. This is neither a full GC UI component migration nor a finished visual-quality/assistive-technology acceptance review. See [GC UI Adoption](GC-UI-ADOPTION.md) for provenance and limits.
 
+## Owner-official mockup — initial implementation review (November 6, 2026)
+
+The founder supplied the official Notebook workspace mockup, preserved privately in [GoreeCloud's Notebook project folder](https://drive.google.com/file/d/1D6zG9nZ5NEGeFVpfhTI9Rgke6PmFsshV/view). Design decisions and remaining functional gaps are documented in [Official Mockup](OFFICIAL-MOCKUP.md).
+
+- [GitHub Actions #443](https://github.com/GoreeCloud/notebook/actions/runs/42318251197) succeeded after the mockup's first alignment pass. Its `notebook-ui-review` artifact ID `13552165750` contains eight correctly labeled light/dark desktop, tablet and mobile synthetic screenshots. Screenshots are temporary and do **not** contain user data.
+- **Verified in source and review:** the first screen now defaults to light for a new workspace, Notebook's emblem and primary actions have a green product accent, a wider middle note list shows real excerpts, tags and timestamps when present, and the desktop editor retains a usable dedicated pane. Existing GC UI Foundations tokens, dark-mode option, keyboard focus and storage safeguards remain.
+- **Still different from the official reference:** the demo screenshot's rich-document toolbar, cover photo, image thumbnails, tables, formatted checklists, dashboard navigation categories and account/notification controls are not implemented. The current editor is a Markdown textarea plus a safe subset preview; these mockup elements must become working, accessible features before they can be presented as available. No fake user/project records are shipped.
+- **Acceptance boundary:** this is a verified first-pass stylistic direction, not pixel-equivalent mockup reproduction, full GC UI 100-principle acceptance, screen-reader acceptance, or a stable release.
+
 ## Outstanding visual and experience checks
 
 - Compare every screen and state with the **complete** founder-approved 100 GC UI principles and actual canonical design tokens/components; local fallback colors are **not** the canonical palette contract.
