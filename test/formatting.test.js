@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatMarkdownSelection as format } from "../src/formatting.js";
+import { formatMarkdownSelection as format, toggleMarkdownChecklist as toggle } from "../src/formatting.js";
 import { MAX_BODY_LENGTH } from "../src/model.js";
 
 test("wraps selected text in bold, italic and inline code without losing its selection", () => {
@@ -51,4 +51,16 @@ test("rejects malformed inputs, unknown commands and formatting that exceeds not
   assert.throws(() => format("abc", 0, 7, "bold"), /Invalid text selection/);
   assert.throws(() => format("abc", 0, 0, "javascript"), /Unknown formatting command/);
   assert.throws(() => format("x".repeat(MAX_BODY_LENGTH), 0, 0, "heading"), /size limit/);
+});
+
+test("checklists update exactly one line without mutating the input or losing content", () => {
+  const before = "Before\n- [ ] First\n- [x] Second\nAfter";
+  const completed = toggle(before, 1, true);
+  assert.equal(completed, "Before\n- [x] First\n- [x] Second\nAfter");
+  assert.equal(toggle(completed, 2, false), "Before\n- [x] First\n- [ ] Second\nAfter");
+  assert.equal(before, "Before\n- [ ] First\n- [x] Second\nAfter");
+  assert.throws(() => toggle(before, 0, true), /Checklist item was not found/);
+  assert.throws(() => toggle(before, 99, true), /Checklist item was not found/);
+  assert.throws(() => toggle(before, -1, false), /Invalid checklist update/);
+  assert.throws(() => toggle(before, 1, "yes"), /Invalid checklist update/);
 });
