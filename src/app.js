@@ -2,6 +2,7 @@ import { SCHEMA_VERSION, MAX_NOTES, makeNote, moveNote, updateNote, childrenOf, 
 import { readState, writeState, readRecoveryState, replaceStateWithRecovery, subscribeToWorkspaceRevisions } from "./storage.js";
 import { createBackup, importBackup } from "./backup.js";
 import { formatMarkdownSelection, toggleMarkdownChecklist } from "./formatting.js";
+import { BUILTIN_TEMPLATES, createNoteFromTemplate } from "./templates.js";
 
 const root = document.getElementById("app");
 // Apply the released GC UI high-contrast palette when the user's system requests it.
@@ -224,6 +225,7 @@ function chrome(content) {
         navButton("home", "Home", icons.home) + navButton("notes", "Notes", icons.notes) +
         navButton("notebooks", "Notebooks", "▣") + navButton("tags", "Tags", "#") +
         navButton("favorites", "Favorites", icons.favorites) + navButton("recent", "Recent", "◷") +
+        navButton("templates", "Templates", "▦") +
         navButton("tasks", "My tasks", icons.tasks) +
         navButton("archive", "Archive", icons.archive) + navButton("trash", "Trash", icons.trash) +
       '</nav>' +
@@ -261,11 +263,38 @@ function noteCard(note) {
 }
 function home() {
   const counts = stats(state.notes), recent = searchNotes(state.notes, "").slice(0, 6);
-  return '<main class="content overview"><div class="hero"><span class="eyebrow"><span class="hero-spark">✦</span> YOUR PERSONAL KNOWLEDGE SPACE</span><h1>Every thought deserves<br><em>a place to grow.</em></h1><p>Capture the little moments and connect the big ideas. Your knowledge, beautifully organized and kept in your control.</p><div class="hero-actions"><button class="gc-button primary" data-action="new">+ Create a note</button><button class="gc-button secondary" data-action="new-task">✓ Add a task</button></div><span class="hero-decoration" aria-hidden="true">✺</span></div>' +
+  return '<main class="content overview"><div class="hero"><span class="eyebrow"><span class="hero-spark">✦</span> YOUR PERSONAL KNOWLEDGE SPACE</span><h1>Every thought deserves<br><em>a place to grow.</em></h1><p>Capture the little moments and connect the big ideas. Your knowledge, beautifully organized and kept in your control.</p><div class="hero-actions"><button class="gc-button primary" data-action="new">+ Create a note</button><button class="gc-button secondary" data-action="new-task">✓ Add a task</button><button class="gc-button secondary" data-view="templates">▦ Use a template</button></div><span class="hero-decoration" aria-hidden="true">✺</span></div>' +
     '<div class="metrics"><div class="metric"><span>YOUR NOTES</span><strong>' + counts.notes + '</strong><small>Ideas worth keeping</small></div><div class="metric"><span>OPEN TASKS</span><strong>' + counts.tasks + '</strong><small>Things in motion</small></div><div class="metric"><span>FAVORITES</span><strong>' + counts.favorites + '</strong><small>Close at hand</small></div><div class="metric"><span>TOPICS</span><strong>' + counts.tags + '</strong><small>Connected themes</small></div></div>' +
     '<div class="section-heading"><div><span class="overline">PICK UP WHERE YOU LEFT OFF</span><h2>Recent notes</h2></div><button class="inline-link" data-view="notes">View all notes →</button></div>' +
     (recent.length ? '<div class="note-grid">' + recent.map(noteCard).join("") + '</div>' : '<div class="empty-panel"><span class="empty-art">✎</span><h3>Start with a single thought</h3><p>Your notebook is ready. Create a note, then build your own connected knowledge space.</p><button class="gc-button primary" data-action="new">Create first note</button></div>') +
     '<div class="tips"><span class="tip-icon">⌘</span><div><strong>A little tip</strong><p>Try [[Note title]] in any note to link ideas together. You can also nest notes, tag topics, and export everything at any time.</p></div></div></main>';
+}
+function templateLibrary() {
+  return '<main class="content template-library"><header class="template-header">' +
+    '<span class="overline">GET STARTED</span><h1>Templates</h1>' +
+    '<p>Choose a starting point for a new private note. Nothing is added until you select a template.</p>' +
+    '</header><div class="template-grid">' +
+    BUILTIN_TEMPLATES.map(template =>
+      '<button type="button" class="template-card" data-template-id="' + safe(template.id) +
+      '" aria-label="Create ' + safe(template.title) + ' note from template">' +
+      '<span class="template-icon" aria-hidden="true">' + safe(template.icon) + '</span>' +
+      '<strong>' + safe(template.title) + '</strong><span>' + safe(template.description) + '</span>' +
+      '<small>+ Use template</small></button>').join("") +
+    '</div><p class="template-privacy">Templates are bundled with Notebook. They do not contact a server or change existing notes.</p></main>';
+}
+function startFromTemplate(templateId) {
+  if (saveBlocked) return notify("Saving is paused. Export your unsaved notes before creating a new note.", true);
+  if (state.notes.length >= MAX_NOTES) return notify("Note limit reached. Export your notes before adding more.", true);
+  try {
+    const note = createNoteFromTemplate(templateId, uid());
+    state.notes.unshift(note);
+    state.selectedId = note.id;
+    state.view = "notes";
+    state.preview = false;
+    queueSave();
+    render();
+    document.getElementById("noteTitle")?.focus();
+  } catch (error) { notify(error.message, true); }
 }
 function simpleMarkdown(source) {
   return String(source).split("\n").map((line, index) => {
@@ -358,7 +387,7 @@ function fitTitleEditor(element) {
 function render() {
   document.documentElement.dataset.theme = state.theme;
   document.documentElement.dataset.gcMode = state.theme;
-  const content = state.view === "home" ? home() : collection();
+  const content = state.view === "home" ? home() : state.view === "templates" ? templateLibrary() : collection();
   root.innerHTML = chrome(content);
   fitTitleEditor(document.getElementById("noteTitle"));
 }
@@ -475,6 +504,8 @@ function applyMarkdownCommand(command) {
   } catch (error) { notify(error.message, true); }
 }
 root.addEventListener("click", event => { 
+  const starter = event.target.closest("[data-template-id]");
+  if (starter) { event.preventDefault(); return startFromTemplate(starter.dataset.templateId); }
   const formatControl = event.target.closest("[data-format]");
   if (formatControl) { event.preventDefault(); return applyMarkdownCommand(formatControl.dataset.format); }
 
