@@ -16,7 +16,7 @@ const icons = {
   home: "⌂", notes: "▤", favorites: "★", tasks: "✓", archive: "◫", trash: "♻",
   add: "+", search: "⌕", settings: "⚙", export: "⇩", shield: "◇"
 };
-let state = { version: SCHEMA_VERSION, notes: [], selectedId: null, view: "home", query: "", theme: "dark", preview: false };
+let state = { version: SCHEMA_VERSION, notes: [], selectedId: null, view: "home", query: "", theme: "light", preview: false };
 let saveChain = Promise.resolve();
 let saveTimer;
 let savedRevision = 0;
@@ -197,19 +197,19 @@ function chrome(content) {
   const counts = stats(state.notes);
   return '<div class="shell">' +
     '<aside class="sidebar" aria-label="Workspace navigation">' +
-      '<div class="brand"><span class="brand-symbol" aria-hidden="true">✦</span><span><strong>GoreeCloud</strong><small>NOTEBOOK</small></span></div>' +
-      '<button class="new-button" data-action="new"><span aria-hidden="true">+</span> New note <kbd>Ctrl N</kbd></button>' +
+      '<div class="brand"><span class="brand-symbol" aria-hidden="true">▤</span><span><strong>Notebook</strong><small>GOREECLOUD</small></span></div>' +
+      '<button class="new-button" data-action="new"><span aria-hidden="true">+</span> New Note <kbd>Ctrl N</kbd></button>' +
       '<div class="nav-section-label">WORKSPACE</div><nav class="primary-nav" aria-label="Main navigation">' +
-        navButton("home", "Overview", icons.home) + navButton("notes", "All notes", icons.notes) +
+        navButton("home", "Home", icons.home) + navButton("notes", "Notes", icons.notes) +
         navButton("favorites", "Favorites", icons.favorites) + navButton("tasks", "My tasks", icons.tasks) +
         navButton("archive", "Archive", icons.archive) + navButton("trash", "Trash", icons.trash) +
       '</nav>' +
-      '<div class="nav-section-label tree-label">YOUR NOTEBOOK <button data-action="new" aria-label="Add note">+</button></div>' +
+      '<div class="nav-section-label tree-label">NOTEBOOKS <button data-action="new" aria-label="Add note">+</button></div>' +
       '<div class="tree-scroll" aria-label="Nested notes">' + (renderTree() || '<p class="tree-empty">Notes you create appear here.</p>') + '</div>' +
       '<div class="sidebar-foot"><span class="privacy-dot" aria-hidden="true"></span><div><strong>Private workspace</strong><small>Stored on this device</small></div><button class="icon-button" data-action="settings" aria-label="Settings" title="Settings">⚙</button></div>' +
     '</aside><div class="page">' +
       '<header class="topbar"><button class="mobile-brand" data-view="home" aria-label="Notebook home">✦</button><div class="breadcrumb">My workspace <span aria-hidden="true">/</span> <b>' + safe(state.view === "home" ? "Overview" : selected()?.title || (state.view[0].toUpperCase() + state.view.slice(1))) + '</b></div>' +
-        '<label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search your notes</span><input id="globalSearch" type="search" placeholder="Search anything..." value="' + safe(state.query) + '" autocomplete="off"><kbd>Ctrl K</kbd></label>' +
+        '<label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search your notes</span><input id="globalSearch" type="search" placeholder="Search your notes, notebooks, and tags..." value="' + safe(state.query) + '" autocomplete="off"><kbd>Ctrl K</kbd></label>' +
         '<button class="top-action" data-action="new" aria-label="Create note">+ <span>New note</span></button><button class="icon-button theme-button" data-action="theme" aria-label="Toggle light and dark theme">' + (state.theme === "dark" ? "☼" : "☾") + '</button>' +
       '</header>' +
       (saveBlocked ? '<div class="save-warning" role="alert"><span>' + safe(saveError) + ' Export a backup before leaving this tab.</span><button data-action="export">Export local copy</button><button data-action="reload">Reload saved version</button></div>' : '') +
@@ -281,7 +281,7 @@ function editor(note) {
 }
 function collection() {
   const visible = searchNotes(state.notes, state.query, state.view);
-  const title = { notes: "All notes", tasks: "My tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
+  const title = { notes: "All Notes", tasks: "My Tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
   return '<main class="collection"><section class="list-panel"><div class="list-heading"><span class="overline">YOUR LIBRARY</span><h1>' + title + '</h1><p>' + visible.length + ' item' + (visible.length === 1 ? "" : "s") + '</p></div>' +
     '<div class="list-tools"><button class="gc-button primary compact" data-action="new">+ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
     '<div class="note-list">' + (visible.length ? visible.map(note => '<button class="note-list-item ' + (note.id === state.selectedId ? "selected" : "") + '" data-note="' + safe(note.id) + '"><span class="list-item-title">' + (note.favorite ? "★ " : "") + safe(note.title) + '</span><span class="list-item-sub">' + safe(note.tags.join(" · ") || (note.body.slice(0, 55).replace(/\n/g, " ") || "No content yet")) + '</span><small>' + safe(date(note.updatedAt)) + '</small></button>').join("") : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
@@ -512,7 +512,7 @@ async function boot() {
       state.notes = clean.notes;
       savedRevision = Number.isSafeInteger(saved.revision) && saved.revision >= 0 ? saved.revision : 0;
       state.selectedId = state.notes.some(n => n.id === saved.selectedId && !n.trashed) ? saved.selectedId : null;
-      state.theme = saved.theme === "light" ? "light" : "dark";
+      state.theme = saved.theme === "dark" ? "dark" : "light";
     }
     render();
     workspaceReady = true;
