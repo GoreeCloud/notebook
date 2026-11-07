@@ -2,7 +2,7 @@
 
 **Authority:** Official product mockup supplied directly by the GoreeCloud founder on **November 6, 2026**. This document describes **visual direction**, not a claim that the pictured features are already implemented.
 
-**Private source image:** [OFFICIAL-NOTEBOOK-UI-MOCKUP.png](https://drive.google.com/file/d/1D6zG9nZ5NEGeFVpfhTI9Rgke6PmFsshV/view), stored in the authorized canonical GoreeCloud Notebook project folder. Do not publish the image to the public GitHub repository or external image hosts without separate approval.
+**Private source image:** `GoreeCloud/Projects/GoreeCloud Notebook/OFFICIAL-NOTEBOOK-UI-MOCKUP.png` (private Drive reference; no public link embedded), stored in the authorized canonical GoreeCloud Notebook project folder. Do not publish the image to the public GitHub repository or external image hosts without separate approval.
 
 ## Screen description — founder reference
 
