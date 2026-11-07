@@ -228,3 +228,18 @@
 @media(max-width:670px){.template-grid{grid-template-columns:1fr}
   .template-card{min-height:165px;padding:19px}.template-library{padding-bottom:90px}}
 @media(prefers-reduced-motion:reduce){.template-card{transition:none}.template-card:hover{transform:none}}
+
+
+/* Bounded, semantic Markdown tables from the owner's Notebook project mockup. */
+.preview-table-scroll{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;
+  border:1px solid var(--gc-outline);border-radius:var(--gc-radius-md);margin:15px 0 21px}
+.preview-table-scroll:focus-visible{outline:var(--gc-v1-component-focus-width) solid var(--gc-v1-color-focus-ring);
+  outline-offset:var(--gc-v1-component-focus-offset)}
+.preview-table{width:100%;min-width:430px;border-collapse:collapse;font-size:13px;line-height:1.5;
+  background:var(--gc-surface);color:var(--gc-text)}
+.preview-table th{font-weight:700;background:var(--gc-surface-tonal);text-align:left;white-space:normal}
+.preview-table th,.preview-table td{padding:11px 14px;border-bottom:1px solid var(--gc-outline);
+  overflow-wrap:anywhere;vertical-align:top}
+.preview-table tr:last-child td{border-bottom:0}
+.preview-table tbody tr:nth-child(even){background:var(--gc-surface-tonal)}
+@media(max-width:620px){.preview-table th,.preview-table td{padding:9px 11px}}
