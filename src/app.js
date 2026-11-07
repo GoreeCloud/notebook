@@ -275,12 +275,14 @@ function simpleMarkdown(source) {
       return '<button class="preview-link" data-link="' + reference + '">↗ ' + (note ? safe(note.title) : reference) + '</button>';
     });
     content = content.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    content = content.replace(/`([^`]+)`/g, "<code>$1</code>");
     if (/^### /.test(line)) return "<h4>" + content.slice(4) + "</h4>";
     if (/^## /.test(line)) return "<h3>" + content.slice(3) + "</h3>";
     if (/^# /.test(line)) return "<h2>" + content.slice(2) + "</h2>";
     if (/^- \[x\] /i.test(line)) return '<p class="preview-check">☑ ' + content.slice(6) + "</p>";
     if (/^- \[ \] /.test(line)) return '<p class="preview-check">☐ ' + content.slice(6) + "</p>";
     if (/^- /.test(line)) return "<p>• " + content.slice(2) + "</p>";
+    if (/^> /.test(line)) return '<blockquote class="preview-quote">' + content.slice(5) + "</blockquote>";
     return content ? "<p>" + content + "</p>" : '<p class="blank-line"></p>';
   }).join("");
 }
