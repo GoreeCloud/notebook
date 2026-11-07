@@ -17,7 +17,7 @@ const icons = {
   home: "⌂", notes: "▤", favorites: "★", tasks: "✓", archive: "◫", trash: "♻",
   add: "+", search: "⌕", settings: "⚙", export: "⇩", shield: "◇"
 };
-let state = { version: SCHEMA_VERSION, notes: [], selectedId: null, view: "home", query: "", theme: "light", preview: false };
+let state = { version: SCHEMA_VERSION, notes: [], selectedId: null, view: "home", query: "", theme: "light", preview: false, tagFilter: "" };
 let saveChain = Promise.resolve();
 let saveTimer;
 let savedRevision = 0;
@@ -177,6 +177,7 @@ function openNote(id) {
 }
 function changeView(view) {
   state.view = view;
+  if (view === "tags") state.tagFilter = "";
   if (view !== "notes") state.selectedId = null;
   render();
 }
@@ -191,6 +192,25 @@ function renderTree(parentId = null, depth = 0, visiting = new Set()) {
       '<span class="tree-type" aria-hidden="true">' + (note.type === "task" ? "✓" : "◈") + '</span><span class="truncate">' + safe(note.title) + '</span></button>' + child + '</div>';
   }).join("");
 }
+function availableTags() {
+  const tags = new Map();
+  for (const note of state.notes) {
+    if (note.trashed || note.archived) continue;
+    for (const value of note.tags) {
+      const key = value.toLocaleLowerCase();
+      if (!tags.has(key)) tags.set(key, value);
+    }
+  }
+  return [...tags.values()].sort((a, b) => a.localeCompare(b));
+}
+function tagControls(includeAll = false) {
+  const names = availableTags();
+  return (includeAll ? '<button class="tag-chip ' + (!state.tagFilter ? 'active' : '') +
+    '" data-tag="">All tags</button>' : "") +
+    names.slice(0, includeAll ? 40 : 12).map(name =>
+      '<button class="tag-chip ' + (state.view === "tags" && state.tagFilter.toLocaleLowerCase() === name.toLocaleLowerCase() ? 'active' : '') +
+      '" data-tag="' + safe(name) + '"># ' + safe(name) + '</button>').join("");
+}
 function navButton(view, title, icon) {
   return '<button class="nav-link ' + (state.view === view ? "active" : "") + '" data-view="' + view + '" ' + (state.view === view ? 'aria-current="page"' : "") + '><span class="nav-icon" aria-hidden="true">' + icon + '</span><span>' + title + '</span></button>';
 }
@@ -202,11 +222,15 @@ function chrome(content) {
       '<button class="new-button" data-action="new"><span aria-hidden="true">+</span> New Note <kbd>Ctrl N</kbd></button>' +
       '<div class="nav-section-label">WORKSPACE</div><nav class="primary-nav" aria-label="Main navigation">' +
         navButton("home", "Home", icons.home) + navButton("notes", "Notes", icons.notes) +
-        navButton("favorites", "Favorites", icons.favorites) + navButton("tasks", "My tasks", icons.tasks) +
+        navButton("notebooks", "Notebooks", "▣") + navButton("tags", "Tags", "#") +
+        navButton("favorites", "Favorites", icons.favorites) + navButton("recent", "Recent", "◷") +
+        navButton("tasks", "My tasks", icons.tasks) +
         navButton("archive", "Archive", icons.archive) + navButton("trash", "Trash", icons.trash) +
       '</nav>' +
       '<div class="nav-section-label tree-label">NOTEBOOKS <button data-action="new" aria-label="Add note">+</button></div>' +
       '<div class="tree-scroll" aria-label="Nested notes">' + (renderTree() || '<p class="tree-empty">Notes you create appear here.</p>') + '</div>' +
+      '<div class="nav-section-label sidebar-tags-heading">TAGS</div>' +
+      '<div class="sidebar-tags" aria-label="Your note tags">' + (tagControls() || '<small>Tags added to notes appear here.</small>') + '</div>' +
       '<div class="sidebar-foot"><span class="privacy-dot" aria-hidden="true"></span><div><strong>Private workspace</strong><small>Stored on this device</small></div><button class="icon-button" data-action="settings" aria-label="Settings" title="Settings">⚙</button></div>' +
     '</aside><div class="page">' +
       '<header class="topbar"><button class="mobile-brand" data-view="home" aria-label="Notebook home">✦</button><div class="breadcrumb">My workspace <span aria-hidden="true">/</span> <b>' + safe(state.view === "home" ? "Overview" : selected()?.title || (state.view[0].toUpperCase() + state.view.slice(1))) + '</b></div>' +
@@ -301,10 +325,22 @@ function noteListItem(note) {
     '<small>' + safe(date(note.updatedAt)) + '</small></button>';
 }
 function collection() {
-  const visible = searchNotes(state.notes, state.query, state.view);
-  const title = { notes: "All Notes", tasks: "My Tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
+  const all = searchNotes(state.notes, state.query, state.view);
+  const visible = state.view === "tags"
+    ? all.filter(note => state.tagFilter
+      ? note.tags.some(tag => tag.toLocaleLowerCase() === state.tagFilter.toLocaleLowerCase())
+      : note.tags.length > 0)
+    : state.view === "notebooks" ? all.filter(note => note.parentId === null)
+    : state.view === "recent" ? all.slice(0, 24) : all;
+  const title = { notes: "All Notes", notebooks: "Notebooks", tags: "Tags", recent: "Recent Notes", tasks: "My Tasks", favorites: "Favorites", archive: "Archive", trash: "Trash" }[state.view] || "Notes";
+  const subnav = state.view === "tags"
+    ? '<div class="tag-filter-row" aria-label="Filter by tag">' + tagControls(true) + '</div>'
+    : state.view === "notebooks"
+      ? '<p class="list-view-hint">Top-level notes are your local containers; dedicated notebooks are planned.</p>'
+      : "";
   return '<main class="collection"><section class="list-panel"><div class="list-heading"><span class="overline">YOUR LIBRARY</span><h1>' + title + '</h1><p>' + visible.length + ' item' + (visible.length === 1 ? "" : "s") + '</p></div>' +
     '<div class="list-tools"><button class="gc-button primary compact" data-action="new">+ Note</button><button class="gc-button secondary compact" data-action="new-task">✓ Task</button></div>' +
+    subnav +
     '<div class="note-list">' + (visible.length ? visible.map(noteListItem).join("") : '<div class="list-empty">Nothing here yet. Your ideas will appear as you add them.</div>') + '</div></section>' +
     '<section class="editor-panel">' + (state.view === "trash" || state.view === "archive" ? '<div class="empty-editor"><div class="empty-art">◫</div><h2>' + title + '</h2><p>' + (state.view === "trash" ? "Restore a note from the list to continue editing." : "Archived notes stay safe and searchable when restored.") + '</p>' + (selected() ? '<button class="gc-button primary" data-action="restore">' + (state.view === "trash" ? "Restore note" : "Unarchive note") + '</button>' : "") + '</div>' : editor(selected())) + '</section></main>';
 }
@@ -436,6 +472,14 @@ root.addEventListener("click", event => {
   const formatControl = event.target.closest("[data-format]");
   if (formatControl) { event.preventDefault(); return applyMarkdownCommand(formatControl.dataset.format); }
 
+  const tag = event.target.closest("[data-tag]");
+  if (tag) {
+    state.view = "tags";
+    state.tagFilter = tag.dataset.tag;
+    state.selectedId = null;
+    render();
+    return;
+  }
   const link = event.target.closest("[data-link]");
   if (link) {
     const note = resolveNoteLink(state.notes, link.dataset.link);
