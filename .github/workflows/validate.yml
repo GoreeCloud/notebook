@@ -1,0 +1,64 @@
+name: Notebook foundation validation
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: JavaScript syntax checks
+        run: npm run check
+      - name: Model unit tests
+        run: npm test
+      - name: Verify allowlisted static release bundle
+        run: |
+          npm run build:release
+          for file in LICENSE licenses/GC-UI-APACHE-2.0.txt THIRD_PARTY_NOTICES.md index.html manifest.webmanifest sw.js assets/gc-ui-foundations.v1.css assets/styles.css assets/icon.svg src/app.js src/tables.js src/templates.js src/formatting.js src/model.js src/storage.js src/backup.js; do
+            test -s "dist/$file"
+            cmp "$file" "dist/$file"
+          done
+          test "$(find dist -type f | wc -l)" -eq 16
+          test ! -e dist/test
+          test ! -e dist/scripts
+          test ! -e dist/docs
+          test ! -e dist/test
+          test -s dist/licenses/GC-UI-APACHE-2.0.txt
+          test -s dist/THIRD_PARTY_NOTICES.md
+      - name: Browser storage and UI smoke
+        env:
+          NOTEBOOK_SCREENSHOT_DIR: test-output/screenshots
+        run: CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)" node scripts/cdp-smoke.mjs
+      - name: Upload synthetic UI review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-ui-review
+          path: test-output/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Validate documentation and license
+        run: |
+          test -s LICENSE
+          test -s README.md
+          test -s docs/IMPLEMENTED-FEATURES.md
+          test -s docs/PLANNED-FEATURES.md
+          test -s docs/COMPETITIVE-OBJECTIVES.md
+      - name: Stage verified Notebook Markdown sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-markdown-source
+          path: |
+            docs/IMPLEMENTED-FEATURES.md
+            docs/PLANNED-FEATURES.md
+            docs/COMPETITIVE-OBJECTIVES.md
+          if-no-files-found: error
+          retention-days: 3

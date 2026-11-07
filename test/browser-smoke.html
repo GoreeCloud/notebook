@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>GoreeCloud Notebook browser smoke test</title>
+<body data-smoke="running"><h1>Notebook browser smoke test</h1><pre id="output">Running…</pre></body>
+<script type="module">
+import { readState, writeState, readRecoveryState, replaceStateWithRecovery } from "../src/storage.js";
+import { SCHEMA_VERSION, makeNote } from "../src/model.js";
+
+const out = document.getElementById("output");
+const check = (condition, description) => { if (!condition) throw new Error(description); };
+const isExplicitLocalTest = location.protocol === "http:" &&
+  location.hostname === "127.0.0.1" &&
+  typeof window.__goreecloudNotebookSmokeToken === "string" &&
+  window.__goreecloudNotebookSmokeToken.length >= 32 &&
+  new URLSearchParams(location.search).get("notebook-smoke") === window.__goreecloudNotebookSmokeToken;
+if (!isExplicitLocalTest) {
+  document.documentElement.dataset.testResult = "REFUSED";
+  throw new Error("Destructive Notebook test refused outside an explicitly marked local test URL.");
+}
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function until(fn, timeout = 8000) {
+  const started = Date.now();
+  while (Date.now() - started < timeout) {
+    const value = await fn();
+    if (value) return value;
+    await delay(100);
+  }
+  throw new Error("Timed out waiting for browser check");
+}
+function finish(ok, details) {
+  document.documentElement.dataset.testResult = ok ? "PASS" : "FAIL";
+  document.body.dataset.smoke = ok ? "passed" : "failed";
+  out.textContent = details;
+}
+try {
+  check((await readState()) === null, "Expected clean browser profile");
+  check((await readRecoveryState()) === null, "Expected no existing import checkpoint");
+  // An app's service worker must not erase other same-origin application caches.
+  const unrelatedCache = await caches.open("unrelated-app-test-cache");
+  await unrelatedCache.put("./unrelated-test-resource", new Response("preserve"));
+  const seed = makeNote({ id: "smoke001", title: "Initial idea" });
+  const first = { version: SCHEMA_VERSION, notes: [seed] };
+  const rev1 = await writeState(first, 0);
+  check(rev1 === 1 && (await readState()).revision === 1, "Initial write revision failed");
+
+  // Simultaneous stale-tab writes: exactly one transaction may win.
+  const changes = [1, 2].map(i => writeState({
+    version: SCHEMA_VERSION, notes: [{ ...seed, body: "Concurrent change " + i }]
+  }, rev1));
+  const results = await Promise.allSettled(changes);
+  check(results.filter(r => r.status === "fulfilled").length === 1, "Expected one winning write");
+  const loss = results.filter(r => r.status === "rejected");
+  check(loss.length === 1 && loss[0].reason.code === "NOTEBOOK_STORAGE_CONFLICT",
+        "Expected stale writer to report a conflict");
+  const saved = await readState();
+  check(saved.revision === 2, "Atomic revision should increase once");
+  check(saved.notes[0].body.startsWith("Concurrent change "), "Winner content missing");
+
+  // Load the actual application in an iframe and exercise its real UI.
+  const frame = document.createElement("iframe");
+  frame.title = "Notebook interface test";
+  frame.src = "../index.html";
+  document.body.append(frame);
+  const doc = await until(() => frame.contentDocument?.querySelector(".content.overview") && frame.contentDocument);
+  // GC UI Foundations v1.0.1 must be applied, not merely copied to the repository.
+  const gcStyles = () => frame.contentWindow.getComputedStyle(doc.documentElement);
+  const color = name => gcStyles().getPropertyValue(name).trim().toUpperCase();
+  check(doc.documentElement.dataset.gcMode === "light", "Notebook default does not request its owner-approved light mockup mode");
+  check(doc.querySelector(".brand strong")?.textContent === "Notebook",
+    "Official Notebook wordmark not present");
+  const newAction = doc.querySelector(".sidebar .new-button");
+  check(newAction?.textContent.includes("New Note"), "Official New Note control missing");
+  check(frame.contentWindow.getComputedStyle(newAction).backgroundColor === "rgb(25, 125, 40)",
+    "Notebook primary action did not use the accessible owner-mockup green accent");
+
+  check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook dark brand does not follow GC UI tokens");
+  check(color("--gc-canvas") === color("--gc-v1-color-canvas"), "Notebook dark canvas bypasses GC UI tokens");
+  check(color("--gc-brand") === "#5145D9", "Unexpected pinned GC UI light primary token");
+  const themeToggle = doc.querySelector(".theme-button");
+  check(Boolean(themeToggle), "GC UI theme control was not rendered");
+  themeToggle.click();
+  check(doc.documentElement.dataset.gcMode === "dark", "Notebook did not synchronize GC UI dark mode");
+  check(color("--gc-brand") === "#C5BFFF", "Notebook dark primary is not the pinned GC UI color");
+  check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook dark theme bypasses GC UI tokens");
+  doc.querySelector(".theme-button")?.click();
+  check(doc.documentElement.dataset.gcMode === "light", "Notebook did not return to official mockup light mode");
+
+  const newButton = doc.querySelector('[data-action="new"]');
+  check(Boolean(newButton), "New-note button not rendered");
+  newButton.click();
+  const title = await until(() => doc.getElementById("noteTitle"));
+  title.value = "Browser acceptance note";
+  title.dispatchEvent(new Event("input", { bubbles: true }));
+  const body = doc.getElementById("noteBody");
+  check(Boolean(body), "Note editor missing");
+  body.value = "A local-first saved idea [[Initial idea]].";
+  body.dispatchEvent(new Event("input", { bubbles: true }));
+  const unsavedExit = new doc.defaultView.Event("beforeunload", { cancelable: true });
+  doc.defaultView.dispatchEvent(unsavedExit);
+  check(unsavedExit.defaultPrevented, "Uncommitted edits did not trigger leave protection");
+  const persisted = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.find(note => note.title === "Browser acceptance note" && note.body.includes("local-first")) && snapshot;
+  });
+  check(persisted.notes.length === 2, "New note was not persisted");
+  await until(() => doc.getElementById("saveStatus")?.textContent === "Saved on this device");
+  const savedExit = new doc.defaultView.Event("beforeunload", { cancelable: true });
+  doc.defaultView.dispatchEvent(savedExit);
+  check(!savedExit.defaultPrevented, "Saved workspace still triggers unsaved-leave warning");
+  const acceptedId = persisted.notes.find(note => note.title === "Browser acceptance note").id;
+
+  // Every pictured toolbar control is a working local operation, never a fake
+  // rich-text affordance. The save must pass through the normal IndexedDB path.
+  const formatter = doc.querySelector('[data-format="bold"]');
+  check(formatter && formatter.getAttribute("aria-label") === "Bold selection",
+    "Accessible formatting toolbar missing");
+  const markdownBody = doc.getElementById("noteBody");
+  const phraseStart = markdownBody.value.indexOf("local-first");
+  check(phraseStart >= 0, "Formatting regression fixture missing selected text");
+  markdownBody.setSelectionRange(phraseStart, phraseStart + "local-first".length);
+  formatter.click();
+  check(markdownBody.value.includes("**local-first**"), "Formatting control failed to wrap selected text");
+  check(doc.activeElement === markdownBody && markdownBody.selectionStart === phraseStart + 2,
+    "Formatting did not restore focus and highlighted text");
+  const italicStart = markdownBody.value.indexOf("saved");
+  markdownBody.setSelectionRange(italicStart, italicStart + "saved".length);
+  markdownBody.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "i", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(markdownBody.value.includes("*saved*"), "Ctrl+I did not italicize the selection");
+
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body.includes("**local-first**")));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelector("#previewOutput strong")?.textContent === "local-first",
+    "Markdown preview did not render toolbar bold syntax");
+  doc.querySelector('[data-action="edit"]').click();
+  const enrichedBody = doc.getElementById("noteBody");
+  enrichedBody.value += "\n> Mockup callout\nInline `code` example\n- [ ] Complete milestone";
+  enrichedBody.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelector(".preview-quote")?.textContent === "Mockup callout",
+    "Block quote from mockup formatting did not render safely");
+  check(doc.querySelector(".markdown-preview code")?.textContent === "code",
+    "Inline Markdown code from the toolbar did not render");
+  const checklist = doc.querySelector(".markdown-preview input[data-check-line]");
+  check(checklist && !checklist.checked && !checklist.disabled,
+    "New checklist control must be editable in the local Markdown preview");
+  checklist.click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId &&
+    note.body.includes("- [x] Complete milestone")));
+  check(doc.querySelector(".markdown-preview input[data-check-line]")?.checked,
+    "Toggling the checklist did not update the preview state");
+  doc.querySelector('[data-action="edit"]').click();
+  const tagsField = doc.getElementById("noteTags");
+  tagsField.value = "project, planning";
+  tagsField.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.tags.includes("project")));
+  doc.querySelector('[data-view="tags"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Tags",
+    "Owner-mockup Tags navigation not functional");
+  const projectChip = doc.querySelector('.tag-filter-row [data-tag="project"]');
+  check(projectChip, "Tag browser did not discover real user-applied tags");
+  projectChip.click();
+  check(doc.querySelector(".list-heading p")?.textContent.includes("1 item"),
+    "Filtering to a tag did not narrow to its matching note");
+  doc.querySelector('[data-view="notebooks"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Notebooks" &&
+    doc.querySelector(".list-view-hint")?.textContent.includes("Top-level notes"),
+    "Notebook hierarchy navigation did not disclose its actual local model");
+  doc.querySelector('[data-view="recent"]').click();
+  check(doc.querySelector(".list-heading h1")?.textContent === "Recent Notes" &&
+    doc.querySelector(".note-list-item"),
+    "Recent notes navigation did not list saved notes");
+  doc.querySelector('[data-view="notes"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+
+  // Link integrity audit must be local, read-only and accessible from Settings.
+  const beforeLinkAudit = await readState();
+  const checkpointBeforeLinkAudit = await readRecoveryState();
+  doc.querySelector('[data-action="settings"]').click();
+  check(doc.getElementById("settingsDialog")?.open, "Settings dialog unavailable for link audit");
+  doc.querySelector('[data-action="audit-links"]').click();
+  const report = doc.getElementById("linkAuditResults");
+  check(report && !report.hidden && report.textContent.includes("Note links: 1"),
+    "Note-link audit did not show an actionable link count");
+  check(report.textContent.includes("Legacy title links: 1 (1 have a unique target)"),
+    "Note-link audit did not count the existing resolvable title link");
+  check(report.textContent.includes("Broken links: 0") &&
+    report.textContent.includes("Audit is read-only."),
+    "Read-only link-audit safety message or resolved status missing");
+  const afterLinkAudit = await readState();
+  check(afterLinkAudit.revision === beforeLinkAudit.revision &&
+    JSON.stringify(afterLinkAudit.notes) === JSON.stringify(beforeLinkAudit.notes),
+    "Link audit unexpectedly modified saved notes or the storage revision");
+  check(JSON.stringify(await readRecoveryState()) === JSON.stringify(checkpointBeforeLinkAudit),
+    "Link audit unexpectedly changed the import recovery checkpoint");
+  doc.getElementById("settingsDialog").close();
+
+  doc.querySelector('[data-action="favorite"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && note.favorite));
+  doc.querySelector('[data-action="duplicate"]').click();
+  await until(async () => (await readState()).notes.some(note =>
+    note.id !== acceptedId && note.title === "Copy of Browser acceptance note" && note.body.includes("local-first")));
+
+
+  // Verify nested notes, visible hierarchy and moving a child to the top level.
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="child"]').click();
+  const childSnapshot = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.find(note => note.parentId === acceptedId) && snapshot;
+  });
+  const childId = childSnapshot.notes.find(note => note.parentId === acceptedId).id;
+  check(Boolean(doc.querySelector('.tree-node.depth-1 [data-note="' + childId + '"]')),
+    "Nested note does not appear beneath its parent");
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  check(![...doc.getElementById("parentSelect").options].some(option => option.value === childId),
+    "Parent editor offers its descendant as a parent (would create a cycle)");
+  doc.querySelector('[data-note="' + childId + '"]').click();
+  const move = doc.getElementById("parentSelect");
+  move.value = "";
+  move.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note => note.id === childId && note.parentId === null));
+
+  // Full application search and task controls, not just the pure model.
+  const search = doc.getElementById("globalSearch");
+  search.value = "Browser acceptance";
+  search.dispatchEvent(new Event("input", { bubbles: true }));
+  check([...doc.querySelectorAll(".note-list-item")].some(item => item.dataset.note === acceptedId),
+        "Searching did not surface the saved note");
+  const resetSearch = doc.getElementById("globalSearch");
+  resetSearch.value = "";
+  resetSearch.dispatchEvent(new Event("input", { bubbles: true }));
+
+  doc.querySelector('[data-action="new-task"]').click();
+  const due = doc.getElementById("taskDue");
+  check(Boolean(due), "Task due-date control not rendered");
+  due.value = "2026-12-15";
+  due.dispatchEvent(new Event("change", { bubbles: true }));
+  const done = doc.getElementById("taskDone");
+  done.checked = true;
+  done.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.type === "task" && note.completed && note.dueDate === "2026-12-15"));
+
+  // Archive / restore and trash / restore preserve original note ID and body.
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="archive"]').click();
+  doc.querySelector('[data-view="archive"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="restore"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && !note.archived));
+  doc.defaultView.confirm = () => true;
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="trash"]').click();
+  doc.querySelector('[data-view="trash"]').click();
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  doc.querySelector('[data-action="restore"]').click();
+  await until(async () => (await readState()).notes.some(note => note.id === acceptedId && !note.trashed));
+
+
+  // A stable-ID wiki link must display and open the renamed target.
+  doc.querySelector('[data-note="smoke001"]').click();
+  const renamedInput = doc.getElementById("noteTitle");
+  renamedInput.value = "Renamed seed note";
+  renamedInput.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const referencingBody = doc.getElementById("noteBody");
+  referencingBody.value = "See the renamed note [[id:smoke001]].";
+  referencingBody.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  const stableLink = doc.querySelector('[data-link="id:smoke001"]');
+  check(stableLink?.textContent.includes("Renamed seed note"), "Stable link did not display renamed title");
+  stableLink.click();
+  check(doc.getElementById("noteTitle")?.value === "Renamed seed note", "Stable link did not open renamed target");
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body.includes("[[id:smoke001]]")));
+
+  // Reopen the UI in a new page context; persisted edits must survive.
+  const second = document.createElement("iframe");
+  second.title = "Notebook second tab test";
+  second.src = "../index.html";
+  document.body.append(second);
+  const secondDoc = await until(() => second.contentDocument?.querySelector(".content.overview") && second.contentDocument);
+  secondDoc.querySelector('[data-view="notes"]').click();
+  check(secondDoc.body.textContent.includes("Browser acceptance note"), "Saved note unavailable after reopen");
+
+  // Advisory messages are authenticated against actual IndexedDB revisions.
+  // A guessed/invented number alone must not lock an editor.
+  const crossTabBus = new BroadcastChannel("goreecloud-notebook-revisions-v1");
+  const observedRevisions = [];
+  crossTabBus.addEventListener("message", event => observedRevisions.push(event.data));
+  crossTabBus.postMessage({ kind: "snapshot-committed", revision: 987654321 });
+  await delay(150);
+  check(!secondDoc.querySelector(".save-warning"),
+    "An unauthenticated high-revision notification blocked an otherwise current tab");
+
+  // First tab saves a newer version; second should warn before any attempted edit.
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const liveBody = doc.getElementById("noteBody");
+  liveBody.value = "Changed in first tab after second opened";
+  liveBody.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note => note.body.includes("Changed in first tab")));
+  await until(() => secondDoc.querySelector(".save-warning"));
+  check(secondDoc.querySelector(".save-warning")?.textContent.includes("read-only"),
+    "Newer committed revision did not proactively make stale tab read-only");
+  check(observedRevisions.some(event => event?.kind === "snapshot-committed" &&
+    Number.isSafeInteger(event.revision) &&
+    Object.keys(event).sort().join(",") === "kind,revision"),
+    "Cross-tab notification exposed more than the revision and event kind");
+  crossTabBus.close();
+  secondDoc.querySelector('[data-note="smoke001"]').click();
+  const secondTitle = secondDoc.getElementById("noteTitle");
+  secondTitle.value = "Outdated title";
+  secondTitle.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(() => secondDoc.querySelector(".save-warning"));
+  check((await readState()).notes.some(note => note.body.includes("Changed in first tab")),
+        "Conflict incorrectly overwrote newer data");
+  check(!(await readState()).notes.some(note => note.title === "Outdated title"),
+        "Read-only cross-tab guard allowed a stale editor to replace a note title");
+  const staleReadOnlyExit = new second.contentWindow.Event("beforeunload", { cancelable: true });
+  second.contentWindow.dispatchEvent(staleReadOnlyExit);
+  check(!staleReadOnlyExit.defaultPrevented,
+    "A clean but outdated tab falsely claimed there were unsaved local edits");
+
+  // When BroadcastChannel is unavailable, a returning tab must re-read the
+  // authoritative IndexedDB revision before allowing stale edits. This iframe
+  // uses an isolated JS realm with the channel API deliberately disabled.
+  const fallbackFrame = document.createElement("iframe");
+  fallbackFrame.title = "Notebook foreground fallback without BroadcastChannel";
+  const scriptStart = "<scr" + "ipt>";
+  const moduleStart = '<scr' + 'ipt type="module" src="/src/app.js">';
+  const scriptEnd = "</scr" + "ipt>";
+  fallbackFrame.srcdoc = '<!doctype html><html><head><base href="' + location.origin +
+    '/"></head><body><div id="app"></div>' + scriptStart +
+    'Object.defineProperty(window,"BroadcastChannel",{value:undefined,configurable:true});' +
+    scriptEnd + moduleStart + scriptEnd + "</body></html>";
+  document.body.append(fallbackFrame);
+  const fallbackDoc = await until(() =>
+    fallbackFrame.contentDocument?.querySelector(".content.overview") && fallbackFrame.contentDocument);
+  check(typeof fallbackFrame.contentWindow.BroadcastChannel === "undefined",
+    "Fallback frame did not disable BroadcastChannel");
+  const newerBody = "Changed again to verify refocus fallback";
+  doc.querySelector('[data-note="' + acceptedId + '"]').click();
+  const firstTabEditor = doc.getElementById("noteBody");
+  firstTabEditor.value = newerBody;
+  firstTabEditor.dispatchEvent(new Event("input", { bubbles: true }));
+  await until(async () => (await readState()).notes.some(note =>
+    note.id === acceptedId && note.body === newerBody));
+  check(!fallbackDoc.querySelector(".save-warning"),
+    "No-BroadcastChannel tab was unexpectedly notified before regaining focus");
+  fallbackFrame.contentWindow.dispatchEvent(new Event("focus"));
+  await until(() => fallbackDoc.querySelector(".save-warning"));
+  check(fallbackDoc.querySelector(".save-warning")?.textContent.includes("read-only"),
+    "Refocus did not detect a newer saved workspace without BroadcastChannel");
+
+  // Browser import: validate the file and replace the snapshot atomically.
+  const fromBackup = makeNote({ id: "restored1", title: "Restored from backup" });
+  fromBackup.body = "My recovered note";
+  const backupFile = new doc.defaultView.File(
+    [JSON.stringify({ version: SCHEMA_VERSION, notes: [fromBackup] })],
+    "notebook-backup.json", { type: "application/json" }
+  );
+  const data = new doc.defaultView.DataTransfer();
+  data.items.add(backupFile);
+  const importInput = doc.getElementById("importFile");
+  const beforeCancelledPreview = await readState();
+  const recoveryBeforeCancelledPreview = await readRecoveryState();
+  let importPrompt = "";
+  doc.defaultView.confirm = message => { importPrompt = message; return false; };
+  importInput.files = data.files;
+  importInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  await until(() => importPrompt.includes("Removed from current workspace:"));
+  check(importPrompt.includes("Current notes: " + beforeCancelledPreview.notes.length),
+    "Import preview did not show actual workspace size");
+  check(importPrompt.includes("Imported notes: 1") && importPrompt.includes("Added: 1"),
+    "Import preview did not show the incoming impact");
+  check(importPrompt.includes("Removed from current workspace: " + beforeCancelledPreview.notes.length),
+    "Import preview did not disclose the removed notes");
+  const afterCancelledPreview = await readState();
+  check(afterCancelledPreview.revision === beforeCancelledPreview.revision &&
+    JSON.stringify(afterCancelledPreview.notes) === JSON.stringify(beforeCancelledPreview.notes),
+    "Cancelled preview unexpectedly changed persisted notes");
+  check(JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeCancelledPreview),
+    "Cancelled preview modified the previous recovery checkpoint");
+  doc.defaultView.confirm = () => true;
+  // Select the backup anew: the app deliberately resets its file input after each attempt.
+  const secondTransfer = new doc.defaultView.DataTransfer();
+  secondTransfer.items.add(backupFile);
+  const secondImportInput = doc.getElementById("importFile");
+  secondImportInput.files = secondTransfer.files;
+  check(secondImportInput.files?.length === 1, "Reselection did not attach the backup file");
+  secondImportInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  const imported = await until(async () => {
+    const snapshot = await readState();
+    const warning = doc.getElementById("toast")?.textContent || "";
+    if (warning.startsWith("Import rejected:")) throw new Error(warning);
+    return snapshot.notes.length === 1 && snapshot.notes[0].id === "restored1" && snapshot;
+  });
+  check(imported.notes[0].body === "My recovered note", "Backup restoration lost content");
+  const importCheckpoint = await readRecoveryState();
+  check(importCheckpoint && importCheckpoint.notes.some(note => note.title === "Browser acceptance note"),
+    "Import did not capture the previously saved workspace");
+  // Reject malformed backups without replacing a successfully restored workspace.
+  const broken = new doc.defaultView.File(
+    ['{"version":1,"notes":[{"id":"invalid","body":false}]}'],
+    "invalid-backup.json", { type: "application/json" }
+  );
+  const invalidData = new doc.defaultView.DataTransfer();
+  invalidData.items.add(broken);
+  const invalidInput = doc.getElementById("importFile");
+  invalidInput.files = invalidData.files;
+  invalidInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  await until(() => doc.getElementById("toast")?.textContent.includes("Import rejected"));
+  const afterRejectedImport = await readState();
+  check(afterRejectedImport.revision === imported.revision &&
+    afterRejectedImport.notes[0].id === "restored1", "Invalid backup modified stored notes");
+
+  // Confirm the actual Export action serializes the complete restored note.
+  let exportedBlob;
+  const nativeObjectUrl = doc.defaultView.URL.createObjectURL;
+  doc.defaultView.URL.createObjectURL = function(blob) {
+    exportedBlob = blob;
+    return nativeObjectUrl.call(this, blob);
+  };
+  doc.querySelector('[data-action="export"]').click();
+  await until(() => Boolean(exportedBlob));
+  check(Boolean(exportedBlob), "Export action did not produce a JSON backup");
+  const exportedData = JSON.parse(await exportedBlob.text());
+  check(exportedData.version === SCHEMA_VERSION &&
+    exportedData.notes[0].id === "restored1" &&
+    exportedData.notes[0].body === "My recovered note",
+    "Export backup is incomplete");
+  doc.defaultView.URL.createObjectURL = nativeObjectUrl;
+
+  // Restore the prior workspace through the settings UI. Undo is itself atomic and reversible.
+  doc.querySelector('[data-action="settings"]').click();
+  doc.querySelector('[data-action="recover-import"]').click();
+  const originalRestored = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.some(note => note.title === "Browser acceptance note") &&
+      !snapshot.notes.some(note => note.id === "restored1") && snapshot;
+  });
+  check(originalRestored.revision > imported.revision, "Undo did not advance the storage revision");
+  const inverseCheckpoint = await readRecoveryState();
+  check(inverseCheckpoint?.notes.some(note => note.id === "restored1"),
+    "Undo did not retain the just-replaced workspace for another reversal");
+  try {
+    await replaceStateWithRecovery({ version: SCHEMA_VERSION, notes: [] }, imported.revision);
+    throw new Error("Stale import unexpectedly overwrote a newer workspace");
+  } catch (error) {
+    check(error.code === "NOTEBOOK_STORAGE_CONFLICT", "Stale import failed without a revision-conflict error");
+  }
+  check((await readState()).revision === originalRestored.revision,
+    "Rejected stale import changed the saved workspace");
+
+  // A failed structured-clone write must abort the entire transaction,
+  // preserving BOTH the active workspace and the pre-import recovery snapshot.
+  const beforeCloneFailure = await readState();
+  const recoveryBeforeCloneFailure = await readRecoveryState();
+  const cannotClone = { ...beforeCloneFailure, functionNotCloneable: () => true };
+  const attempted = replaceStateWithRecovery(cannotClone, beforeCloneFailure.revision);
+  const failure = await Promise.race([
+    attempted.then(() => "unexpected-success", error => error),
+    delay(5000).then(() => "timed-out")
+  ]);
+  check(failure?.name === "DataCloneError", "Invalid IndexedDB write did not reject with DataCloneError");
+  const afterCloneFailure = await readState();
+  const recoveryAfterCloneFailure = await readRecoveryState();
+  check(afterCloneFailure.revision === beforeCloneFailure.revision &&
+    JSON.stringify(afterCloneFailure.notes) === JSON.stringify(beforeCloneFailure.notes),
+    "Failed write changed the active Notebook workspace");
+  check(JSON.stringify(recoveryAfterCloneFailure) === JSON.stringify(recoveryBeforeCloneFailure),
+    "Failed write changed the recovery checkpoint");
+
+  // A standard gzip JSON file must import and undo through the user interface.
+  const gzipNote = makeNote({ id: "gzipnote1", title: "Compressed restore" });
+  gzipNote.body = "Restored from a standard gzip archive";
+  const rawGzipSource = new Blob([JSON.stringify({ version: SCHEMA_VERSION, notes: [gzipNote] })]);
+  const zipped = await new Response(rawGzipSource.stream().pipeThrough(
+    new doc.defaultView.CompressionStream("gzip")
+  )).blob();
+  const gzipFile = new doc.defaultView.File([zipped], "notebook.json.gz", { type: "application/gzip" });
+  const compressedTransfer = new doc.defaultView.DataTransfer();
+  compressedTransfer.items.add(gzipFile);
+  const gzipInput = doc.getElementById("importFile");
+  gzipInput.files = compressedTransfer.files;
+  gzipInput.dispatchEvent(new doc.defaultView.Event("change", { bubbles: true }));
+  const compressedRestored = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === 1 && snapshot.notes[0].id === "gzipnote1" && snapshot;
+  });
+  check(compressedRestored.notes[0].body === gzipNote.body, "Gzip restore lost note contents");
+  const settingsForUndo = doc.getElementById("settingsDialog");
+  if (!settingsForUndo.open) doc.querySelector('[data-action="settings"]').click();
+  doc.querySelector('[data-action="recover-import"]').click();
+  await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === originalRestored.notes.length &&
+      snapshot.notes.some(note => note.id === acceptedId);
+  });
+
+  // Keyboard navigation and authoring shortcuts must be functional without a pointer.
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "k", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(doc.activeElement?.id === "globalSearch", "Ctrl+K did not focus note search");
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "n", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  check(Boolean(doc.getElementById("noteTitle")) && doc.activeElement?.id === "noteTitle",
+    "Ctrl+N did not create and focus a note");
+  doc.dispatchEvent(new doc.defaultView.KeyboardEvent("keydown", {
+    key: "s", ctrlKey: true, bubbles: true, cancelable: true
+  }));
+  await until(async () => (await readState()).notes.length === originalRestored.notes.length + 1);
+
+  // The official-mockup Templates library is opt-in. Viewing it cannot insert
+  // starter records into an existing workspace, alter revisions or change undo.
+  const beforeTemplates = await readState();
+  const recoveryBeforeTemplates = await readRecoveryState();
+  const templatesNav = doc.querySelector('.sidebar [data-view="templates"]');
+  check(Boolean(templatesNav), "Templates navigation not present");
+  templatesNav.click();
+  check(doc.querySelector(".template-header h1")?.textContent === "Templates",
+    "Templates navigation did not open its real local library");
+  check(doc.querySelectorAll(".template-card[data-template-id]").length === 4,
+    "Expected four accessible bundled starter layouts");
+  const afterPreview = await readState();
+  check(afterPreview.revision === beforeTemplates.revision &&
+    JSON.stringify(afterPreview.notes) === JSON.stringify(beforeTemplates.notes) &&
+    JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeTemplates),
+    "Browsing templates unexpectedly changed notes or the recovery checkpoint");
+  doc.querySelector('[data-template-id="project-plan"]').click();
+  check(doc.getElementById("noteTitle")?.value === "Project plan",
+    "Selecting a project starter did not open a real editable note");
+  const createdFromTemplate = await until(async () => {
+    const snapshot = await readState();
+    return snapshot.notes.length === beforeTemplates.notes.length + 1 &&
+      snapshot.notes.some(note => note.title === "Project plan" &&
+        note.body.includes("## Milestones") && note.tags.includes("planning")) && snapshot;
+  });
+  check(createdFromTemplate.notes.some(note => note.title === "Browser acceptance note"),
+    "Template creation replaced an existing user note");
+  check(createdFromTemplate.revision > beforeTemplates.revision,
+    "Template creation did not commit through revision-checked IndexedDB");
+
+  // Tables from the official project mockup are real sanitized Markdown blocks.
+  const tablePreviewButton = doc.querySelector('[data-action="preview"]');
+  tablePreviewButton.click();
+  const previewTable = doc.querySelector(".preview-table");
+  check(previewTable && previewTable.querySelectorAll("th").length === 3 &&
+    previewTable.querySelectorAll("tbody tr").length === 3,
+    "Project starter milestone table did not render with semantic table cells");
+  check(doc.querySelector(".preview-table-scroll")?.getAttribute("role") === "region",
+    "Markdown table is not in an accessible scrollable region");
+  doc.querySelector('[data-action="edit"]').click();
+  const tableEditor = doc.getElementById("noteBody");
+  tableEditor.setSelectionRange(tableEditor.value.length, tableEditor.value.length);
+  const tableButton = doc.querySelector('[data-format="table"]');
+  check(tableButton?.getAttribute("aria-label") === "Insert Markdown table",
+    "Working table-insertion toolbar control not found");
+  tableButton.click();
+  check(tableEditor.value.split("| Phase | Status | Timeline |").length === 3,
+    "Table control did not preserve the original table and add a second table");
+  await until(async () => (await readState()).notes.some(note =>
+    note.title === "Project plan" && note.body.split("| Phase | Status | Timeline |").length === 3));
+  tableEditor.value += "\n| Unsafe | Values |\n| --- | --- |\n| <img src=x onerror=alert(1)> | safe |";
+  tableEditor.dispatchEvent(new Event("input", { bubbles: true }));
+  doc.querySelector('[data-action="preview"]').click();
+  check(doc.querySelectorAll(".preview-table").length === 3 &&
+    !doc.querySelector(".markdown-preview img") &&
+    doc.querySelector(".markdown-preview")?.textContent.includes("<img src=x onerror=alert(1)>"),
+    "Markdown table rendered unsafe HTML or lost escaped cell content");
+  doc.querySelector('[data-action="edit"]').click();
+  await until(async () => (await readState()).notes.some(note =>
+    note.title === "Project plan" && note.body.includes("<img src=x onerror=alert(1)>")));
+
+
+
+  // Read local storage quota and request eviction resistance without assuming browser approval.
+  const settings = doc.getElementById("settingsDialog");
+  if (!settings.open) doc.querySelector('[data-action="settings"]').click();
+  check(Boolean(doc.querySelector('[data-action="protect-storage"]')),
+    "Persistent storage request control not rendered");
+  await until(() => doc.getElementById("storageStatus")?.textContent.includes("Browser origin storage") ||
+    doc.getElementById("storageStatus")?.textContent.includes("unavailable") ||
+    doc.getElementById("storageStatus")?.textContent.includes("does not expose"));
+  doc.querySelector('[data-action="protect-storage"]').click();
+  await until(() => /persistent storage|storage protection request/i.test(doc.getElementById("toast")?.textContent || ""));
+
+  // Synthetic QuotaExceededError: a rejected autosave must preserve stored
+  // notes and the recovery checkpoint while retaining unsaved edits in this tab.
+  const beforeQuota = await readState();
+  const recoveryBeforeQuota = await readRecoveryState();
+  const quotaStorePrototype = frame.contentWindow.IDBObjectStore.prototype;
+  const nativePut = quotaStorePrototype.put;
+  quotaStorePrototype.put = function(value, key) {
+    if (key === "snapshot") {
+      throw new frame.contentWindow.DOMException("Simulated quota exhausted", "QuotaExceededError");
+    }
+    return nativePut.call(this, value, key);
+  };
+  try {
+    const draftBody = doc.getElementById("noteBody");
+    check(Boolean(draftBody), "No editor available for quota-rejection regression");
+    draftBody.value = "Unsaved content during simulated quota failure";
+    draftBody.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => doc.querySelector(".save-warning"));
+    check(doc.querySelector(".save-warning")?.textContent.includes("storage quota was exceeded"),
+      "Quota failure warning did not explain the save rejection");
+    check(doc.getElementById("noteBody")?.value.includes("Unsaved content during simulated quota failure"),
+      "Quota rejection discarded the in-memory unsaved draft");
+    check(Boolean(doc.querySelector('.save-warning [data-action="export"]')),
+      "Export recovery is unavailable after a quota failure");
+    const afterQuota = await readState();
+    check(afterQuota.revision === beforeQuota.revision &&
+      JSON.stringify(afterQuota.notes) === JSON.stringify(beforeQuota.notes),
+      "Quota rejection changed the last successfully saved workspace");
+    check(JSON.stringify(await readRecoveryState()) === JSON.stringify(recoveryBeforeQuota),
+      "Quota rejection changed the import recovery checkpoint");
+  } finally {
+    quotaStorePrototype.put = nativePut;
+  }
+
+  // Wait for the service-worker shell installation before the runner emulates offline networking.
+  const activeWorker = await Promise.race([
+    frame.contentWindow.navigator.serviceWorker.ready.then(registration => registration.active),
+    delay(8000).then(() => null)
+  ]);
+  check(Boolean(activeWorker), "PWA service-worker shell did not become ready");
+  check((await caches.keys()).includes("unrelated-app-test-cache"),
+    "Notebook service-worker activation removed an unrelated cache");
+
+  finish(true, "PASS: IndexedDB revisions, autosave, favorites, duplication, nested-note relocation, stable links, search, tasks, archive/trash recovery, stale-tab warning, backup import/export/undo, stale replacement/clone failure rollback, keyboard shortcuts, pending-exit warning, browser-persistence request, simulated quota rollback and unrelated-cache isolation.");
+} catch (error) {
+  console.error(error);
+  finish(false, "FAIL: " + (error?.stack || error));
+}
+</script>
+</html>
