@@ -49,12 +49,14 @@ test("Notebook maps core semantic variables to GC UI versioned tokens", () => {
   assert.match(bridge, /outline:var\(--gc-v1-component-focus-width\) solid var\(--gc-v1-color-focus-ring\)/);
 });
 
-test("PWA loads pinned Foundations before Notebook CSS and syncs dark mode", () => {
+test("PWA loads pinned Foundations before Notebook CSS and syncs owner-approved light mode", () => {
   const html = text("index.html");
   const first = html.indexOf("./assets/gc-ui-foundations.v1.css");
   const second = html.indexOf("./assets/styles.css");
   assert.ok(first > 0 && second > first, "Foundations must load before Notebook bridge");
-  assert.match(html, /data-gc-mode="dark"/);
+  assert.match(html, /data-gc-mode="light"/);
   assert.match(text("src/app.js"), /document\.documentElement\.dataset\.gcMode = state\.theme/);
   assert.match(text("sw.js"), /\.\/assets\/gc-ui-foundations\.v1\.css/);
+  assert.match(text("assets/styles.css"), /--notebook-accent:#197d28/);
+  assert.match(html, /<title>GoreeCloud Notebook<\/title>/);
 });
