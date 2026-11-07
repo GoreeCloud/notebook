@@ -68,6 +68,13 @@ try {
   const gcStyles = () => frame.contentWindow.getComputedStyle(doc.documentElement);
   const color = name => gcStyles().getPropertyValue(name).trim().toUpperCase();
   check(doc.documentElement.dataset.gcMode === "light", "Notebook default does not request its owner-approved light mockup mode");
+  check(doc.querySelector(".brand strong")?.textContent === "Notebook",
+    "Official Notebook wordmark not present");
+  const newAction = doc.querySelector(".sidebar .new-button");
+  check(newAction?.textContent.includes("New Note"), "Official New Note control missing");
+  check(frame.contentWindow.getComputedStyle(newAction).backgroundColor === "rgb(25, 125, 40)",
+    "Notebook primary action did not use the accessible owner-mockup green accent");
+
   check(color("--gc-brand") === color("--gc-v1-color-primary"), "Notebook dark brand does not follow GC UI tokens");
   check(color("--gc-canvas") === color("--gc-v1-color-canvas"), "Notebook dark canvas bypasses GC UI tokens");
   check(color("--gc-brand") === "#5145D9", "Unexpected pinned GC UI light primary token");
