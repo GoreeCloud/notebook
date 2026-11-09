@@ -19,7 +19,7 @@ Open **Settings → Import backup** and select a `.json` or `.json.gz` file. The
 
 - **Plain JSON:** Up to **22,000,000 bytes**.
 - **Gzip JSON:** Up to **66,000,000 compressed bytes**, with an enforced **64,000,000 decompressed-byte limit**. Malformed gzip and oversized decompressed content are rejected before replacement. Gzip import needs the browser's `DecompressionStream` API.
-- **Unsupported:** Whole-workspace backups exceeding the gzip limits, incomplete/corrupt backups, unknown schema versions or invalid hierarchies.
+- **Unsupported:** Whole-workspace backups exceeding the gzip limits, incomplete/corrupt backups, unknown schema versions or invalid hierarchies. Malformed UTF-8 in either plain JSON or gzip JSON is also rejected without silently rewriting note text.
 
 Imports use atomic revision checks to prevent a stale tab from replacing newer saved data. They also preserve **one pre-import workspace checkpoint** in the same IndexedDB transaction. **Settings → Undo last import** can restore that previous snapshot. A later import or undo replaces the checkpoint; it is not a full version history or an off-device backup.
 

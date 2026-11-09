@@ -96,3 +96,45 @@ test("gzip failures retain a readable plaintext export and warn it cannot be rei
     globalThis.CompressionStream = originalConstructor;
   }
 });
+
+
+test("plain JSON refuses malformed UTF-8 rather than silently altering note content", async () => {
+  const valid = JSON.stringify({
+    version: 1, notes: [makeNote({ id: "unicode01", title: "Original" })]
+  });
+  const bytes = new TextEncoder().encode(valid);
+  const position = valid.indexOf("Original");
+  assert.ok(position > 0);
+  bytes[position] = 0xff;
+  const input = named(new Blob([bytes], { type: "application/json" }), "bad-utf8.json");
+  // Legacy Blob.text() would have decoded this to a different, still-valid title.
+  assert.ok((await input.text()).includes("�"));
+  await assert.rejects(importBackup(input), /valid UTF-8 JSON/);
+});
+
+test("plain JSON preserves Unicode, and optional UTF-8 BOM is accepted", async () => {
+  const notes = [makeNote({ id: "unicode02", title: "Résumé 📓 日本語" })];
+  notes[0].body = "A 🧭 thoughtful note\nSecond line";
+  const backup = JSON.stringify({ version: 1, notes });
+  for (const prefix of [new Uint8Array(), new Uint8Array([0xef, 0xbb, 0xbf])]) {
+    const bytes = new Blob([prefix, new TextEncoder().encode(backup)], { type: "application/json" });
+    const restored = await importBackup(named(bytes, "unicode.json"));
+    assert.equal(restored.notes[0].title, notes[0].title);
+    assert.equal(restored.notes[0].body, notes[0].body);
+  }
+});
+
+test("gzip backup also rejects invalid UTF-8 source bytes consistently", async () => {
+  if (typeof CompressionStream !== "function" || typeof DecompressionStream !== "function") return;
+  const data = new TextEncoder().encode(JSON.stringify({
+    version: 1, notes: [makeNote({ id: "unicode03", title: "Original" })]
+  }));
+  const needle = new TextEncoder().encode("Original");
+  const index = Buffer.from(data).indexOf(Buffer.from(needle));
+  assert.ok(index > 0);
+  data[index] = 0xff;
+  const compressed = await new Response(
+    new Blob([data]).stream().pipeThrough(new CompressionStream("gzip"))
+  ).blob();
+  await assert.rejects(importBackup(named(compressed, "bad.json.gz", "application/gzip")));
+});

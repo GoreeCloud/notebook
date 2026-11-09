@@ -82,5 +82,17 @@ export async function importBackup(file) {
   if (!supportedBackupSize(file.size)) {
     throw new Error("JSON backup exceeds 22 MB. Use a compressed .json.gz backup for larger workspaces.");
   }
-  return validateSnapshot(JSON.parse(await file.text()));
+  // Blob.text() silently replaces malformed UTF-8 bytes with U+FFFD. A
+  // portable backup must never be restored with silently changed note text.
+  // The compressed path already uses a fatal UTF-8 decoder; enforce parity.
+  let content;
+  try {
+    content = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("Notebook backup is not valid UTF-8 JSON.", { cause: error });
+    }
+    throw error;
+  }
+  return validateSnapshot(JSON.parse(content));
 }
