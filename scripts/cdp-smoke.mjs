@@ -111,6 +111,11 @@ try {
     return status?.path === "/index.html" && status.opened && status.offline;
   }, 12000);
   console.log("PASS: PWA opened its cached shell while browser networking was disabled.");
+  // Restore transport before testing the packaged application. The dist/ smoke
+  // must not depend on whether screenshot capture was enabled for this run.
+  await command("Network.emulateNetworkConditions", {
+    offline: false, latency: 0, downloadThroughput: 0, uploadThroughput: 0
+  });
   // Save screenshots made entirely from synthetic test records, never real user notes.
   if (process.env.NOTEBOOK_SCREENSHOT_DIR) {
     const output = resolve(process.env.NOTEBOOK_SCREENSHOT_DIR);
