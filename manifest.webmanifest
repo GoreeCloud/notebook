@@ -1,0 +1,18 @@
+{
+  "name": "GoreeCloud Notebook",
+  "short_name": "Notebook",
+  "description": "Private, local-first notes and connected knowledge",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fdfefc",
+  "theme_color": "#fdfefc",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
