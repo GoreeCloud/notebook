@@ -57,6 +57,44 @@ test("rejects unsupported, duplicate, broken or cyclic backups", () => {
   const b = note("child01", "Child", "root001");
   assert.throws(() => validateSnapshot({ version: 1, notes: [a, b] }), /cyclic/);
 });
+test("restores reject malformed optional metadata instead of silently changing note content", () => {
+  const original = makeNote({ id: "integrity01", title: "Private plan" });
+  const cases = [
+    ["title type", { title: 17 }, /Invalid note title/],
+    ["title length", { title: "X".repeat(181) }, /Invalid note title/],
+    ["title newlines", { title: "Private\nplan" }, /Invalid note title/],
+    ["tags nonarray", { tags: "private" }, /Invalid note tags/],
+    ["tags wrong element", { tags: ["safe", 42] }, /Invalid note tags/],
+    ["tags truncation", { tags: ["a".repeat(49)] }, /Invalid note tags/],
+    ["tags duplicates", { tags: ["private", "private"] }, /Invalid note tags/],
+    ["too many tags", { tags: Array.from({ length: 25 }, (_, i) => "tag" + i) }, /Invalid note tags/],
+    ["favorite type", { favorite: "false" }, /Invalid note favorite/],
+    ["due date", { dueDate: "tomorrow" }, /Invalid due date/],
+    ["timestamp length", { createdAt: "a".repeat(41) }, /Invalid note createdAt/],
+    ["timestamp type", { updatedAt: 0 }, /Invalid note updatedAt/],
+  ];
+  for (const [name, patch, message] of cases) {
+    assert.throws(() => validateSnapshot({ version: 1, notes: [{ ...original, ...patch }] }), message, name);
+  }
+  assert.equal(validateSnapshot({ version: 1, notes: [original] }).notes[0].title, "Private plan");
+  assert.equal(validateSnapshot({ version: 1, notes: [original] }).notes[0].createdAt, original.createdAt);
+  const withTags = { ...original, tags: ["original"] };
+  const checked = validateSnapshot({ version: 1, notes: [withTags] });
+  checked.notes[0].tags.push("independent");
+  assert.deepEqual(withTags.tags, ["original"], "restored metadata must not alias its source");
+});
+
+test("older v1 snapshots can omit optional flags and tags without inventing content changes", () => {
+  const note = makeNote({ id: "legacy001", title: "Original" });
+  const { tags, dueDate, createdAt, updatedAt, favorite, archived, trashed, completed, ...legacy } = note;
+  const restored = validateSnapshot({ version: 1, notes: [legacy] }).notes[0];
+  assert.equal(restored.title, legacy.title);
+  assert.deepEqual(restored.tags, []);
+  assert.equal(restored.dueDate, "");
+  assert.equal(restored.favorite, false);
+  assert.equal(restored.body, legacy.body);
+});
+
 test("escapes HTML-sensitive content", () => {
   assert.equal(escapeHtml('<img src=x onerror="alert(1)">'), "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
 });
