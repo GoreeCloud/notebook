@@ -131,11 +131,29 @@ export function validateSnapshot(raw) {
   const notes = raw.notes.map(n => {
     if (!n || typeof n !== "object" || typeof n.id !== "string" || !/^[A-Za-z0-9_-]{4,128}$/.test(n.id) || ids.has(n.id)) throw new Error("Invalid or duplicate note ID");
     ids.add(n.id);
+    // A restore is not an edit: never silently replace a corrupt title,
+    // discard tags, clear a due date, or truncate recorded timestamps. Older
+    // v1 optional metadata may be absent, but supplied fields must be valid.
+    if (typeof n.title !== "string" || n.title.length < 1 || n.title.length > 180 ||
+        n.title !== n.title.replace(/[\r\n\t]+/g, " ").trim()) throw new Error("Invalid note title");
     if (typeof n.body !== "string" || n.body.length > MAX_BODY_LENGTH) throw new Error("Invalid note body");
     if (!validTypes.has(n.type)) throw new Error("Invalid note type");
     if (n.parentId !== null && typeof n.parentId !== "string") throw new Error("Invalid parent");
+    if (n.tags !== undefined && (!Array.isArray(n.tags) || n.tags.length > 24 ||
+        n.tags.some(tag => typeof tag !== "string" || !tag.length || tag.length > 48) ||
+        new Set(n.tags).size !== n.tags.length)) throw new Error("Invalid note tags");
+    for (const flag of ["favorite", "archived", "trashed", "completed"]) {
+      if (n[flag] !== undefined && typeof n[flag] !== "boolean") throw new Error("Invalid note " + flag);
+    }
+    if (n.dueDate !== undefined && (typeof n.dueDate !== "string" ||
+        (n.dueDate !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(n.dueDate)))) throw new Error("Invalid due date");
+    for (const field of ["createdAt", "updatedAt"]) {
+      if (n[field] !== undefined && (typeof n[field] !== "string" || n[field].length > 40)) {
+        throw new Error("Invalid note " + field);
+      }
+    }
     const defaults = makeNote({ id: n.id, title: n.title, parentId: n.parentId, type: n.type });
-    return { ...defaults, body: n.body, tags: Array.isArray(n.tags) ? [...new Set(n.tags.filter(t => typeof t === "string").map(t => t.slice(0, 48)))].slice(0, 24) : [], favorite: n.favorite === true, archived: n.archived === true, trashed: n.trashed === true, completed: n.completed === true, dueDate: typeof n.dueDate === "string" && (/^\d{4}-\d{2}-\d{2}$/.test(n.dueDate) || n.dueDate === "") ? n.dueDate : "", createdAt: typeof n.createdAt === "string" ? n.createdAt.slice(0, 40) : defaults.createdAt, updatedAt: typeof n.updatedAt === "string" ? n.updatedAt.slice(0, 40) : defaults.updatedAt };
+    return { ...defaults, body: n.body, tags: n.tags ? [...n.tags] : [], favorite: n.favorite === true, archived: n.archived === true, trashed: n.trashed === true, completed: n.completed === true, dueDate: n.dueDate ?? "", createdAt: n.createdAt ?? defaults.createdAt, updatedAt: n.updatedAt ?? defaults.updatedAt };
   });
   const byId = new Map(notes.map(n => [n.id, n]));
   for (const note of notes) {
