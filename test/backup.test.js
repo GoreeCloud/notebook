@@ -138,3 +138,24 @@ test("gzip backup also rejects invalid UTF-8 source bytes consistently", async (
   ).blob();
   await assert.rejects(importBackup(named(compressed, "bad.json.gz", "application/gzip")));
 });
+
+test("JSON and gzip import reject metadata that would otherwise be silently rewritten", async () => {
+  const original = makeNote({ id: "corrupt01", title: "Sensitive text" });
+  const cases = [
+    { ...original, title: 999 },
+    { ...original, tags: ["keep", 42, "also keep"] },
+    { ...original, favorite: "false" },
+    { ...original, dueDate: "invalid" },
+    { ...original, updatedAt: "x".repeat(100) },
+  ];
+  for (const corrupt of cases) {
+    const json = JSON.stringify({ version: 1, notes: [corrupt] });
+    await assert.rejects(importBackup(named(new Blob([json]), "corrupt.json")), /Invalid/);
+    if (typeof CompressionStream === "function" && typeof DecompressionStream === "function") {
+      const gzip = await new Response(
+        new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"))
+      ).blob();
+      await assert.rejects(importBackup(named(gzip, "corrupt.json.gz", "application/gzip")), /Invalid/);
+    }
+  }
+});
