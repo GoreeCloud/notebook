@@ -2,7 +2,7 @@
 
 An original, MIT-licensed, open-source **self-hosted note and personal knowledge workspace**, taking inspiration from Evernote and Trilium Notes. Not a fork or full feature-parity replacement.
 
-**Status: early development preview (November 2026).** No production deployment, app-store release, signed APK, data encryption, or cross-device synchronization has been validated.
+**Status: early development preview (November 2026).** No production deployment, app-store release, signed APK, encrypted **live note store**, or cross-device synchronization has been validated. Optional encrypted offline SQLite snapshots exist, but are not independent disaster-recovery certification.
 
 ## Implemented source
 
@@ -11,12 +11,12 @@ An original, MIT-licensed, open-source **self-hosted note and personal knowledge
 | Local notes and search | Yes | Yes | Yes |
 | Markdown note editing | Yes, safe preview | Plain-text editor | Plain-text editor |
 | Notebooks and nested notes | Yes | Shared SQLite data model | Yes, local schema v3 |
-| Tags, revisions, backlinks | Yes | Partial (data model) | Tags and revisions; backlinks pending |
+| Tags and revision history | Yes | Yes | Yes; historical export metadata has limitations |\n| Wiki-link/backlink navigation | Yes, authenticated local graph | Yes, local graph, first 30 per direction | Not yet |
 | Soft delete and restore | Yes | Soft delete | Soft delete |
-| JSON export and append-only import | Web / API | Via local API | Explicit JSON v2 import/export, append-only |
+| JSON v2 export and append-only import | Web / API with explicit consent | Native offline file picker, confirmation and private plaintext export | Explicit Storage Access Framework import/export |
 | Offline editing without server | No | Yes | Yes |
 
-Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** Trilium ZIP migration, ENEX attachments and full rich-text fidelity, OCR, encryption, collaboration and full platform parity are not implemented.
+Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** Full Trilium-specific ZIP metadata migration, ENEX attachments, full rich-text fidelity, OCR, encrypted **live data**, collaboration and full platform parity are not implemented. Conservative Markdown ZIP and ENEX text imports exist with explicit loss/consent warnings.
 
 ## Repository structure
 
@@ -66,7 +66,7 @@ Tests, builds and virtual-display smoke checks **do not establish hardware, pack
 
 ## Security, privacy, integration and licensing
 
-There is no telemetry in first-party source; API access uses a **single local bearer token**, not the mandatory GoreeCloud Identity platform. SQLite data is **not encrypted at rest** and application-level disaster recovery has not been tested. JSON archives can now be imported in a validated, append-only operation, but device-loss backups and external restore drills are unverified. The web preview does not enable raw HTML rendering. Android cloud backup is disabled. See [SECURITY.md](SECURITY.md) and [Threat Model](docs/THREAT_MODEL.md).
+There is no telemetry in first-party source; API access uses a **single local bearer token**, not the mandatory GoreeCloud Identity platform. The **live** SQLite store is not encrypted at rest; optional authenticated encrypted SQLite snapshots have synthetic restore tests, but independent off-device disaster-recovery rehearsal has not been completed. JSON archives can now be imported in a validated, append-only operation, but device-loss backups and external restore drills are unverified. The web preview does not enable raw HTML rendering. Android cloud backup is disabled. See [SECURITY.md](SECURITY.md) and [Threat Model](docs/THREAT_MODEL.md).
 
 GoreeCloud UI is the source of design truth. GoreeCloud Mesh integration, GoreeShield privacy controls, GoreeCloud Identity authorization, and Wardveil security monitoring remain specified future integration work; do not treat the architecture as enforcement.
 
@@ -74,10 +74,11 @@ Original first-party code uses [MIT](LICENSE). Dependencies retain their own ups
 
 Optional local privacy audit: [read-only SQLite file/sidecar permission inspection](docs/LOCAL_FILE_PERMISSIONS.md). No automatic permission changes or note-content access.
 
-Linux: the native Qt Quick client supports per-notebook filters, notebook creation, nested-note creation and comma-separated tag editing, with user-data-isolated Qt smoke tests. Full hierarchy, parity and packaging acceptance remain open. See [Linux Parity](docs/LINUX_PARITY.md).
+Linux: the native Qt Quick client supports notebook filtering/creation, nested-note creation, comma-separated tags, revision history, local wiki-link navigation and JSON v2 import/export, with user-data-isolated Qt smoke tests. Full hierarchy, parity and packaging acceptance remain open. See [Linux Parity](docs/LINUX_PARITY.md).
 
 Linux Qt Quick now exposes [offline portable JSON v2 recovery](docs/LINUX_JSON_RECOVERY.md), with explicit import preview/confirmation and private, **unencrypted** export. User-facing file-picker accessibility and manual validation remain outstanding.
 
-Notes can resolve local links via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
+Web and Linux can resolve local links via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
 
-Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md) and an explicit web **Load more notes** control. Paging is offset-based and not a stable snapshot under concurrent edits.
+Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md) and an explicit web **Load more notes** control. A native Linux paged-summary sidebar is being validated separately. Paging is offset-based and not a stable snapshot under concurrent edits.
+\nFor a source-grounded, per-client acceptance matrix, see [Platform Capabilities](docs/PLATFORM_CAPABILITIES.md).\n

@@ -29,7 +29,7 @@ SQLite triggers capture note mutations in a monotonic `note_change_events` table
 
 ## Search index
 
-The SQLite service database has a derived local `notes_fts` virtual table with SQL triggers on note insert/update/delete. The authenticated `GET /api/v1/search` endpoint performs prefix-token matching and weighted ranking without accepting raw FTS query operators. It excludes soft-deleted notes; first run backfills existing active notes. SQLite builds lacking FTS5 fall back to a capped LIKE search. Index data is plaintext and never leaves the local service by default. See [Indexed Local Search](SEARCH.md).
+The SQLite service database has a derived local `notes_fts` virtual table with SQL triggers on note insert/update/delete. The authenticated `GET /api/v1/search` endpoint performs prefix-token matching and weighted ranking without accepting raw FTS query operators. It excludes soft-deleted notes; first run backfills existing active notes. SQLite builds lacking FTS5 fall back to a parameterized, SQL-paginated LIKE search across active titles, bodies and stored tags; it remains non-ranked and potentially slower than FTS5. Index data is plaintext and never leaves the local service by default. See [Indexed Local Search](SEARCH.md).
 
 ## Android native schema and export
 
