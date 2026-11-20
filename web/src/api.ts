@@ -10,6 +10,10 @@ export type NoteLinkGraph = {
   limit:number;offset:number;resolution:string;
 };
 
+export type NotePage = {
+  results:Note[];has_more:boolean;offset:number;next_offset:number;limit:number;
+};
+
 export class ApiError extends Error {
   constructor(public status:number, message:string) { super(message); }
 }
@@ -31,6 +35,9 @@ export function apiClient(baseUrl:string,token:string) {
     notebooks:()=>request<Notebook[]>("/notebooks"),
     createNotebook:(name:string)=>request<Notebook>("/notebooks",{method:"POST",body:JSON.stringify({name})}),
     notes:(query="",deleted=false)=>request<Note[]>("/notes?q="+encode(query)+"&include_deleted="+deleted),
+    notesPage:(query="",deleted=false,limit=500,offset=0)=>request<NotePage>(
+      "/notes/page?q="+encode(query)+"&include_deleted="+deleted+
+      "&limit="+limit+"&offset="+offset),
     rankedSearch:(q:string,limit=200,notebookId="")=>request<{
       backend:"fts5"|"like";results:Note[];has_more:boolean;limit:number;offset:number
     }>("/search?q="+encode(q)+"&limit="+limit+

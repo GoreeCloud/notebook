@@ -75,6 +75,9 @@ export default function App(){
   const [connected,setConnected]=useState(false);
   const [notebooks,setNotebooks]=useState<Notebook[]>([]);
   const [notes,setNotes]=useState<Note[]>([]);
+  const [noteNextOffset,setNoteNextOffset]=useState(0);
+  const [noteHasMore,setNoteHasMore]=useState(false);
+  const [loadingMoreNotes,setLoadingMoreNotes]=useState(false);
   const [selected,setSelected]=useState("");
   const [activeBook,setActiveBook]=useState("");
   const [query,setQuery]=useState("");
@@ -104,8 +107,11 @@ export default function App(){
   const selectedBook=notebooks.find(n=>n.id===activeBook);
 
   const load=useCallback(async (preferSelected?:string)=>{
-    const [books,items]=await Promise.all([api.notebooks(),api.notes("",true)]);
+    const [books,page]=await Promise.all([api.notebooks(),api.notesPage("",true,500,0)]);
+    const items=page.results;
     setNotebooks(books);setNotes(items);
+    setNoteNextOffset(page.next_offset);
+    setNoteHasMore(page.has_more);
     setActiveBook(current=>current||books[0]?.id||"");
     setSelected(current=>{
       const requested=preferSelected||current;
@@ -115,6 +121,23 @@ export default function App(){
 
   useEffect(()=>{if(!connected)return;
     load().catch(e=>setError(String(e.message||e)));},[connected,load]);
+
+  // Cursor is derived exclusively from backend page offsets; ranked-search
+  // additions or link-navigation results must not advance the list cursor.
+  const loadMoreNotes=async()=>{
+    if(loadingMoreNotes||!noteHasMore)return;
+    setLoadingMoreNotes(true);setError("");
+    try{
+      const page=await api.notesPage("",true,500,noteNextOffset);
+      setNotes(existing=>{
+        const seen=new Set(existing.map(item=>item.id));
+        return [...existing,...page.results.filter(item=>!seen.has(item.id))];
+      });
+      setNoteNextOffset(page.next_offset);
+      setNoteHasMore(page.has_more);
+    }catch(e){setError("Could not load more notes: "+String(e));}
+    finally{setLoadingMoreNotes(false);}
+  };
 
   // Debounced server-ranked FTS results; local filtering remains available
   // until the request returns and for Trash, which is deliberately not indexed.
@@ -365,6 +388,10 @@ export default function App(){
           <div className="tag-row">{note.tags.slice(0,3).map(t=><span className="tag" key={t}>#{t}</span>)}</div>
         </button>)}
         {shown.length===0&&<div className="empty">Nothing here yet.<p>{trash?"Trash is empty.":"Create a note to start collecting ideas."}</p></div>}
+        {noteHasMore&&<button className="load-more-notes" onClick={loadMoreNotes}
+          disabled={loadingMoreNotes} aria-label="Load more stored notes">
+          {loadingMoreNotes?"Loading notes…":"Load more notes from this device"}
+        </button>}
       </div>
       {!trash&&<button className="new-note" onClick={()=>addNote()}><Plus size={18}/> New note</button>}
     </section>

@@ -79,3 +79,5 @@ Linux: the native Qt Quick client supports per-notebook filters, notebook creati
 Linux Qt Quick now exposes [offline portable JSON v2 recovery](docs/LINUX_JSON_RECOVERY.md), with explicit import preview/confirmation and private, **unencrypted** export. User-facing file-picker accessibility and manual validation remain outstanding.
 
 Notes can resolve local links via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
+
+Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md) and an explicit web **Load more notes** control. Paging is offset-based and not a stable snapshot under concurrent edits.

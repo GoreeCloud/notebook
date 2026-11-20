@@ -207,7 +207,10 @@ class Store:
             current = db.execute("SELECT parent_id FROM notes WHERE id=?", (cursor,)).fetchone()
             cursor = current["parent_id"] if current else None
 
-    def list_notes(self, notebook_id=None, q="", include_deleted=False):
+    def list_notes(self, notebook_id=None, q="", include_deleted=False,
+                   limit=500, offset=0):
+        if not 1 <= limit <= 501 or not 0 <= offset <= 100_000:
+            raise ValueError("Invalid note list bounds")
         predicates = []
         args = []
         if notebook_id:
@@ -223,9 +226,26 @@ class Store:
         with self.connection() as db:
             rows = db.execute(
                 "SELECT * FROM notes" + where +
-                " ORDER BY pinned DESC, updated_at DESC, id LIMIT 500", args
+                " ORDER BY pinned DESC, updated_at DESC, id LIMIT ? OFFSET ?",
+                (*args, limit, offset),
             ).fetchall()
         return [self.note(row) for row in rows]
+
+    def list_notes_page(self, notebook_id=None, q="", include_deleted=False,
+                        limit=200, offset=0):
+        """Bounded opt-in envelope; preserve the legacy array list_notes API.
+
+        Pages use the shared filtered query with a limit+1 sentinel.
+        Offset pagination is not a snapshot under concurrent mutations.
+        """
+        if not 1 <= limit <= 500 or not 0 <= offset <= 100_000:
+            raise ValueError("Invalid note page bounds")
+        rows = self.list_notes(notebook_id=notebook_id, q=q,
+                               include_deleted=include_deleted,
+                               limit=limit+1, offset=offset)
+        return {"results": rows[:limit], "has_more": len(rows)>limit,
+                "offset": offset, "next_offset": offset+min(limit,len(rows)),
+                "limit": limit}
 
     def get(self, note_id, include_deleted=False):
         with self.connection() as db:

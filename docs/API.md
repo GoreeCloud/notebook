@@ -26,3 +26,7 @@ The local API enforces a 12 MiB streamed HTTP request limit and adds no-store he
 ## Hierarchy and input integrity
 
 Changing a parent's `notebook_id` returns HTTP 409 while that note still has any child records, including trashed children. Move the children individually or remove their parent links before moving the parent; this prevents silent cross-notebook references. A note in Trash must be restored before its title/body/tags/pin can be modified. Existing behavior of trashing a parent without cascading deletion of its children is retained. Changes are guarded by `expected_version` and SQLite version checks. Tag items must be 1-64 characters after trimming (maximum 20 tags).
+
+## Paged local notes (opt-in)
+
+`GET /api/v1/notes/page` is a protected note-list envelope with `results`, `has_more`, `offset`, `next_offset` and `limit`. It accepts the same notebook/query/Trash filters as the existing array endpoint, with `limit=1..500` and `offset=0..100000`. Existing `GET /notes` continues to return a legacy array of at most 500 records. See [Note Pagination](NOTE_PAGINATION.md) for consistency and validation limits.
