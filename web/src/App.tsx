@@ -3,7 +3,7 @@ import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus
   Hash,Link2,Menu,MoreHorizontal,PanelLeftClose,Pin,Plus,Search,Settings2,Trash2, X} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {apiClient,ApiError,type Note,type NoteSummary,type Notebook,type Revision,type NoteLinkGraph} from "./api";
+import {apiClient,ApiError,type Note,type NoteSummary,type Notebook,type Revision,type NoteLinkSummaryGraph} from "./api";
 import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
 import {plaintextJsonExportWarning,importUnsavedDraftWarning,unsavedNavigationWarning} from "./privacy";
 import {isLocalNotebookEndpoint} from "./endpoint";
@@ -99,7 +99,7 @@ export default function App(){
   const [collapsed,setCollapsed]=useState(false);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [revisions,setRevisions]=useState<Revision[]>([]);
-  const [linkGraph,setLinkGraph]=useState<NoteLinkGraph|null>(null);
+  const [linkGraph,setLinkGraph]=useState<NoteLinkSummaryGraph|null>(null);
   const [hydrateFailure,setHydrateFailure]=useState("");
   const [hydrateRetry,setHydrateRetry]=useState(0);
   const api=useMemo(()=>apiClient(endpoint,key),[endpoint,key]);
@@ -201,15 +201,22 @@ export default function App(){
     if(!connected||!chosen||chosen.deleted_at){setLinkGraph(null);return;}
     let current=true;
     setLinkGraph(null);
-    api.noteLinks(chosen.id).then(graph=>{if(current)setLinkGraph(graph);})
+    api.noteLinksSummary(chosen.id).then(graph=>{if(current)setLinkGraph(graph);})
       .catch(()=>{if(current)setLinkGraph(null);});
     return()=>{current=false;};
   },[connected,api,chosen?.id,chosen?.version,chosen?.deleted_at,searchEpoch]);
 
-  const openLinkedNote=(target:Note)=>{
+  const openLinkedNote=(target:NoteSummary)=>{
     if(dirty&&!confirm("Discard unsaved edits before following this note link?"))return;
-    setNotes(items=>items.some(n=>n.id===target.id)?
-      items.map(item=>item.id===target.id?target:item):[...items,target]);
+    // Link previews are NOT writable notes. Preserve any already-hydrated
+    // full note and otherwise route through the normal guarded detail GET.
+    const preview=toPreviewNote(target);
+    setNotes(items=>{
+      const existing=items.find(item=>item.id===target.id);
+      if(existing&&!existing.preview_only)return items;
+      return existing?items.map(item=>item.id===target.id?preview:item):
+        [...items,preview];
+    });
     setActiveBook(target.notebook_id);
     setQuery("");setTrash(false);setPreview(false);setSelected(target.id);
   };

@@ -41,3 +41,9 @@ unchanged. Web editors explicitly hydrate the selected full note through
 GET /api/v1/notes/{id} before editing; Trash uses include_deleted=true.
 See [Note Pagination](NOTE_PAGINATION.md). Requests still require the local
 bearer token; this does not implement Identity or GoreeShield policy.
+
+The authenticated note-links endpoint supports optional summary=true,
+which returns 160-character previews and note metadata in place of
+full incoming/outgoing note bodies, without changing the default response.
+The web app hydrates linked destinations through GET /notes/{id} before
+editing. See [Local Links](LINKS.md).

@@ -44,10 +44,22 @@ def _resolve(body: str, source_notebook: str,
     return result
 
 
-def link_graph(store, note_id: str, *, limit: int=50, offset: int=0) -> dict:
+def _graph_item(store, row, summary_only: bool):
+    note = store.note(row)
+    if summary_only:
+        note["preview"] = note.pop("body")[:160]
+    return note
+
+
+def link_graph(store, note_id: str, *, limit: int=50, offset: int=0,
+               summary_only: bool=False) -> dict:
     if not 1<=limit<=100 or not 0<=offset<=10000:
         raise ValueError("Invalid link page")
     with store.connection() as db:
+        # The graph joins title metadata, source bodies and target rows.
+        # Pin one SQLite read snapshot so concurrent edits/Trash changes
+        # cannot produce a mixed-generation or partially missing graph.
+        db.execute("BEGIN")
         target=db.execute("SELECT * FROM notes WHERE id=? AND deleted_at IS NULL",
                           (note_id,)).fetchone()
         if target is None:
@@ -66,7 +78,7 @@ def link_graph(store, note_id: str, *, limit: int=50, offset: int=0) -> dict:
             row=db.execute("SELECT * FROM notes WHERE id=? AND deleted_at IS NULL",
                            (ident,)).fetchone()
             if row is not None:
-                outgoing.append(store.note(row))
+                outgoing.append(_graph_item(store,row,summary_only))
         incoming=[]
         matched=0
         incoming_more=False
@@ -83,7 +95,7 @@ def link_graph(store, note_id: str, *, limit: int=50, offset: int=0) -> dict:
             if matched<=offset:
                 continue
             if len(incoming)<limit:
-                incoming.append(store.note(source))
+                incoming.append(_graph_item(store,source,summary_only))
             else:
                 incoming_more=True
                 break
