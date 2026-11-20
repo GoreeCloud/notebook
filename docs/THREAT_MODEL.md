@@ -10,7 +10,7 @@ Assets: private note text, tags, hierarchy, revisions, bearer token, SQLite stor
 | Concurrent edits | Optimistic `expected_version` / 409 | No automatic merge; draft loss possible |
 | Device loss | Android app sandbox; OS filesystem ownership | No application-level encryption |
 | Network interception | Documented localhost-only API | TLS and remote ingress not supported |
-| Data loss | SQLite transactions + version history | No verified backup restore/import; Android backup disabled |
+| Data loss | SQLite transactions + version history | Local JSON import is tested; device-loss backup and external restore drill remain absent; Android backup disabled |
 | Supply chain | Source-pinned direct deps and npm lock | Broader advisory, lock, SBOM, provenance checks needed |
 
 GoreeShield governs privacy policies and user consent; Wardveil governs cybersecurity. Neither is technically integrated yet. Do not send notebook data to outside services by default.

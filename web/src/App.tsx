@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus2,FolderPlus,
   Hash,Link2,Menu,MoreHorizontal,PanelLeftClose,Pin,Plus,Search,Settings2,Trash2, X} from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -40,6 +40,7 @@ export default function App(){
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [revisions,setRevisions]=useState<Revision[]>([]);
   const api=useMemo(()=>apiClient(endpoint,key),[endpoint,key]);
+  const fileInput=useRef<HTMLInputElement>(null);
   const chosen=notes.find(n=>n.id===selected);
   const dirty=Boolean(chosen&&(draft.title!==chosen.title||draft.body!==chosen.body||
     draft.tags!==chosen.tags.join(", ")));
@@ -116,6 +117,18 @@ export default function App(){
     const anchor=document.createElement("a");anchor.href=objectUrl;anchor.download="goreecloud-notebook-export.json";
     anchor.click();URL.revokeObjectURL(objectUrl);setToast("Export downloaded");
   }catch(e){setError(String(e));}};
+  const importFile=async (file:File)=>{
+    setError("");
+    if(file.size>8*1024*1024){setError("Archive exceeds the 8 MiB import limit.");return;}
+    try{
+      const document:unknown=JSON.parse(await file.text());
+      const report=await api.importArchive(document,true);
+      if(!confirm(`Validated ${report.notes} notes, ${report.notebooks} notebooks and ${report.revisions} revisions. Import as new records without overwriting existing notes?`)) return;
+      const result=await api.importArchive(document,false);
+      await load();
+      setToast(`Imported ${result.notes} notes into new notebooks`);
+    }catch(e){setError("Import failed; no changes were applied: "+String(e));}
+  };
   useEffect(()=>{
     const keydown=(e:KeyboardEvent)=>{
       if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();void save();}
@@ -162,6 +175,11 @@ export default function App(){
         <div className="nav-heading lower">LIBRARY</div>
         <button className={"nav-item "+(trash?"active":"")} onClick={()=>{setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
         <div className="sidebar-bottom">
+          <input ref={fileInput} type="file" accept=".json,application/json" hidden
+            aria-label="Select Notebook JSON archive"
+            onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file);e.currentTarget.value="";}}/>
+          <button className="nav-item" onClick={()=>fileInput.current?.click()}>
+            <ArchiveRestore size={18}/> Import JSON</button>
           <button className="nav-item" onClick={download}><Download size={18}/> Export JSON</button>
           <button className="nav-item" onClick={()=>{setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
         </div>

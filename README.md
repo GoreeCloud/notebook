@@ -13,15 +13,15 @@ An original, MIT-licensed, open-source **self-hosted note and personal knowledge
 | Notebooks and nested notes | Yes | Shared SQLite data model | Not yet |
 | Tags, revisions, backlinks | Yes | Partial (data model) | Not yet |
 | Soft delete and restore | Yes | Soft delete | Soft delete |
-| JSON export | Web / API | Via local API | Not yet |
+| JSON export and append-only restore | Web / API | Via local API | Not yet |
 | Offline editing without server | No | Yes | Yes |
 
-Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** Restore/import, attachments, ENEX/Trilium migration, OCR, encryption, collaboration and full platform parity are not implemented.
+Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** ENEX/Trilium migration, attachments, OCR, encryption, collaboration and full platform parity are not implemented.
 
 ## Repository structure
 
-- `server/`: FastAPI + Pydantic + SQLite, bearer authentication, revision history, optimistic concurrency, note hierarchy and tests.
-- `web/`: React + Vite, Markdown editor and react-markdown preview, search, tree, tags, trash, revision restore and JSON export.
+- `server/`: FastAPI + Pydantic + SQLite, bearer authentication, revision history, optimistic concurrency, note hierarchy and tests; authenticated dry-run JSON restore.
+- `web/`: React + Vite, Markdown editor and react-markdown preview, search, tree, tags, trash, revision restore, JSON export and validated append-only JSON import.
 - `linux/`: native Qt Quick **6.12.0** graphical client using PySide6 and local SQLite.
 - `android/`: native Kotlin + Jetpack Compose **Material 3 Expressive** client with app-private SQLite.
 - `docs/`: API, architecture, provenance, privacy/security limitations and milestones.
@@ -64,8 +64,8 @@ Tests, builds and virtual-display smoke checks **do not establish hardware, pack
 
 ## Security, privacy, integration and licensing
 
-There is no telemetry in first-party source; API access uses a **single local bearer token**, not the mandatory GoreeCloud Identity platform. SQLite data is **not encrypted at rest** and recovery has not been tested. The web preview does not enable raw HTML rendering. Android cloud backup is disabled. See [SECURITY.md](SECURITY.md) and [Threat Model](docs/THREAT_MODEL.md).
+There is no telemetry in first-party source; API access uses a **single local bearer token**, not the mandatory GoreeCloud Identity platform. SQLite data is **not encrypted at rest** and application-level disaster recovery has not been tested. JSON archives can now be imported in a validated, append-only operation, but device-loss backups and external restore drills are unverified. The web preview does not enable raw HTML rendering. Android cloud backup is disabled. See [SECURITY.md](SECURITY.md) and [Threat Model](docs/THREAT_MODEL.md).
 
 GoreeCloud UI is the source of design truth. GoreeCloud Mesh integration, GoreeShield privacy controls, GoreeCloud Identity authorization, and Wardveil security monitoring remain specified future integration work; do not treat the architecture as enforcement.
 
-Original first-party code uses [MIT](LICENSE). Dependencies retain their own upstream licenses and attribution in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). **No code from Evernote, Trilium or AFFiNE was copied.** See [Architecture](docs/ARCHITECTURE.md), [API](docs/API.md) and [Roadmap](docs/ROADMAP.md).
+Original first-party code uses [MIT](LICENSE). Dependencies retain their own upstream licenses and attribution in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). **No code from Evernote, Trilium or AFFiNE was copied.** See [Architecture](docs/ARCHITECTURE.md), [API](docs/API.md) and [Roadmap](docs/ROADMAP.md); see [JSON Recovery](docs/RECOVERY.md) for restore behavior and limits.

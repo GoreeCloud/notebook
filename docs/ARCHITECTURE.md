@@ -18,3 +18,7 @@ Mandatory platform systems:
 - **Wardveil:** future threat scanning, policy checks, auditing and incident response.
 
 Future synchronization should use signed, encrypted note change logs with explicit sharing policies, robust client cursors and tested conflict recovery. Evaluate Yjs collaboration after separate security/performance review; not part of current source.
+
+## Local data portability
+
+The JSON v2 export includes all notebooks, notes (including Trash), and saved revisions, unlike the older v1 export. An authenticated v1/v2 importer validates type, size, UUID references, parent cycles, tags, timestamps and revision version ranges before writing in one SQLite transaction. Dry-run does not change storage. Imports append only and assign new UUIDs to prevent collisions and overwrite. Binary attachments, user account ACLs and encrypted backup are not part of the format. See [JSON Recovery](RECOVERY.md).
