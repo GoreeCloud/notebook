@@ -6,7 +6,9 @@ All `/api/v1/*` paths require a bearer token in the Authorization header. `GET /
 | --- | --- | --- |
 | `/api/v1/notebooks` | GET, POST | List/create notebooks |
 | `/api/v1/notes` | GET, POST | List/search and create; optional q, notebook_id, include_deleted |
-| `/api/v1/notes/{id}` | GET, PATCH, DELETE | Fetch, update, soft-delete |
+| `/api/v1/notes/{id}` | GET, PATCH, DELETE | Fetch (optional include_deleted=true for explicit Trash detail), update, soft-delete |
+| `/api/v1/notes/page` | GET | SQL-paginated notes; optional summary=true returns only a bounded text preview plus metadata |
+| `/api/v1/notes/{id}/links` | GET | Bounded incoming/outgoing active wiki-link graph, including stable UUID links |
 | `/api/v1/notes/{id}/restore` | POST | Restore from trash |
 | `/api/v1/notes/{id}/revisions` | GET | List previous versions |
 | `/api/v1/notes/{id}/revisions/{n}/restore` | POST | Restore prior body/title |
@@ -30,3 +32,12 @@ Changing a parent's `notebook_id` returns HTTP 409 while that note still has any
 ## Paged local notes (opt-in)
 
 `GET /api/v1/notes/page` is a protected note-list envelope with `results`, `has_more`, `offset`, `next_offset` and `limit`. It accepts the same notebook/query/Trash filters as the existing array endpoint, with `limit=1..500` and `offset=0..100000`. Existing `GET /notes` continues to return a legacy array of at most 500 records. See [Note Pagination](NOTE_PAGINATION.md) for consistency and validation limits.
+
+
+The optional GET /api/v1/notes/page?summary=true query returns a 160-character
+preview plus safe note-list metadata, without exposing complete Markdown for
+unselected notes. The default page response shape and legacy /notes array are
+unchanged. Web editors explicitly hydrate the selected full note through
+GET /api/v1/notes/{id} before editing; Trash uses include_deleted=true.
+See [Note Pagination](NOTE_PAGINATION.md). Requests still require the local
+bearer token; this does not implement Identity or GoreeShield policy.

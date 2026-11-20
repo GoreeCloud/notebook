@@ -199,6 +199,50 @@ class NotebookStore(context: Context, databaseName:String="notebook.db") :
 
     fun getNote(id:String):NoteRecord? = find(readableDatabase,id)
 
+    /** Bounded offline incoming/outgoing references. No URL crawling.
+     * Run scans on an IO dispatcher, never on the UI thread.
+     */
+    fun linkGraph(noteId:String,limit:Int=30):LocalLinkGraph {
+        require(limit in 1..30) { "Invalid local link page size" }
+        val db=readableDatabase
+        val active=LinkedHashMap<String,LinkedNote>()
+        val titleIds=HashMap<Pair<String,String>,MutableList<String>>()
+        db.rawQuery("SELECT id,notebook_id,title FROM notes WHERE deleted=0",null).use { c ->
+            while(c.moveToNext()) {
+                val item=LinkedNote(c.getString(0),c.getString(1),c.getString(2))
+                active[item.id]=item
+                titleIds.getOrPut(item.notebookId to WikiReferences.fold(item.title)) {
+                    mutableListOf()
+                }.add(item.id)
+            }
+        }
+        val source=active[noteId] ?: return LocalLinkGraph(emptyList(),emptyList(),false,false)
+        val body=db.rawQuery("SELECT body FROM notes WHERE id=? AND deleted=0",
+            arrayOf(noteId)).use { c ->
+            if(c.moveToFirst())c.getString(0) else ""
+        }
+        val outIds=WikiReferences.resolve(body,source.notebookId,active,titleIds)
+            .filter { it!=noteId }
+        val outgoing=outIds.take(limit).mapNotNull{active[it]}
+        val incoming=mutableListOf<LinkedNote>()
+        var moreIncoming=false
+        db.rawQuery("""SELECT id,notebook_id,body FROM notes
+            WHERE id<>? AND deleted=0 AND instr(body,'[[')>0
+            ORDER BY updated_at DESC,id""",arrayOf(noteId)).use { c ->
+            while(c.moveToNext()) {
+                val id=c.getString(0)
+                val links=WikiReferences.resolve(c.getString(2),c.getString(1),
+                    active,titleIds)
+                if(noteId !in links)continue
+                val item=active[id] ?: continue
+                if(incoming.size>=limit){moreIncoming=true;break}
+                incoming.add(item)
+            }
+        }
+        return LocalLinkGraph(incoming,outgoing,moreIncoming,outIds.size>limit)
+    }
+
+
     fun create(notebookId:String=defaultNotebookId(),parentId:String?=null): NoteRecord {
         require(notebookId.isNotBlank())
         val db=writableDatabase

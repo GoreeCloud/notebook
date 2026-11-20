@@ -2,7 +2,12 @@ import {normalizeNotebookEndpoint} from "./endpoint";
 export type Notebook = {id:string; name:string; created_at?:string};
 export type Note = {id:string; notebook_id:string; parent_id:string|null; title:string;
   body:string; tags:string[]; pinned:boolean; deleted_at:string|null;
-  version:number; created_at:string; updated_at:string};
+  version:number; created_at:string; updated_at:string;
+  preview_only?:boolean;preview?:string};
+export type NoteSummary = Omit<Note,"body"|"preview_only"> & {preview:string};
+export type NoteSummaryPage = {
+  results:NoteSummary[];has_more:boolean;offset:number;next_offset:number;limit:number;
+};
 export type Revision = {note_id:string;version:number;title:string;body:string;saved_at:string};
 export type NoteLinkGraph = {
   incoming:{results:Note[];has_more:boolean};
@@ -38,6 +43,11 @@ export function apiClient(baseUrl:string,token:string) {
     notesPage:(query="",deleted=false,limit=500,offset=0)=>request<NotePage>(
       "/notes/page?q="+encode(query)+"&include_deleted="+deleted+
       "&limit="+limit+"&offset="+offset),
+    notesPageSummary:(query="",deleted=false,limit=500,offset=0)=>request<NoteSummaryPage>(
+      "/notes/page?summary=true&q="+encode(query)+"&include_deleted="+deleted+
+      "&limit="+limit+"&offset="+offset),
+    getNote:(id:string,includeDeleted=false)=>request<Note>(
+      "/notes/"+encode(id)+"?include_deleted="+includeDeleted),
     rankedSearch:(q:string,limit=200,notebookId="")=>request<{
       backend:"fts5"|"like";results:Note[];has_more:boolean;limit:number;offset:number
     }>("/search?q="+encode(q)+"&limit="+limit+
