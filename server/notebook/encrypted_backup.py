@@ -152,28 +152,73 @@ def encrypt_backup(source: str | Path, destination: str | Path,
             "encrypted":True}
 
 
+def _read_encrypted_file(source: Path) -> bytes:
+    """Read a bounded regular file through one no-follow descriptor.
+
+    A pathname may change after initial validation. This avoids following
+    a substituted symlink or blocking on a substituted FIFO, while reading
+    no more than the authenticated format's maximum possible envelope.
+    """
+    limit = MAX_PLAINTEXT + len(MAGIC) + SALT_SIZE + NONCE_SIZE + 16
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    flags |= getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(source, flags)
+        with os.fdopen(fd, "rb") as stream:
+            meta = os.fstat(stream.fileno())
+            if not stat.S_ISREG(meta.st_mode):
+                raise SnapshotError("Encrypted backup source is not a regular file")
+            if meta.st_size > limit:
+                raise SnapshotError("Encrypted backup exceeds 128 MiB limit")
+            # The stream can grow even after fstat; bound the actual read.
+            data = stream.read(limit + 1)
+    except OSError as exc:
+        raise SnapshotError("Could not safely read encrypted backup source") from exc
+    if len(data) > limit:
+        raise SnapshotError("Encrypted backup exceeds 128 MiB limit")
+    return data
+
+
+def _decrypt_verified_image(source: Path, secret: bytes) -> tuple[bytes, dict]:
+    content = _read_encrypted_file(source)
+    overhead = len(MAGIC) + SALT_SIZE + NONCE_SIZE + 16
+    if len(content) < overhead or not content.startswith(MAGIC):
+        raise SnapshotError("Unknown or truncated encrypted backup format")
+    offset = len(MAGIC)
+    salt = content[offset:offset + SALT_SIZE]
+    nonce = content[offset + SALT_SIZE:offset + SALT_SIZE + NONCE_SIZE]
+    header = content[:offset + SALT_SIZE + NONCE_SIZE]
+    try:
+        image = AESGCM(_derive(secret, salt)).decrypt(
+            nonce, content[len(header):], header
+        )
+    except InvalidTag as exc:
+        raise SnapshotError(
+            "Incorrect passphrase or encrypted backup failed authentication"
+        ) from exc
+    return image, _inspect_bytes(image)
+
+
+def verify_encrypted_backup(source: str | Path, password: str) -> dict:
+    """Authenticate and inspect in memory; never create a plaintext file.
+
+    This is an opt-in recovery readiness check, not an independent off-device
+    restore rehearsal. Plaintext may still remain in process RAM.
+    """
+    secret = _password(password)
+    src = _check_source(source)
+    _, evidence = _decrypt_verified_image(src, secret)
+    return {"format": "GCNB-ENCRYPTED-V1", "authenticated": True, **evidence}
+
+
 def decrypt_backup(source: str | Path, destination: str | Path,
                    password: str) -> dict:
-    secret=_password(password)
-    src=_check_source(source)
-    dst=_destination(src,destination)
-    if src.stat().st_size > MAX_PLAINTEXT+len(MAGIC)+SALT_SIZE+NONCE_SIZE+16:
-        raise SnapshotError("Encrypted backup exceeds 128 MiB limit")
-    content=src.read_bytes()
-    overhead=len(MAGIC)+SALT_SIZE+NONCE_SIZE+16
-    if len(content)<overhead or not content.startswith(MAGIC):
-        raise SnapshotError("Unknown or truncated encrypted backup format")
-    offset=len(MAGIC)
-    salt=content[offset:offset+SALT_SIZE]
-    nonce=content[offset+SALT_SIZE:offset+SALT_SIZE+NONCE_SIZE]
-    header=content[:offset+SALT_SIZE+NONCE_SIZE]
-    try:
-        plaintext=AESGCM(_derive(secret,salt)).decrypt(nonce,content[len(header):],header)
-    except InvalidTag as exc:
-        raise SnapshotError("Incorrect passphrase or encrypted backup failed authentication") from exc
-    evidence=_inspect_bytes(plaintext)
-    _publish_bytes(dst,plaintext)
-    return {"format":"SQLite","restored":True,**evidence}
+    secret = _password(password)
+    src = _check_source(source)
+    dst = _destination(src, destination)
+    plaintext, evidence = _decrypt_verified_image(src, secret)
+    _publish_bytes(dst, plaintext)
+    return {"format": "SQLite", "restored": True, **evidence}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -184,6 +229,9 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("--source",required=True)
         sub.add_argument("--destination",required=True,
                          help="New path, never an existing file")
+    check=commands.add_parser("verify",
+                              help="Authenticate and inspect in memory without writing files")
+    check.add_argument("--source",required=True)
     args=parser.parse_args(argv)
     try:
         secret=getpass.getpass("Notebook backup passphrase (not echoed): ")
@@ -193,10 +241,14 @@ def main(argv: list[str] | None = None) -> int:
                 raise SnapshotError("Passphrase confirmation did not match")
             result=encrypt_backup(args.source,args.destination,secret)
             print("Encrypted backup written: AES-256-GCM with Argon2id key derivation")
-        else:
+        elif args.command=="restore":
             result=decrypt_backup(args.source,args.destination,secret)
             print(f"Validated SQLite restore: notes={result['notes']}, notebooks={result['notebooks']}")
             print("Restored SQLite is PLAINTEXT; protect the chosen destination.")
+        else:
+            result=verify_encrypted_backup(args.source,secret)
+            print(f"VALID authenticated encrypted archive: notes={result['notes']}, notebooks={result['notebooks']}")
+            print("Verification wrote no plaintext output; this is not a restore drill.")
         return 0
     except (SnapshotError,OSError) as exc:
         parser.exit(2,"Encrypted backup error: "+str(exc)+"\n")
