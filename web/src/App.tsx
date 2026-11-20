@@ -121,6 +121,30 @@ export default function App(){
     setError("");
     if(file.size>8*1024*1024){setError("Archive exceeds the 8 MiB import limit.");return;}
     try{
+      const isZip=/\.zip$/i.test(file.name);
+      if(isZip){
+        const array=new Uint8Array(await file.arrayBuffer());
+        const pieces:string[]=[];
+        for(let i=0;i<array.length;i+=32768){
+          pieces.push(String.fromCharCode(...array.subarray(i,i+32768)));
+        }
+        const archive_base64=btoa(pieces.join(""));
+        let skip=false;
+        let report;
+        try{report=await api.importMarkdownZip(archive_base64,true,false);}
+        catch(error){
+          if(!(error instanceof ApiError&&error.status===422&&
+               error.message.includes("skip_unsupported")))throw error;
+          if(!confirm("This ZIP contains non-Markdown files or Trilium metadata. Those files CANNOT be preserved. Continue as a TEXT-ONLY import and omit them?"))return;
+          skip=true;
+          report=await api.importMarkdownZip(archive_base64,true,true);
+        }
+        if(!confirm(`Validated ${report.notes} notes including folder placeholders. ${report.warnings.join(" ")} Import without overwriting existing content?`))return;
+        const result=await api.importMarkdownZip(archive_base64,false,skip);
+        await load();
+        setToast(`Imported ${result.notes} Markdown notes and folders`);
+        return;
+      }
       const content=await file.text();
       const isEnex=/\.enex$/i.test(file.name);
       if(isEnex){
@@ -194,11 +218,11 @@ export default function App(){
         <div className="nav-heading lower">LIBRARY</div>
         <button className={"nav-item "+(trash?"active":"")} onClick={()=>{setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
         <div className="sidebar-bottom">
-          <input ref={fileInput} type="file" accept=".json,.enex,application/json,text/xml,application/xml" hidden
-            aria-label="Select Notebook JSON or ENEX archive"
+          <input ref={fileInput} type="file" accept=".json,.enex,.zip,application/json,text/xml,application/xml,application/zip" hidden
+            aria-label="Select Notebook JSON, ENEX or Markdown ZIP archive"
             onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file);e.currentTarget.value="";}}/>
           <button className="nav-item" onClick={()=>fileInput.current?.click()}>
-            <ArchiveRestore size={18}/> Import JSON / ENEX</button>
+            <ArchiveRestore size={18}/> Import JSON / ENEX / ZIP</button>
           <button className="nav-item" onClick={download}><Download size={18}/> Export JSON</button>
           <button className="nav-item" onClick={()=>{setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
         </div>

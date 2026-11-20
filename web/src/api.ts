@@ -38,6 +38,9 @@ export function apiClient(baseUrl:string,token:string) {
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
     export:()=>request<{format:string;notebooks:Notebook[];notes:Note[];revisions?:Revision[]}>("/export"),
+    importMarkdownZip:(archive_base64:string,dry_run:boolean,skip_unsupported:boolean)=>request<{
+      mode:string;dry_run:boolean;notebooks:number;notes:number;revisions:number;warnings:string[]
+    }>("/import/markdown-zip",{method:"POST",body:JSON.stringify({archive_base64,dry_run,skip_unsupported})}),
     importEnex:(xml:string,dry_run:boolean,skip_resources:boolean)=>request<{
       mode:string;dry_run:boolean;notebooks:number;notes:number;revisions:number;warnings:string[]
     }>("/import/enex",{method:"POST",body:JSON.stringify({xml,dry_run,skip_resources})}),
