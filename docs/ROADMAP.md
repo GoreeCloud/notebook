@@ -23,6 +23,7 @@
 ## Privacy, security and recoverability
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration
 - [x] Optional encrypted local SQLite snapshot with Argon2id/AES-GCM and synthetic restoration tests
+- [x] Read-only local SQLite/file-sidecar mode and ownership audit (operator-run; no automatic changes)
 - [ ] Encrypted live note store, protected browser exports, off-device backup and independent restoration rehearsal
 - [ ] Versioned schema migrations and safe import quarantine
 

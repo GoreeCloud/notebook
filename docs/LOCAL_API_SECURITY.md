@@ -17,3 +17,7 @@ Run `PYTHONPATH=server .venv/bin/pytest -q server/tests/test_http_boundary.py` f
 ## Browser bearer-token destination validation
 
 The React client validates a Notebook service endpoint before sending any authorization headers: only HTTP(S) URLs are accepted; HTTP is allowed **only** for loopback localhost/127.0.0.1/[::1]. Userinfo credentials, paths, URL queries and fragments are rejected, and remote HTTPS origins require an explicit user-facing confirmation about the shared token and missing Identity/production security gates. This does not prove a remote endpoint is trusted; network/proxy/TLS configuration still requires separate review. Node-based regression tests cover URL parsing and unsafe schemes.
+
+## Local data-file metadata review
+
+Optional read-only permissions audit of the service SQLite database and WAL/SHM/journal sidecars is documented in [Local File Permissions](LOCAL_FILE_PERMISSIONS.md). It reports modes and ownership only; never changes live data or filesystem permissions.
