@@ -32,3 +32,9 @@ canary exposure, no-overwrite/refusal and independent SQLite restoration of
 notes and revisions. Headless Qt and unsigned package smoke cannot establish
 actual file-picker, assistive-technology, off-device recovery or external
 security-review acceptance.
+
+**CI-specific dependency:** The Qt job installs the same pinned optional PyCA
+requirements used by the backend crypto tests, so the native encrypted-export
+bridge is exercised. This test installation is independent of package contents:
+the extracted unsigned Debian package continues to use the system runtime and
+does not contain compiled cryptography wheels.
