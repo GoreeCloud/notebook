@@ -27,7 +27,11 @@ def slug(title: str) -> str:
 
 
 def make_markdown_zip(store) -> bytes:
+    # A single read snapshot is essential: a notebook created concurrently
+    # between these SELECTs could otherwise yield orphaned ZIP entries or
+    # mixed-generation exports. WAL writers may continue while we read.
     with store.connection() as db:
+        db.execute("BEGIN")
         books = [dict(x) for x in db.execute("SELECT * FROM notebooks ORDER BY id")]
         notes = [dict(x) for x in db.execute(
             "SELECT * FROM notes WHERE deleted_at IS NULL ORDER BY notebook_id, id")]
