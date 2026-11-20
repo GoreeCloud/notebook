@@ -4,13 +4,14 @@ from __future__ import annotations
 import os
 import secrets
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .store import Conflict, NotFound, Store, now
+from .transfer import InvalidArchive, export_all, import_archive
 
 
 class NotebookCreate(BaseModel):
@@ -33,6 +34,11 @@ class NotePatch(BaseModel):
     body: str | None = Field(default=None, max_length=1_000_000)
     tags: list[str] | None = Field(default=None, max_length=20)
     pinned: bool | None = None
+
+
+class ImportRequest(BaseModel):
+    document: dict[str, Any]
+    dry_run: bool = True
 
 
 class VersionCheck(BaseModel):
@@ -65,6 +71,8 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(e)) from e
         except Conflict as e:
             raise HTTPException(status_code=409, detail=str(e)) from e
+        except InvalidArchive as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
 
     @app.get("/health")
     def health():
@@ -123,7 +131,11 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
 
     @api.get("/export")
     def export():
-        return store.export()
+        return safe(export_all, store)
+
+    @api.post("/import")
+    def import_notes(payload: ImportRequest):
+        return safe(import_archive, store, payload.document, payload.dry_run)
 
     app.include_router(api)
     return app

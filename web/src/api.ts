@@ -37,6 +37,9 @@ export function apiClient(baseUrl:string,token:string) {
     restoreRevision:(note:Note,version:number)=>request<Note>(
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
-    export:()=>request<{format:string;notebooks:Notebook[];notes:Note[]}>("/export")
+    export:()=>request<{format:string;notebooks:Notebook[];notes:Note[];revisions?:Revision[]}>("/export"),
+    importArchive:(document:unknown,dry_run:boolean)=>request<{
+      mode:string;dry_run:boolean;notebooks:number;notes:number;revisions:number;warnings:string[]
+    }>("/import",{method:"POST",body:JSON.stringify({document,dry_run})})
   };
 }
