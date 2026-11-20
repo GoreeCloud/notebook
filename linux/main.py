@@ -14,6 +14,7 @@ from PySide6.QtGui import QGuiApplication
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 from notebook.store import Store, Conflict, NotFound
 from notebook.transfer import InvalidArchive
+from notebook.backup import SnapshotError
 from recovery import PortableJsonError, PortableJsonRecovery
 
 
@@ -126,6 +127,30 @@ class Bridge(QObject):
             return json.dumps(self.store.revisions(self._selected))
         except NotFound:
             return "[]"
+
+    @Property(bool, constant=True)
+    def encryptedBackupAvailable(self):
+        """Optional PyCA crypto may be absent in a minimal .deb install."""
+        try:
+            from notebook.encrypted_backup import encrypt_backup
+        except (ImportError, OSError):
+            return False
+        return callable(encrypt_backup)
+
+    @Slot(str, str, result=bool)
+    def exportEncryptedBackup(self, file_url: str, passphrase: str) -> bool:
+        """User-directed, new-file-only AES-GCM SQLite backup; no plaintext file."""
+        try:
+            from notebook.encrypted_backup import encrypt_backup
+            destination = self._local_document_path(file_url)
+            result = encrypt_backup(self.store.filename, destination, passphrase)
+            self._message(f"Encrypted SQLite backup saved ({result['bytes']} bytes);"
+                          " retain the passphrase separately")
+            return True
+        except (ImportError, OSError, ValueError, PortableJsonError, SnapshotError) as exc:
+            self._message("Encrypted backup refused: " + type(exc).__name__ +
+                          " (check passphrase, optional crypto or new destination)")
+            return False
 
     @Property(str, notify=statusChanged)
     def status(self):

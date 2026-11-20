@@ -9,7 +9,7 @@
 
 ## Knowledge features
 - [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
-- [x] Android native SQL-paginated 160-character note previews with Load More beyond 500 records (physical-device paging acceptance pending)
+- [x] Android native SQL-paginated 160-character note previews with Load More beyond 500 records (synthetic OnePlus N200 instrumentation passed; human paging UX acceptance pending)
 - [x] Synthetic Android v1→v3 and v2→v3 physical-device SQLite migration acceptance; real user data untouched
 - [x] Android JSON v2 import with safe dry-run, new-ID append and physical-device isolated instrumentation/rollback acceptance
 - [x] Linux Qt notebook selector, nested-note creation, tags and disposable smoke verification
@@ -23,12 +23,14 @@
 - [x] Indexed local FTS5 title/body/tag search, query sanitization and browser ranked results
 - [x] Optional paged local note list API with explicit browser Load More beyond 500 notes (snapshot paging pending)
 - [x] Authenticated local wiki-link/backlink graph across the full active corpus with stable note-ID references and bounded pagination
+- [x] Android offline wiki-link navigation with stable local ID references, Unicode title disambiguation and unsaved-edit guard (synthetic physical-device parser/SQLite test passed; manual UI acceptance pending)
 - [ ] Wiki-link graph performance benchmarks, true full-text corpus search acceptance, keyboard accessibility E2E tests
 
 
 ## Privacy, security and recoverability
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration
 - [x] Optional encrypted local SQLite snapshot with Argon2id/AES-GCM and synthetic restoration tests
+- [x] Optional native Linux encrypted snapshot export UI (CLI restore only; source venv PyCA, package dependency/AT acceptance pending)
 - [x] Read-only local SQLite/file-sidecar mode and ownership audit (operator-run; no automatic changes)
 - [ ] Encrypted live note store, protected browser exports, off-device backup and independent restoration rehearsal
 - [ ] Versioned schema migrations and safe import quarantine

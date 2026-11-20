@@ -48,3 +48,9 @@ filters also apply before SQL pagination. Changing the filter, notebook,
 Trash mode or following a cross-notebook link resets the page window.
 As with the web list, offset pages can move during concurrent writes; no
 cross-device snapshot or Mesh synchronization is provided.
+
+**Opt-in encrypted SQLite backup:** A native Qt warning, password fields
+and save picker now expose the local encrypted-snapshot primitive only when
+optional cryptography is available. The unsigned Debian preview does not
+bundle compiled crypto and disables the control if absent.
+See [Linux Encrypted Backup](LINUX_ENCRYPTED_BACKUP.md).

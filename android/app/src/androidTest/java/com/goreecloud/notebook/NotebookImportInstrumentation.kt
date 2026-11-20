@@ -124,7 +124,33 @@ class NotebookImportInstrumentation:Instrumentation() {
             catch (_:IllegalArgumentException){invalid=true}
             check(invalid)
 
-            report.putString("result","PASS: append-only JSON roundtrip, rollback, native preview paging beyond 500 and isolated Trash visibility")
+            // Local wiki graph: Unicode title resolution and stable ID links
+            // across notebooks, with duplicate-title and Trash exclusions.
+            val target=store.create(book)
+            val named=store.save(target,"Straße reference target","target body")
+                ?:error("Could not create synthetic target")
+            val source=store.create(importedBook)
+            val byId=store.save(source,"Link source",
+                "See [[note:"+named.id+"|label]] and [[note:"+named.id+"]] ")
+                ?:error("Could not create cross-notebook ID link")
+            val titleSource=store.create(book)
+            val titled=store.save(titleSource,"Title source",
+                "Try [[STRASSE REFERENCE TARGET]]")
+                ?:error("Could not create Unicode title link")
+            val incoming=store.linkGraph(named.id)
+            check(incoming.incoming.map{it.id}.toSet()==setOf(byId.id,titled.id))
+            check(store.linkGraph(byId.id).outgoing.map{it.id}==listOf(named.id))
+            val duplicate=store.create(book)
+            store.save(duplicate,"Straße reference target","ambiguous")
+                ?:error("Could not create duplicate title")
+            val changed=store.linkGraph(named.id)
+            check(changed.incoming.map{it.id}==listOf(byId.id))
+            check(store.linkGraph(titled.id).outgoing.isEmpty())
+            check(store.trash(named))
+            check(store.linkGraph(byId.id).outgoing.isEmpty())
+            check(store.linkGraph(named.id).incoming.isEmpty())
+
+            report.putString("result","PASS: append-only JSON roundtrip, rollback, 535-note paging, Trash and local wiki links")
         } catch (error:Throwable) {
             report.putString("result","FAIL: "+error.javaClass.simpleName+": "+(error.message?:"unknown test error"))
             exitStatus=Activity.RESULT_CANCELED
