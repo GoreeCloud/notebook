@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {apiClient,ApiError,type Note,type Notebook,type Revision,type NoteLinkGraph} from "./api";
 import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
+import {plaintextJsonExportWarning,importUnsavedDraftWarning} from "./privacy";
 import {isLocalNotebookEndpoint} from "./endpoint";
 
 function ThemeControls({theme,accent,onTheme,onAccent}:{
@@ -209,6 +210,7 @@ export default function App(){
     catch(e){setError(String(e));}
   };
   const download=async()=>{try{
+    if(!confirm(plaintextJsonExportWarning))return;
     const data=JSON.stringify(await api.export(),null,2);
     const objectUrl=URL.createObjectURL(new Blob([data],{type:"application/json"}));
     const anchor=document.createElement("a");anchor.href=objectUrl;anchor.download="goreecloud-notebook-export.json";
@@ -224,6 +226,7 @@ export default function App(){
   }catch(e){setError(String(e));}};
   const importFile=async (file:File)=>{
     setError("");
+    if(dirty&&!confirm(importUnsavedDraftWarning))return;
     if(file.size>8*1024*1024){setError("Archive exceeds the 8 MiB import limit.");return;}
     try{
       const isZip=/\.zip$/i.test(file.name);
