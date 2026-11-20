@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {apiClient,ApiError,type Note,type NoteSummary,type Notebook,type Revision,type NoteLinkGraph} from "./api";
 import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
-import {plaintextJsonExportWarning,importUnsavedDraftWarning} from "./privacy";
+import {plaintextJsonExportWarning,importUnsavedDraftWarning,unsavedNavigationWarning} from "./privacy";
 import {isLocalNotebookEndpoint} from "./endpoint";
 
 function ThemeControls({theme,accent,onTheme,onAccent}:{
@@ -108,6 +108,7 @@ export default function App(){
   const dirty=Boolean(chosen&&!chosen.preview_only&&
     (draft.title!==chosen.title||draft.body!==chosen.body||
     draft.tags!==chosen.tags.join(", ")));
+  const confirmDraftDiscard=()=>!dirty||confirm(unsavedNavigationWarning);
   const ranked=Boolean(query.trim()&&!trash&&searchResults!==null);
   const visible=(ranked?searchResults||[]:notes).filter(n=>
     (trash?!!n.deleted_at:!n.deleted_at)&&(!activeBook||n.notebook_id===activeBook)&&
@@ -230,19 +231,21 @@ export default function App(){
     finally{setSaving(false);}
   };
   const addNote=async(parent_id:string|null=null)=>{
+    if(!confirmDraftDiscard())return;
     try{
       const note=await api.createNote(activeBook||notebooks[0].id,"Untitled note",parent_id);
       await load(note.id);setTrash(false);setPreview(false);
     }catch(e){setError(String(e));}
   };
   const addNotebook=async()=>{
+    if(!confirmDraftDiscard())return;
     const name=prompt("Name of the new notebook");
     if(!name?.trim())return;
     try{const book=await api.createNotebook(name.trim());await load();setActiveBook(book.id);setSelected("");}
     catch(e){setError(String(e));}
   };
   const moveToTrash=async()=>{
-    if(!selectedNote||!confirm("Move this note to Trash?"))return;
+    if(!selectedNote||!confirmDraftDiscard()||!confirm("Move this note to Trash?"))return;
     try{await api.trash(selectedNote);await load();setSelected("");setToast("Moved to Trash");}
     catch(e){setError(String(e));}
   };
@@ -253,7 +256,7 @@ export default function App(){
   const history=async()=>{if(!selectedNote)return;
     try{setRevisions(await api.revisions(selectedNote.id));}catch(e){setError(String(e));}
   };
-  const restoreVersion=async(version:number)=>{if(!selectedNote||!confirm("Restore this version?"))return;
+  const restoreVersion=async(version:number)=>{if(!selectedNote||!confirmDraftDiscard()||!confirm("Restore this version?"))return;
     try{const note=await api.restoreRevision(selectedNote,version);await load(note.id);setRevisions([]);setToast("Revision restored");}
     catch(e){setError(String(e));}
   };
@@ -373,14 +376,14 @@ export default function App(){
       </header>
       <div className="sidebar-body">
         <div className="nav-heading">WORKSPACE <button title="Create notebook" aria-label="Create notebook" onClick={addNotebook}><Plus size={17}/></button></div>
-        <button className={"nav-item "+(!activeBook?"active":"")} onClick={()=>{setActiveBook("");setTrash(false);setSidebarOpen(false);}}>
+        <button className={"nav-item "+(!activeBook?"active":"")} onClick={()=>{if(!confirmDraftDiscard())return;setActiveBook("");setTrash(false);setSidebarOpen(false);}}>
           <BookOpen size={18}/> All notes <span className="count">{notes.filter(n=>!n.deleted_at).length}</span></button>
         {notebooks.map(b=><button key={b.id} className={"nav-item "+(activeBook===b.id&&!trash?"active":"")}
-          onClick={()=>{setActiveBook(b.id);setTrash(false);setSidebarOpen(false);}}>
+          onClick={()=>{if(!confirmDraftDiscard())return;setActiveBook(b.id);setTrash(false);setSidebarOpen(false);}}>
           <span className="book-dot"/> {b.name} <span className="count">{notes.filter(n=>n.notebook_id===b.id&&!n.deleted_at).length}</span>
         </button>)}
         <div className="nav-heading lower">LIBRARY</div>
-        <button className={"nav-item "+(trash?"active":"")} onClick={()=>{setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
+        <button className={"nav-item "+(trash?"active":"")} onClick={()=>{if(!confirmDraftDiscard())return;setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
         <div className="sidebar-bottom">
           <ThemeControls theme={themeMode} accent={accent} onTheme={setThemeMode} onAccent={setAccent}/>
           <input ref={fileInput} type="file" accept=".json,.enex,.zip,application/json,text/xml,application/xml,application/zip" hidden
@@ -391,7 +394,7 @@ export default function App(){
           <button className="nav-item" onClick={download}><Download size={18}/> Export JSON</button>
           <button className="nav-item" onClick={downloadMarkdownZip}>
             <Download size={18}/> Export Markdown ZIP</button>
-          <button className="nav-item" onClick={()=>{setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
+          <button className="nav-item" onClick={()=>{if(!confirmDraftDiscard())return;setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
         </div>
       </div>
     </aside>
@@ -406,7 +409,7 @@ export default function App(){
       <div className="note-list">
         {shown.map(({note,depth})=><button key={note.id}
           className={"note-list-item "+(selected===note.id?"selected":"")}
-          style={{paddingLeft:16+depth*12}} onClick={()=>{if(dirty&&!confirm("Discard unsaved edits?"))return;setSelected(note.id);}}>
+          style={{paddingLeft:16+depth*12}} onClick={()=>{if(note.id!==selected&&!confirmDraftDiscard())return;setSelected(note.id);}}>
           <div className="list-item-head"><span>{note.pinned&&<Pin size={13} aria-label="Pinned"/>}{note.title}</span>
             <small>{new Date(note.updated_at).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</small></div>
           <p>{note.body.slice(0,115).replace(/[#*\[\]]/g,"")||"Start writing..."}</p>
