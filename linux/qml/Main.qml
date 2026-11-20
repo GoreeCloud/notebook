@@ -13,18 +13,90 @@ ApplicationWindow {
     color: "#F6F7FB"
     property var notes: []
     property var active: ({})
+    property var revisions: []
+    property string pendingAction: ""
+    property string pendingId: ""
+    property bool allowClose: false
+    function runAction(action, noteId) {
+        if (hasEdits) {
+            pendingAction = action
+            pendingId = noteId || ""
+            unsavedDialog.open()
+            return
+        }
+        performAction(action, noteId)
+    }
+    function performAction(action, noteId) {
+        if (action === "select") backend.selectNote(noteId)
+        else if (action === "new") backend.newNote()
+        else if (action === "trash") backend.deleteNote(active.id, active.version)
+        else if (action === "showTrash") backend.setTrashView(true)
+        else if (action === "showNotes") backend.setTrashView(false)
+        else if (action === "restore") backend.restoreNote(active.id, active.version)
+        else if (action === "close") { window.allowClose = true; Qt.quit() }
+    }
+    Dialog {
+        id: unsavedDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        title: "Discard unsaved changes?"
+        standardButtons: Dialog.Cancel | Dialog.Discard
+        Label { text: "This note has changes that have not been saved." }
+        onDiscarded: window.performAction(window.pendingAction, window.pendingId)
+    }
+    Popup {
+        id: historyPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 80, 460)
+        height: Math.min(window.height - 100, 430)
+        modal: true
+        padding: 22
+        ColumnLayout {
+            anchors.fill: parent
+            Label { text: "Version history"; font.pixelSize: 19; font.bold: true }
+            Label { text: "Restoring creates a new revision."; color: "#68758C" }
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                model: window.revisions
+                clip: true
+                delegate: ItemDelegate {
+                    required property var modelData
+                    width: ListView.view.width
+                    text: "Revision " + modelData.version + " · " + modelData.title
+                    onClicked: {
+                        backend.restoreRevision(window.active.id, modelData.version, window.active.version)
+                        historyPopup.close()
+                    }
+                }
+            }
+            Button { text: "Close"; onClicked: historyPopup.close() }
+        }
+    }
     property bool hasEdits: !!active.id && (noteTitle.text !== active.title || noteBody.text !== active.body)
     Component.onCompleted: {
         notes = JSON.parse(backend.notesJson)
         active = JSON.parse(backend.selectedJson)
+        revisions = JSON.parse(backend.revisionsJson)
     }
     Connections {
         target: backend
         function onNotesChanged() { window.notes = JSON.parse(backend.notesJson) }
+        function onRevisionsChanged() { window.revisions = JSON.parse(backend.revisionsJson) }
         function onSelectedChanged() {
             window.active = JSON.parse(backend.selectedJson)
             noteTitle.text = window.active.title || ""
             noteBody.text = window.active.body || ""
+        }
+    }
+    onClosing: function(close) {
+        if (!allowClose && hasEdits) {
+            close.accepted = false
+            pendingAction = "close"
+            pendingId = ""
+            unsavedDialog.open()
         }
     }
     RowLayout {
@@ -53,9 +125,15 @@ ApplicationWindow {
                         Text { text: "GOREECLOUD"; font.pixelSize: 10; font.letterSpacing: 2; color: "#68758C" }
                     }
                     Item { Layout.fillWidth: true }
-                    Button { text: "+"; onClicked: backend.newNote(); Accessible.name: "New note" }
+                    Button { text: "+"; onClicked: window.runAction("new", ""); Accessible.name: "New note" }
                 }
-                Label { text: "MY COLLECTION"; font.pixelSize: 10; font.bold: true; color: "#68758C" }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label { text: backend.trashView ? "TRASH" : "MY COLLECTION"; font.pixelSize: 10; font.bold: true; color: "#68758C" }
+                    Item { Layout.fillWidth: true }
+                    Button { text: backend.trashView ? "All notes" : "Trash"
+                        onClicked: window.runAction(backend.trashView ? "showNotes" : "showTrash", "") }
+                }
                 TextField {
                     id: search
                     Layout.fillWidth: true
@@ -87,10 +165,7 @@ ApplicationWindow {
                                 font.pixelSize: 12; color: "#68758C"; elide: Text.ElideRight; width: parent.width
                             }
                         }
-                        MouseArea { anchors.fill: parent; onClicked: {
-                            if (window.hasEdits) { backend.selectNote(modelData.id) }
-                            else backend.selectNote(modelData.id)
-                        }}
+                        MouseArea { anchors.fill: parent; onClicked: window.runAction("select", modelData.id) }
                     }
                     ScrollBar.vertical: ScrollBar {}
                 }
@@ -117,13 +192,18 @@ ApplicationWindow {
                         Text { text: "PERSONAL KNOWLEDGE  /  NOTE"; font.pixelSize: 10; font.letterSpacing: 1.8; color: "#68758C" }
                         Item { Layout.fillWidth: true }
                         Button {
-                            text: "Move to Trash"
+                            text: backend.trashView ? "Restore" : "Move to Trash"
                             enabled: !!window.active.id
-                            onClicked: backend.deleteNote(window.active.id, window.active.version)
+                            onClicked: window.runAction(backend.trashView ? "restore" : "trash", "")
+                        }
+                        Button {
+                            text: "History"
+                            enabled: !!window.active.id && !backend.trashView && window.revisions.length > 0
+                            onClicked: historyPopup.open()
                         }
                         Button {
                             text: hasEdits ? "Save changes" : "Saved"
-                            enabled: !!window.active.id && hasEdits
+                            enabled: !!window.active.id && hasEdits && !backend.trashView
                             onClicked: backend.saveNote(window.active.id, noteTitle.text, noteBody.text, window.active.version)
                         }
                     }
@@ -147,7 +227,7 @@ ApplicationWindow {
                             font.bold: true
                             color: "#1B2030"
                             background: Item {}
-                            enabled: !!window.active.id
+                            enabled: !!window.active.id && !backend.trashView
                         }
                         Text {
                             Layout.leftMargin: 49
@@ -168,7 +248,7 @@ ApplicationWindow {
                             font.pixelSize: 15
                             color: "#1B2030"
                             selectByMouse: true
-                            enabled: !!window.active.id
+                            enabled: !!window.active.id && !backend.trashView
                             background: Item {}
                         }
                     }

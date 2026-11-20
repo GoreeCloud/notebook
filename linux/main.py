@@ -24,17 +24,21 @@ class Bridge(QObject):
     selectedChanged = Signal()
     statusChanged = Signal()
     notebooksChanged = Signal()
+    revisionsChanged = Signal()
+    trashViewChanged = Signal()
 
     def __init__(self, database: str):
         super().__init__()
         self.store = Store(database)
         self._query = ""
         self._selected = ""
+        self._show_trash = False
         self._status = "All changes stored on this device"
 
     @Property(str, notify=notesChanged)
     def notesJson(self):
-        return json.dumps(self.store.list_notes(q=self._query))
+        return json.dumps(self.store.list_notes(q=self._query, include_deleted=self._show_trash) if not self._show_trash else
+                          [n for n in self.store.list_notes(q=self._query, include_deleted=True) if n["deleted_at"]])
 
     @Property(str, notify=notebooksChanged)
     def notebooksJson(self):
@@ -45,9 +49,22 @@ class Bridge(QObject):
         if not self._selected:
             return "{}"
         try:
-            return json.dumps(self.store.get(self._selected))
+            return json.dumps(self.store.get(self._selected, include_deleted=True))
         except NotFound:
             return "{}"
+
+    @Property(bool, notify=trashViewChanged)
+    def trashView(self):
+        return self._show_trash
+
+    @Property(str, notify=revisionsChanged)
+    def revisionsJson(self):
+        if not self._selected:
+            return "[]"
+        try:
+            return json.dumps(self.store.revisions(self._selected))
+        except NotFound:
+            return "[]"
 
     @Property(str, notify=statusChanged)
     def status(self):
@@ -66,6 +83,16 @@ class Bridge(QObject):
     def selectNote(self, note_id):
         self._selected = note_id
         self.selectedChanged.emit()
+        self.revisionsChanged.emit()
+
+    @Slot(bool)
+    def setTrashView(self, enabled):
+        self._show_trash = enabled
+        self._selected = ""
+        self.selectedChanged.emit()
+        self.revisionsChanged.emit()
+        self.notesChanged.emit()
+        self.trashViewChanged.emit()
 
     @Slot()
     def newNote(self):
@@ -75,6 +102,7 @@ class Bridge(QObject):
             self._selected = note["id"]
             self.notesChanged.emit()
             self.selectedChanged.emit()
+            self.revisionsChanged.emit()
             self._message("New note created")
         except (Conflict, NotFound, IndexError) as ex:
             self._message(str(ex))
@@ -85,6 +113,7 @@ class Bridge(QObject):
             self.store.update(note_id, {"title": title.strip() or "Untitled note", "body": body}, version)
             self.notesChanged.emit()
             self.selectedChanged.emit()
+            self.revisionsChanged.emit()
             self._message("Saved")
         except (Conflict, NotFound) as ex:
             self._message(str(ex) + " — reload before overwriting")
@@ -97,7 +126,32 @@ class Bridge(QObject):
             self._selected = ""
             self.selectedChanged.emit()
             self.notesChanged.emit()
-            self._message("Moved to Trash (recovery available through API)")
+            self.revisionsChanged.emit()
+            self._message("Moved to Trash")
+        except (Conflict, NotFound) as ex:
+            self._message(str(ex))
+
+
+    @Slot(str, int)
+    def restoreNote(self, note_id, version):
+        try:
+            self.store.update(note_id, {"deleted_at": None}, version)
+            self._selected = ""
+            self.selectedChanged.emit()
+            self.revisionsChanged.emit()
+            self.notesChanged.emit()
+            self._message("Restored from Trash")
+        except (Conflict, NotFound) as ex:
+            self._message(str(ex))
+
+    @Slot(str, int, int)
+    def restoreRevision(self, note_id, revision, current_version):
+        try:
+            self.store.restore_revision(note_id, revision, current_version)
+            self.notesChanged.emit()
+            self.selectedChanged.emit()
+            self.revisionsChanged.emit()
+            self._message("Revision restored")
         except (Conflict, NotFound) as ex:
             self._message(str(ex))
 
