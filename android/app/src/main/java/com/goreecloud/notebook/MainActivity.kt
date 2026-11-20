@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -68,6 +69,8 @@ private fun NotebookScreen(store: NotebookStore) {
     var historyVisible by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var exportConfirm by remember { mutableStateOf(false) }
+    var pendingImport by remember { mutableStateOf<ByteArray?>(null) }
+    var importPreview by remember { mutableStateOf<NotebookImportReport?>(null) }
     val context=LocalContext.current
     val exportScope=rememberCoroutineScope()
     val exportLauncher=rememberLauncherForActivityResult(
@@ -89,6 +92,40 @@ private fun NotebookScreen(store: NotebookStore) {
                 status=outcome
             }
         } else status="Export cancelled"
+    }
+    val importLauncher=rememberLauncherForActivityResult(
+        contract=ActivityResultContracts.OpenDocument()
+    ){ uri ->
+        if(uri!=null) {
+            exportScope.launch {
+                try {
+                    val (document,report)=withContext(Dispatchers.IO) {
+                        val input=context.contentResolver.openInputStream(uri)
+                            ?: error("Document provider could not read the selected file")
+                        val bytes=input.use { stream ->
+                            val result=ByteArrayOutputStream()
+                            val chunk=ByteArray(65536)
+                            while(true) {
+                                val count=stream.read(chunk)
+                                if(count<0)break
+                                require(result.size()+count<=NotebookArchiveParser.MAX_BYTES) {
+                                    "Notebook JSON exceeds 8 MiB import limit"
+                                }
+                                result.write(chunk,0,count)
+                            }
+                            result.toByteArray()
+                        }
+                        bytes to store.importJsonV2(bytes,dryRun=true)
+                    }
+                    pendingImport=document
+                    importPreview=report
+                    status="Archive validated: ${report.notes} notes (dry run, no changes)"
+                }catch(e:Exception) {
+                    pendingImport=null;importPreview=null
+                    status="Import refused; no data changed: ${e.message ?: "invalid archive"}"
+                }
+            }
+        }else status="Import cancelled"
     }
     val editing = selected != null
     val dirty = selected?.let {
@@ -138,6 +175,40 @@ private fun NotebookScreen(store: NotebookStore) {
             confirmDiscard=false; selected=null;refresh()
         }){Text("Discard")}},
         dismissButton={TextButton(onClick={confirmDiscard=false}){Text("Keep editing")}}
+    )
+    if(importPreview!=null) AlertDialog(
+        onDismissRequest={importPreview=null;pendingImport=null},
+        title={Text("Import Notebook JSON v2?")},
+        text={Text("Validated ${importPreview!!.notebooks} notebooks, " +
+            "${importPreview!!.notes} notes and ${importPreview!!.revisions} revisions. " +
+            "This will APPEND new notebooks and notes with new IDs and will never overwrite " +
+            "existing content. Imported data may contain private information. " +
+            "Malformed archives are refused; imports are one SQLite transaction. " +
+            "The document provider you selected may store the source file in a cloud.")},
+        confirmButton={TextButton(onClick={
+            val bytes=pendingImport
+            pendingImport=null;importPreview=null
+            if(bytes!=null) {
+                exportScope.launch {
+                    try {
+                        val result=withContext(Dispatchers.IO) {
+                            store.importJsonV2(bytes,dryRun=false)
+                        }
+                        notebooks=store.notebooks()
+                        activeNotebook=result.firstImportedNotebookId ?: activeNotebook
+                        selected=null
+                        showTrash=false
+                        refresh()
+                        status="Imported ${result.notes} notes into new notebooks"
+                    }catch(e:Exception) {
+                        status="Import failed; SQLite rolled back: ${e.message ?: "invalid data"}"
+                    }
+                }
+            }
+        }){Text("Import as new records")}},
+        dismissButton={TextButton(onClick={
+            importPreview=null;pendingImport=null;status="Import cancelled"
+        }){Text("Cancel")}}
     )
     if(exportConfirm) AlertDialog(
         onDismissRequest={exportConfirm=false},
@@ -222,6 +293,9 @@ private fun NotebookScreen(store: NotebookStore) {
                 },
                 actions={
                     if(!editing) {
+                        TextButton(onClick={
+                            importLauncher.launch(arrayOf("application/json","text/plain","application/octet-stream"))
+                        }) { Text("Import JSON") }
                         TextButton(onClick={exportConfirm=true}) { Text("Export JSON") }
                     }
                     if(editing){

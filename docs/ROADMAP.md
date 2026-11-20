@@ -5,12 +5,13 @@
 - [x] Local notes, Markdown, search and revision-aware API
 - [x] Initial licensing/provenance and security documentation
 - [ ] Verified Android physical-device install and Linux package
-- [ ] Passing GitHub CI and enforced protected-main PR flow
+- [x] Passing four required GitHub CI checks and enforced protected-main PR flow
 
 ## Knowledge features
 - [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
 - [x] Synthetic Android v1→v3 and v2→v3 physical-device SQLite migration acceptance; real user data untouched
-- [ ] Complete tree/attachments/tags/revisions parity and authenticated import across all clients
+- [x] Android JSON v2 import with safe dry-run, new-ID append and physical-device isolated instrumentation/rollback acceptance
+- [ ] Complete tree/attachments/tags/revisions and full import/export format parity across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
 - [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
 - [x] Safe Markdown ZIP import/export of active note trees with path validation, basic round-trip tests and explicit metadata/media-loss acknowledgement
