@@ -73,3 +73,5 @@ GoreeCloud UI is the source of design truth. GoreeCloud Mesh integration, GoreeS
 Original first-party code uses [MIT](LICENSE). Dependencies retain their own upstream licenses and attribution in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). **No code from Evernote, Trilium or AFFiNE was copied.** See [Architecture](docs/ARCHITECTURE.md), [API](docs/API.md) and [Roadmap](docs/ROADMAP.md); see [JSON Recovery](docs/RECOVERY.md) for restore behavior and limits, and [Encrypted Offline Backup](docs/ENCRYPTED_BACKUP.md) for optional authenticated local snapshots.
 
 Optional local privacy audit: [read-only SQLite file/sidecar permission inspection](docs/LOCAL_FILE_PERMISSIONS.md). No automatic permission changes or note-content access.
+
+Linux: the native Qt Quick client supports per-notebook filters, notebook creation, nested-note creation and comma-separated tag editing, with user-data-isolated Qt smoke tests. Full hierarchy, parity and packaging acceptance remain open. See [Linux Parity](docs/LINUX_PARITY.md).

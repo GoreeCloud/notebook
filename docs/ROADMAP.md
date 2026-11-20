@@ -11,6 +11,7 @@
 - [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
 - [x] Synthetic Android v1→v3 and v2→v3 physical-device SQLite migration acceptance; real user data untouched
 - [x] Android JSON v2 import with safe dry-run, new-ID append and physical-device isolated instrumentation/rollback acceptance
+- [x] Linux Qt notebook selector, nested-note creation, tags and disposable smoke verification
 - [ ] Complete tree/attachments/tags/revisions and full import/export format parity across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
 - [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
