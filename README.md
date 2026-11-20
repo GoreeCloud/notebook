@@ -49,7 +49,7 @@ With the Python venv created above, run `.venv/bin/pip install -r linux/requirem
 
 ## Native Android
 
-Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It does not yet support backups, cross-device access or encryption at the application layer.
+Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It does not yet support backups, cross-device access or encryption at the application layer. Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed or device-validated release).
 
 ## Validation
 

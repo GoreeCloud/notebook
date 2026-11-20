@@ -48,7 +48,7 @@ jobs:
         with:
           packages: 'platform-tools'
       - name: Install Android SDK 37
-        run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
       - run: chmod +x gradlew && ./gradlew :app:assembleDebug --no-daemon
         working-directory: android
       - uses: actions/upload-artifact@v4
