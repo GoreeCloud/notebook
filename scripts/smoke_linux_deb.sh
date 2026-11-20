@@ -18,5 +18,11 @@ QT_QPA_PLATFORM=offscreen GC_NOTEBOOK_SMOKE=1 \
   XDG_DATA_HOME="$STAGE/local-test-data" \
   GC_NOTEBOOK_PACKAGE_ROOT="$APP" \
   "$STAGE/usr/bin/goreecloud-notebook"
-test -f "$STAGE/local-test-data/goreecloud/notebook/notes.sqlite3"
-echo "PASS: extracted native Qt Quick .deb launched with isolated test database"
+# Smoke creates and deletes a private SQLite sandbox automatically. It must
+# never write into XDG_DATA_HOME, even when the package was extracted to a
+# temporary staging directory. Do not regress to expecting a user DB file.
+if [[ -e "$STAGE/local-test-data" ]]; then
+  echo "FAIL: packaged Qt smoke wrote to user-configured XDG_DATA_HOME" >&2
+  exit 1
+fi
+echo "PASS: extracted native Qt Quick .deb launched with disposable SQLite and no user-data writes"

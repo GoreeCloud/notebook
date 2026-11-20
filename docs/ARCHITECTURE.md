@@ -34,3 +34,7 @@ The SQLite service database has a derived local `notes_fts` virtual table with S
 ## Android native schema and export
 
 Android schema v3 stores stable notebook IDs, optional parent relationships, note timestamps and local revisions with a sequential v1→v2→v3 migration path. User-confirmed Android Storage Access Framework JSON v2 export is plaintext, contains note content and revisions, and is compatible with service append-only imports subject to lossy historical tags/pinning. Android remains separately sandboxed with no network permission or automatic backup. It now supports locally validated, append-only JSON v2 document import with preflight and explicit consent; see [Android JSON Import](ANDROID_JSON_IMPORT.md). See [Android Data](ANDROID_DATA.md).
+
+## Linux native notebook scope
+
+The Qt Quick bridge maps existing service SQLite notebook IDs and optional parent-note references to native notebook selection, notebook creation, child-note creation and tag edits. No additional Linux database format or network transport was introduced. Qt smoke mode uses disposable SQLite exclusively. See [Linux Parity](LINUX_PARITY.md).

@@ -12,6 +12,7 @@ ApplicationWindow {
     title: "GoreeCloud Notebook"
     color: "#F6F7FB"
     property var notes: []
+    property var notebooks: []
     property var active: ({})
     property var revisions: []
     property string pendingAction: ""
@@ -29,11 +30,33 @@ ApplicationWindow {
     function performAction(action, noteId) {
         if (action === "select") backend.selectNote(noteId)
         else if (action === "new") backend.newNote()
+        else if (action === "child") backend.newChildNote(noteId)
+        else if (action === "notebook") backend.setNotebook(noteId)
+        else if (action === "newNotebook") newNotebookDialog.open()
         else if (action === "trash") backend.deleteNote(active.id, active.version)
         else if (action === "showTrash") backend.setTrashView(true)
         else if (action === "showNotes") backend.setTrashView(false)
         else if (action === "restore") backend.restoreNote(active.id, active.version)
         else if (action === "close") { window.allowClose = true; Qt.quit() }
+    }
+    Dialog {
+        id: newNotebookDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        title: "Create notebook"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        TextField {
+            id: newNotebookName
+            width: 290
+            placeholderText: "Notebook name"
+            maximumLength: 120
+            Accessible.name: "New notebook name"
+        }
+        onAccepted: {
+            backend.newNotebook(newNotebookName.text)
+            newNotebookName.text = ""
+        }
     }
     Dialog {
         id: unsavedDialog
@@ -75,20 +98,28 @@ ApplicationWindow {
             Button { text: "Close"; onClicked: historyPopup.close() }
         }
     }
-    property bool hasEdits: !!active.id && (noteTitle.text !== active.title || noteBody.text !== active.body)
+    function editTags(text) {
+        return text.split(",").map(function(t) { return t.trim() }).filter(function(t) { return t.length > 0 })
+    }
+    property bool hasEdits: !!active.id && (noteTitle.text !== active.title ||
+        noteBody.text !== active.body ||
+        JSON.stringify(editTags(noteTags.text)) !== JSON.stringify(active.tags || []))
     Component.onCompleted: {
         notes = JSON.parse(backend.notesJson)
+        notebooks = JSON.parse(backend.notebooksJson)
         active = JSON.parse(backend.selectedJson)
         revisions = JSON.parse(backend.revisionsJson)
     }
     Connections {
         target: backend
         function onNotesChanged() { window.notes = JSON.parse(backend.notesJson) }
+        function onNotebooksChanged() { window.notebooks = JSON.parse(backend.notebooksJson) }
         function onRevisionsChanged() { window.revisions = JSON.parse(backend.revisionsJson) }
         function onSelectedChanged() {
             window.active = JSON.parse(backend.selectedJson)
             noteTitle.text = window.active.title || ""
             noteBody.text = window.active.body || ""
+            noteTags.text = (window.active.tags || []).join(", ")
         }
     }
     onClosing: function(close) {
@@ -125,7 +156,33 @@ ApplicationWindow {
                         Text { text: "GOREECLOUD"; font.pixelSize: 10; font.letterSpacing: 2; color: "#68758C" }
                     }
                     Item { Layout.fillWidth: true }
-                    Button { text: "+"; onClicked: window.runAction("new", ""); Accessible.name: "New note" }
+                    Button { text: "+"; enabled: !backend.trashView;
+                        onClicked: window.runAction("new", ""); Accessible.name: "New note" }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    ComboBox {
+                        id: notebookPicker
+                        Layout.fillWidth: true
+                        Accessible.name: "Selected notebook"
+                        model: [{id:"", name:"All notebooks"}].concat(window.notebooks)
+                        textRole: "name"
+                        currentIndex: {
+                            var items = model
+                            for(var index=0;index<items.length;index++) {
+                                if(items[index].id === backend.activeNotebook)return index
+                            }
+                            return 0
+                        }
+                        onActivated: function(index) {
+                            window.runAction("notebook", model[index].id)
+                        }
+                    }
+                    Button {
+                        text: "New"
+                        Accessible.name: "Create notebook"
+                        onClicked: window.runAction("newNotebook", "")
+                    }
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -159,7 +216,8 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.margins: 14
                             spacing: 7
-                            Text { text: modelData.title; font.bold: true; color: "#1B2030"; elide: Text.ElideRight; width: parent.width }
+                            Text { text: (modelData.parent_id ? "↳ " : "") + modelData.title;
+                                font.bold: true; color: "#1B2030"; elide: Text.ElideRight; width: parent.width }
                             Text {
                                 text: modelData.body ? modelData.body.replace(/\n/g, " ").slice(0, 90) : "Start writing..."
                                 font.pixelSize: 12; color: "#68758C"; elide: Text.ElideRight; width: parent.width
@@ -197,6 +255,12 @@ ApplicationWindow {
                             onClicked: window.runAction(backend.trashView ? "restore" : "trash", "")
                         }
                         Button {
+                            text: "Add child"
+                            Accessible.name: "Create nested note"
+                            enabled: !!window.active.id && !backend.trashView
+                            onClicked: window.runAction("child", window.active.id)
+                        }
+                        Button {
                             text: "History"
                             enabled: !!window.active.id && !backend.trashView && window.revisions.length > 0
                             onClicked: historyPopup.open()
@@ -204,7 +268,8 @@ ApplicationWindow {
                         Button {
                             text: hasEdits ? "Save changes" : "Saved"
                             enabled: !!window.active.id && hasEdits && !backend.trashView
-                            onClicked: backend.saveNote(window.active.id, noteTitle.text, noteBody.text, window.active.version)
+                            onClicked: backend.saveNoteWithTags(window.active.id, noteTitle.text, noteBody.text,
+                                noteTags.text, window.active.version)
                         }
                     }
                 }
@@ -223,6 +288,7 @@ ApplicationWindow {
                             Layout.rightMargin: 44
                             text: window.active.title || ""
                             placeholderText: "Select a note"
+                            maximumLength: 200
                             font.pixelSize: 32
                             font.bold: true
                             color: "#1B2030"
@@ -234,6 +300,17 @@ ApplicationWindow {
                             text: window.active.id ? "Revision " + window.active.version + " · Markdown text" : "Create or select a note to begin"
                             font.pixelSize: 12
                             color: "#68758C"
+                        }
+                        TextField {
+                            id: noteTags
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 44
+                            Layout.rightMargin: 44
+                            placeholderText: "Tags, separated by commas"
+                            Accessible.name: "Note tags"
+                            enabled: !!window.active.id && !backend.trashView
+                            maximumLength: 500
+                            text: (window.active.tags || []).join(", ")
                         }
                         Rectangle { Layout.fillWidth: true; Layout.leftMargin: 44; Layout.rightMargin: 44; height: 1; color: "#EEF0F7" }
                         TextArea {
