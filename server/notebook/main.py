@@ -158,8 +158,14 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
         return safe(store.restore_revision, note_id, version, payload.expected_version)
 
     @api.get("/notes/{note_id}/backlinks")
-    def backlinks(note_id: str):
-        return safe(store.backlinks, note_id)
+    def backlinks(note_id: str, limit: int = Query(default=100, ge=1, le=100),
+                  offset: int = Query(default=0, ge=0, le=10000)):
+        return safe(store.backlinks, note_id, limit, offset)
+
+    @api.get("/notes/{note_id}/links")
+    def note_link_graph(note_id: str, limit: int = Query(default=50, ge=1, le=100),
+                        offset: int = Query(default=0, ge=0, le=10000)):
+        return safe(store.link_graph, note_id, limit, offset)
 
     @api.get("/search")
     def ranked_search(q: str = Query(min_length=1, max_length=200),

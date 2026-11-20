@@ -31,3 +31,12 @@
 .tag,.toggle.on{color:var(--gc-on-brand-container)}
 .note-list-item.selected p{color:var(--gc-on-brand-container)}
 @media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
+
+
+/* Local wiki-link navigation; colors come from the pinned GoreeCloud UI roles. */
+.link-graph .history-title{gap:14px;flex-wrap:wrap}
+.link-graph .history-title h3{display:flex;align-items:center;gap:8px}
+.link-graph small,.link-graph p{font-size:12px;color:var(--gc-text-soft);line-height:1.55}
+.link-group{padding:12px 0;border-top:1px solid var(--gc-outline-soft)}
+.link-group h4{font-size:12px;color:var(--gc-text);margin:0 0 10px}
+.link-target{margin:3px;max-width:100%;overflow-wrap:anywhere;text-align:left;white-space:normal}

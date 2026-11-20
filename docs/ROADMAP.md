@@ -20,7 +20,8 @@
 - [ ] Full ENEX/ENML fidelity, attachments and full Trilium-specific ZIP metadata migration
 - [ ] Rich text (evaluate MIT Tiptap/ProseMirror), web clipping and OCR
 - [x] Indexed local FTS5 title/body/tag search, query sanitization and browser ranked results
-- [ ] Backlink graph, full corpus search benchmarks and keyboard accessibility E2E tests
+- [x] Authenticated local wiki-link/backlink graph across the full active corpus with stable note-ID references and bounded pagination
+- [ ] Wiki-link graph performance benchmarks, true full-text corpus search acceptance, keyboard accessibility E2E tests
 
 ## Privacy, security and recoverability
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration

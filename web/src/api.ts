@@ -4,6 +4,11 @@ export type Note = {id:string; notebook_id:string; parent_id:string|null; title:
   body:string; tags:string[]; pinned:boolean; deleted_at:string|null;
   version:number; created_at:string; updated_at:string};
 export type Revision = {note_id:string;version:number;title:string;body:string;saved_at:string};
+export type NoteLinkGraph = {
+  incoming:{results:Note[];has_more:boolean};
+  outgoing:{results:Note[];has_more:boolean};
+  limit:number;offset:number;resolution:string;
+};
 
 export class ApiError extends Error {
   constructor(public status:number, message:string) { super(message); }
@@ -39,6 +44,8 @@ export function apiClient(baseUrl:string,token:string) {
     untrash:(note:Note)=>request<Note>("/notes/"+encode(note.id)+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
     revisions:(id:string)=>request<Revision[]>("/notes/"+encode(id)+"/revisions"),
+    noteLinks:(id:string,limit=50,offset=0)=>request<NoteLinkGraph>(
+      "/notes/"+encode(id)+"/links?limit="+limit+"&offset="+offset),
     restoreRevision:(note:Note,version:number)=>request<Note>(
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
