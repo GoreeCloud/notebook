@@ -54,6 +54,32 @@ class LinuxEncryptedRecoveryTest(unittest.TestCase):
             self.assertEqual(current["body"],"private historical body")
             self.assertEqual(recovered.revisions(before["id"])[0]["body"],"")
 
+    def test_verify_existing_encrypted_archive_does_not_create_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder=Path(directory)
+            bridge=Bridge(str(folder/"source.sqlite3"))
+            bridge.newNote()
+            note=bridge.store.get(json.loads(bridge.selectedJson)["id"])
+            bridge.saveNote(note["id"],"Archive to validate","TOP-SECRET-SYNTHETIC",1)
+            archive=folder/"archive.gcnb"
+            local=QUrl.fromLocalFile(str(archive)).toString()
+            self.assertTrue(bridge.exportEncryptedBackup(local,PASSPHRASE))
+            before={x.name:x.read_bytes() for x in folder.iterdir() if x.is_file()}
+            self.assertTrue(bridge.verifyEncryptedBackup(local,PASSPHRASE))
+            self.assertIn("VALID",bridge.status)
+            self.assertIn("no plaintext output",bridge.status)
+            self.assertFalse(bridge.verifyEncryptedBackup(local,"incorrect long passphrase"))
+            self.assertNotIn(PASSPHRASE,bridge.status)
+            self.assertFalse(bridge.verifyEncryptedBackup("https://example.test/a.gcnb",PASSPHRASE))
+            self.assertEqual(before,{x.name:x.read_bytes() for x in folder.iterdir() if x.is_file()})
+            archive_bytes=bytearray(archive.read_bytes())
+            archive_bytes[-1]^=1
+            tampered=folder/"tampered.gcnb"
+            tampered.write_bytes(archive_bytes)
+            self.assertFalse(bridge.verifyEncryptedBackup(
+                QUrl.fromLocalFile(str(tampered)).toString(),PASSPHRASE))
+            self.assertFalse((folder/"restored.sqlite3").exists())
+
     def test_qml_consent_and_clear_password_fields(self):
         qml=(ROOT/"linux/qml/Main.qml").read_text(encoding="utf-8")
         self.assertIn('window.runAction("encryptedBackup", "")',qml)
@@ -61,6 +87,10 @@ class LinuxEncryptedRecoveryTest(unittest.TestCase):
         self.assertIn("echoMode: TextInput.Password",qml)
         self.assertIn('encryptedBackupSecret.text = ""',qml)
         self.assertIn('backend.exportEncryptedBackup(selectedFile.toString(), passphrase)',qml)
+        self.assertIn('backend.verifyEncryptedBackup(localFile, passphrase)',qml)
+        self.assertIn('encryptedBackupVerifySecret.text = ""',qml)
+        self.assertIn('fileMode: PlatformDialogs.FileDialog.OpenFile',qml)
+        self.assertIn("It does not replace a separate recovery drill.",qml)
 
 
 if __name__=="__main__":
