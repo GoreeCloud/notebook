@@ -52,6 +52,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (node24)
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: "21"}
+      # Official GitHub MIT cache action, pinned to reviewed Node 24 v6.1.0.
+      # Cache ONLY public Gradle dependency artifacts and wrapper distributions.
+      # No configuration-cache, credentials, build output, or user data.
+      - name: Cache public Android Gradle dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper/dists
+          key: notebook-android-gradle-${{ runner.os }}-v1-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/settings.gradle.kts', 'android/build.gradle.kts', 'android/app/build.gradle.kts') }}
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
