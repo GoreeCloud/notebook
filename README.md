@@ -10,10 +10,10 @@ An original, MIT-licensed, open-source **self-hosted note and personal knowledge
 | --- | --- | --- | --- |
 | Local notes and search | Yes | Yes | Yes |
 | Markdown note editing | Yes, safe preview | Plain-text editor | Plain-text editor |
-| Notebooks and nested notes | Yes | Shared SQLite data model | Not yet |
-| Tags, revisions, backlinks | Yes | Partial (data model) | Not yet |
+| Notebooks and nested notes | Yes | Shared SQLite data model | Yes, local schema v3 |
+| Tags, revisions, backlinks | Yes | Partial (data model) | Tags and revisions; backlinks pending |
 | Soft delete and restore | Yes | Soft delete | Soft delete |
-| JSON export and append-only restore | Web / API | Via local API | Not yet |
+| JSON export and append-only restore | Web / API | Via local API | Explicit JSON v2 export only; restore pending |
 | Offline editing without server | No | Yes | Yes |
 
 Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** Trilium ZIP migration, ENEX attachments and full rich-text fidelity, OCR, encryption, collaboration and full platform parity are not implemented.
@@ -51,7 +51,7 @@ The repository also includes an **experimental unsigned x86_64 .deb builder** in
 
 ## Native Android
 
-Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It does not yet support backups, cross-device access or encryption at the application layer. Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed or device-validated release).
+Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It supports explicit plaintext JSON v2 export through Android Storage Access Framework, but no in-app restore, cross-device access, automatic backups or encryption at the application layer. See [Android Data](docs/ANDROID_DATA.md). Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed or device-validated release).
 
 ## Validation
 

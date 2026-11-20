@@ -6,7 +6,7 @@ Qt Quick 6.12 native Linux ------------local----> SQLite (same host/account)
 Kotlin/Compose Material 3 Expressive Android --> SQLite (Android app sandbox)
 ```
 
-This is an **offline-native local-first foundation**, not synchronized multi-device software. Canonical document content is UTF-8 Markdown. Each note has a UUID, optional parent ID, tags, version counter, soft-delete timestamp and revision history on the service database. SQLite owns transactions and foreign key validation. Android has a smaller independent schema.
+This is an **offline-native local-first foundation**, not synchronized multi-device software. Canonical document content is UTF-8 Markdown. Each note has a UUID, optional parent ID, tags, version counter, soft-delete timestamp and revision history on the service database. SQLite owns transactions and foreign key validation. Android retains a separate SQLite v3 schema with notebooks, parent-child note relationships, revisions and explicit plaintext JSON export.
 
 The web API binds to loopback in the documented command and requires a random shared bearer token. No user account or remote access control is implemented. Do not use an external bind address without reviewed authentication, authorization, HTTPS, rate limits and deployment gates.
 
@@ -30,3 +30,7 @@ SQLite triggers capture note mutations in a monotonic `note_change_events` table
 ## Search index
 
 The SQLite service database has a derived local `notes_fts` virtual table with SQL triggers on note insert/update/delete. The authenticated `GET /api/v1/search` endpoint performs prefix-token matching and weighted ranking without accepting raw FTS query operators. It excludes soft-deleted notes; first run backfills existing active notes. SQLite builds lacking FTS5 fall back to a capped LIKE search. Index data is plaintext and never leaves the local service by default. See [Indexed Local Search](SEARCH.md).
+
+## Android native schema and export
+
+Android schema v3 stores stable notebook IDs, optional parent relationships, note timestamps and local revisions with a sequential v1→v2→v3 migration path. User-confirmed Android Storage Access Framework JSON v2 export is plaintext, contains note content and revisions, and is compatible with service append-only imports subject to lossy historical tags/pinning. Android remains separately sandboxed with no network permission or automatic backup. See [Android Data](ANDROID_DATA.md).
