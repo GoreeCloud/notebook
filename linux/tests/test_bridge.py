@@ -82,6 +82,46 @@ class LinuxBridgeTest(unittest.TestCase):
             bridge.setNotebook("")
             self.assertEqual(len(json.loads(bridge.notesJson)), 2)
 
+    def test_local_wiki_links_navigation_cross_notebook_and_trash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = Bridge(str(Path(directory) / "notes.sqlite3"))
+            first_book = bridge.store.notebooks()[0]["id"]
+            destination = bridge.store.create(first_book, "Target", "Original")
+            second_book = bridge.store.create_notebook("Second")["id"]
+            source = bridge.store.create(
+                second_book, "Source", "[[note:" + destination["id"] + "|Target]]"
+            )
+            link_notifications = []
+            bridge.linksChanged.connect(lambda: link_notifications.append(True))
+            bridge.setNotebook(second_book)
+            bridge.selectNote(source["id"])
+            outgoing = json.loads(bridge.linksJson)["outgoing"]["results"]
+            self.assertEqual([n["id"] for n in outgoing], [destination["id"]])
+            bridge.setQuery("missing")
+            self.assertEqual(json.loads(bridge.notesJson), [])
+            bridge.navigateLinkedNote(destination["id"])
+            self.assertEqual(bridge.activeNotebook, first_book)
+            self.assertEqual(json.loads(bridge.selectedJson)["id"], destination["id"])
+            self.assertEqual([x["id"] for x in json.loads(bridge.notesJson)],
+                             [destination["id"]])
+            incoming = json.loads(bridge.linksJson)["incoming"]["results"]
+            self.assertEqual([n["id"] for n in incoming], [source["id"]])
+            self.assertGreater(len(link_notifications), 0)
+            bridge.navigateLinkedNote("not-a-note")
+            self.assertEqual(json.loads(bridge.selectedJson)["id"], destination["id"])
+            bridge.store.update(source["id"], {"deleted_at": "2026-11-20T00:00:00Z"}, 1)
+            self.assertEqual(json.loads(bridge.linksJson)["incoming"]["results"], [])
+            bridge.setTrashView(True)
+            self.assertEqual(json.loads(bridge.linksJson)["outgoing"]["results"], [])
+            self.assertEqual(json.loads(bridge.linksJson)["incoming"]["results"], [])
+
+    def test_qml_link_navigation_uses_unsaved_draft_guard(self):
+        qml = (ROOT / "linux/qml/Main.qml").read_text()
+        self.assertIn('window.runAction("linked", modelData.id)', qml)
+        self.assertIn('else if (action === "linked")', qml)
+        self.assertIn('if (hasEdits)', qml)
+        self.assertIn('backend.navigateLinkedNote(noteId)', qml)
+
     def test_smoke_uses_only_ephemeral_database(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "normal-user-database"

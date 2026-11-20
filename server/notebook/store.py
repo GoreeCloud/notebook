@@ -347,11 +347,33 @@ class Store:
                     "offset": offset}
         terms = terms[:12]
         if not self.fts_enabled:
-            # Explicit fallback on SQLite builds without FTS5 support;
-            # LIKE retains existing API semantics but caps at 500 items.
-            matches = self.list_notes(notebook_id=notebook_id, q=" ".join(terms))
-            return {"backend": "like", "results": matches[offset:offset+limit],
-                    "has_more": len(matches) > offset+limit,
+            # FTS5 is optional on SQLite distributions. Apply scope, all
+            # sanitized terms, and pagination INSIDE SQLite instead of
+            # slicing the legacy 500-note display limit in Python.
+            # LIKE has substring semantics and no BM25 ranking; unlike FTS5,
+            # it can still return every matching page in a large library.
+            predicates = ["deleted_at IS NULL"]
+            args = []
+            if notebook_id:
+                predicates.append("notebook_id=?")
+                args.append(notebook_id)
+            for term in terms:
+                escaped = (term.replace("\\", "\\\\")
+                           .replace("%", "\\%").replace("_", "\\_"))
+                predicates.append(
+                    "(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\'"
+                    " OR tags LIKE ? ESCAPE '\\')"
+                )
+                args.extend(["%" + escaped + "%"] * 3)
+            with self.connection() as db:
+                rows = db.execute(
+                    "SELECT * FROM notes WHERE " + " AND ".join(predicates) +
+                    " ORDER BY pinned DESC, updated_at DESC, id LIMIT ? OFFSET ?",
+                    (*args, limit + 1, offset),
+                ).fetchall()
+            return {"backend": "like",
+                    "results": [self.note(row) for row in rows[:limit]],
+                    "has_more": len(rows) > limit,
                     "limit": limit, "offset": offset}
         expression = " AND ".join('"' + term + '"*' for term in terms)
         with self.connection() as db:

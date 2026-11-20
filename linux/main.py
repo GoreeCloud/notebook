@@ -29,6 +29,7 @@ class Bridge(QObject):
     notebooksChanged = Signal()
     revisionsChanged = Signal()
     trashViewChanged = Signal()
+    linksChanged = Signal()
 
     def __init__(self, database: str):
         super().__init__()
@@ -39,6 +40,10 @@ class Bridge(QObject):
         self._show_trash = False
         self._status = "All changes stored on this device"
         self.recovery = PortableJsonRecovery()
+        # Links are derived from local SQLite, never synchronized or cached.
+        # Editing any note can change an incoming or outgoing reference.
+        self.notesChanged.connect(self.linksChanged.emit)
+        self.selectedChanged.connect(self.linksChanged.emit)
 
     @Property(str, notify=notesChanged)
     def notesJson(self):
@@ -71,6 +76,18 @@ class Bridge(QObject):
     @Property(bool, notify=trashViewChanged)
     def trashView(self):
         return self._show_trash
+
+    @Property(str, notify=linksChanged)
+    def linksJson(self):
+        empty = {"incoming": {"results": [], "has_more": False},
+                 "outgoing": {"results": [], "has_more": False},
+                 "limit": 30, "offset": 0}
+        if not self._selected or self._show_trash:
+            return json.dumps(empty)
+        try:
+            return json.dumps(self.store.link_graph(self._selected, limit=30))
+        except NotFound:
+            return json.dumps(empty)
 
     @Property(str, notify=revisionsChanged)
     def revisionsJson(self):
@@ -203,6 +220,28 @@ class Bridge(QObject):
         self._selected = note_id
         self.selectedChanged.emit()
         self.revisionsChanged.emit()
+
+    @Slot(str)
+    def navigateLinkedNote(self, note_id):
+        """Follow a resolved active wiki-link, including cross-notebook links.
+
+        QML must call this through its existing unsaved-edits confirmation.
+        """
+        try:
+            note = self.store.get(note_id)
+        except NotFound:
+            self._message("Linked note is unavailable or in Trash")
+            return
+        self._selected = note["id"]
+        self._active_notebook = note["notebook_id"]
+        self._query = ""
+        self._show_trash = False
+        self.notebooksChanged.emit()
+        self.trashViewChanged.emit()
+        self.notesChanged.emit()
+        self.selectedChanged.emit()
+        self.revisionsChanged.emit()
+        self._message("Opened linked note on this device")
 
     @Slot(bool)
     def setTrashView(self, enabled):
