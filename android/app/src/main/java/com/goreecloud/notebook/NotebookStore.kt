@@ -25,7 +25,8 @@ data class NoteRevision(
 )
 
 /** Private on-device SQLite. No background sync, network or app-layer encryption. */
-class NotebookStore(context: Context) : SQLiteOpenHelper(context, "notebook.db", null, 3) {
+class NotebookStore(context: Context, databaseName:String="notebook.db") :
+    SQLiteOpenHelper(context, databaseName, null, 3) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -283,6 +284,65 @@ class NotebookStore(context: Context) : SQLiteOpenHelper(context, "notebook.db",
             "Export exceeds 8 MiB; create a local SQLite snapshot instead"
         }
         return result
+    }
+
+    /**
+     * Validates a Notebook v2 JSON archive independently of device contents.
+     * Applying always appends fresh UUIDs in one SQLite transaction, leaving
+     * existing notebooks, notes and revisions untouched.
+     */
+    fun importJsonV2(bytes:ByteArray,dryRun:Boolean=true):NotebookImportReport {
+        val parsed=NotebookArchiveParser.parse(bytes)
+        val report=NotebookImportReport(
+            parsed.books.size,parsed.notes.size,parsed.revisions.size,dryRun
+        )
+        if(dryRun)return report
+        val bookIds=parsed.books.associate { it.id to UUID.randomUUID().toString() }
+        val noteIds=parsed.notes.associate { it.id to UUID.randomUUID().toString() }
+        val db=writableDatabase
+        db.beginTransaction()
+        try {
+            for(book in parsed.books){
+                db.insertOrThrow("notebooks",null,ContentValues().apply{
+                    put("id",bookIds.getValue(book.id))
+                    put("name",book.name)
+                    put("created_at",book.createdAt)
+                })
+            }
+            // Parser supplies an acyclic, parent-first order.
+            for(note in parsed.notes){
+                db.insertOrThrow("notes",null,ContentValues().apply{
+                    put("id",noteIds.getValue(note.id))
+                    put("notebook_id",bookIds.getValue(note.notebookId))
+                    put("parent_id",note.parentId?.let{noteIds.getValue(it)})
+                    put("title",note.title)
+                    put("body",note.body)
+                    put("tags",note.tags)
+                    put("pinned",if(note.pinned)1 else 0)
+                    put("deleted",if(note.deleted)1 else 0)
+                    put("version",note.version)
+                    put("created_at",note.createdAt)
+                    put("updated_at",note.updatedAt)
+                })
+            }
+            for(revision in parsed.revisions){
+                db.insertOrThrow("revisions",null,ContentValues().apply{
+                    put("note_id",noteIds.getValue(revision.noteId))
+                    put("version",revision.version)
+                    put("title",revision.title)
+                    put("body",revision.body)
+                    // JSON v2 has no historic tags or pin fields.
+                    put("tags","")
+                    put("pinned",0)
+                    put("saved_at",revision.savedAt)
+                })
+            }
+            db.setTransactionSuccessful()
+        }finally{db.endTransaction()}
+        return report.copy(
+            dryRun=false,
+            firstImportedNotebookId=bookIds.getValue(parsed.books.first().id)
+        )
     }
 
     fun restoreRevision(note:NoteRecord, version:Int):NoteRecord? {

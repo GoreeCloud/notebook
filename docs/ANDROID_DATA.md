@@ -1,6 +1,6 @@
-# Native Android SQLite v3 and user-directed data export
+# Native Android SQLite v3 and user-directed data portability
 
-The Android client remains fully local, uses a private app SQLite database, declares **no INTERNET permission**, and has `allowBackup=false`. It is **not** synchronized with the web/Qt service database. Android versionCode **2** uses schema **3**:
+The Android client remains fully local, uses a private app SQLite database, declares **no INTERNET permission**, and has `allowBackup=false`. It is **not** synchronized with the web/Qt service database. Android versionCode **3** uses schema **3** (the original v3 schema was introduced in versionCode 2):
 
 - A first-class `notebooks` table with persistent UUIDs, names and creation timestamps.
 - Every note receives a notebook ID and optional parent-note UUID, plus creation/update timestamps.
@@ -12,7 +12,7 @@ The Android client remains fully local, uses a private app SQLite database, decl
 
 Choose **Export JSON** from the Android app. The confirmation explains that this file contains all notebooks, note bodies, tags, Trash and revision text **without encryption**. The Android Storage Access Framework then lets the user choose a destination, which may be managed by a cloud provider; the app itself has no network permission and never chooses a destination in the background. Export runs on an I/O worker and is limited to an 8 MiB JSON v2 archive.
 
-The exported schema follows `goreecloud-notebook-v2` and can be imported by the server's validated append-only JSON importer, subject to its existing size/count checks. **Limitations:** Android's old revision model stored historical tags and pin states; JSON v2 only represents historical title/body, so those older revision attributes are not round-tripped. Imported Android notes will receive new IDs on the web service, not merge by original UUID. There is **no Android JSON restore/import yet**, no app-at-rest encryption and no automatic backup. Keep separate protected copies and verify a restore on the receiving system.
+The exported schema follows `goreecloud-notebook-v2` and can be imported by the server's validated append-only JSON importer, subject to its existing size/count checks. **Limitations:** Android's old revision model stored historical tags and pin states; JSON v2 only represents historical title/body, so those older revision attributes are not round-tripped. Imported Android notes will receive new IDs on the web service, not merge by original UUID. There is now an **explicit JSON v2 append-only Android import**, but no merge-based sync, app-at-rest encryption or automatic backup. See [Android JSON Import](ANDROID_JSON_IMPORT.md). Keep separate protected copies and verify a restore on the receiving system.
 
 ## Acceptance evidence and open gates
 
@@ -22,4 +22,6 @@ The exported schema follows `goreecloud-notebook-v2` and can be imported by the 
 
 An optional **read-only** developer verification script, `scripts/verify_android_schema.sh <adb-serial>`, reports only schema version, row counts, and foreign-key integrity from an already-installed debug APK. It does not alter the device.
 
-CI assembles the Android debug APK; full physical note editing, Android Storage Access Framework file-picker export, real-world restore rehearsals, and human/assistive-technology accessibility should still be tested independently. Native Android is not considered a full parity release until human interaction tests, assistive-technology testing, protected backups/imports and cross-device Mesh security are complete.
+**JSON v2 import acceptance (November 20, 2026):** The isolated native instrumentation on the same OnePlus N200 passed append-only JSON import/export, dry-run, new UUID note hierarchy, revision history, malformed-reference refusal, and synthetic SQLite rollback, leaving the normal app database unchanged. See [Android JSON Import](ANDROID_JSON_IMPORT.md). This is test-code acceptance, not a manual document-picker usability test.
+
+CI assembles the Android debug APK and test APK; full physical note editing, Android Storage Access Framework document-picker export/import interactions, real-world restore rehearsals, and human/assistive-technology accessibility should still be tested independently. Native Android is not considered a full parity release until human interaction tests, assistive-technology testing, protected backups/imports and cross-device Mesh security are complete.
