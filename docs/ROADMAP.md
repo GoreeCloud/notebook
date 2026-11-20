@@ -36,3 +36,7 @@
 - [ ] GoreeCloud Containers deployment when ready, documented Docker/Podman alternatives
 
 Unchecked items are not implemented or not yet independently verified.
+
+## CI reliability follow-up
+
+Android main-push workflow intermittently failed the `packageDebug` task on 2026-11-20 while equivalent pull-request builds passed. `--stacktrace` is now enabled for the Android build so future failures expose the underlying error. No root cause or fix is claimed; GitHub issue tracks further qualification, test-repeatability and clean-run evidence.
