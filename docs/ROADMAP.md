@@ -20,7 +20,8 @@
 
 ## Privacy, security and recoverability
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration
-- [ ] Encrypted note store, protected exports, backup + restoration rehearsal
+- [x] Optional encrypted local SQLite snapshot with Argon2id/AES-GCM and synthetic restoration tests
+- [ ] Encrypted live note store, protected browser exports, off-device backup and independent restoration rehearsal
 - [ ] Versioned schema migrations and safe import quarantine
 
 ## Synchronization and release

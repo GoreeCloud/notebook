@@ -10,7 +10,7 @@ Assets: private note text, tags, hierarchy, revisions, bearer token, SQLite stor
 | Concurrent edits | Optimistic `expected_version` / 409 | No automatic merge; draft loss possible |
 | Device loss | Android app sandbox; OS filesystem ownership | No application-level encryption |
 | Network interception | Documented localhost-only API | TLS and remote ingress not supported |
-| Data loss | SQLite transactions + private default file mode + version history | Local JSON import is tested; device-loss backup and external restore drill remain absent; Android backup disabled |
+| Data loss | SQLite transactions, private default file mode, optional encrypted snapshots + version history | Local JSON import is tested; device-loss backup and external restore drill remain absent; Android backup disabled |
 | Supply chain | Source-pinned direct deps and npm lock | Broader advisory, lock, SBOM, provenance checks needed |
 
 GoreeShield governs privacy policies and user consent; Wardveil governs cybersecurity. Neither is technically integrated yet. Do not send notebook data to outside services by default.
@@ -18,3 +18,5 @@ GoreeShield governs privacy policies and user consent; Wardveil governs cybersec
 Additional local API controls, unresolved remote exposure risks, and test evidence are in [Local API Security](LOCAL_API_SECURITY.md).
 
 Hierarchical data-integrity protection now rejects a parent move into another notebook if descendants would retain invalid references. Service create/update endpoints validate tag element size and reject empty tags, and trashed notes cannot be edited without restoration. These are local storage safeguards, not Identity ACLs or cross-device conflict resolution.
+
+Optional AES-256-GCM + Argon2id encrypted SQLite backups protect only an explicit local recovery copy; the live app database, JSON exports and network service remain unencrypted. See [Encrypted Backup](ENCRYPTED_BACKUP.md).
