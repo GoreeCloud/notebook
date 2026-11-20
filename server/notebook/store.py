@@ -342,9 +342,10 @@ class Store:
                 raise NotFound("Revision not found")
         return self.update(note_id, {"title": row["title"], "body": row["body"]}, expected_version)
 
-    def link_graph(self, note_id, limit=50, offset=0):
+    def link_graph(self, note_id, limit=50, offset=0, summary_only=False):
         from .links import link_graph
-        return link_graph(self, note_id, limit=limit, offset=offset)
+        return link_graph(self, note_id, limit=limit, offset=offset,
+                          summary_only=summary_only)
 
     def backlinks(self, note_id, limit=100, offset=0):
         # Retain legacy array shape, but scan the entire active corpus.
