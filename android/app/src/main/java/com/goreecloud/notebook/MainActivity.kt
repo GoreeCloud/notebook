@@ -70,6 +70,9 @@ private fun NotebookScreen(store: NotebookStore) {
     var pinned by rememberSaveable { mutableStateOf(false) }
     var status by remember { mutableStateOf("Local · offline") }
     var historyVisible by remember { mutableStateOf(false) }
+    var linksVisible by remember { mutableStateOf(false) }
+    var pendingLinkedTarget by remember { mutableStateOf<String?>(null) }
+    var localLinks by remember { mutableStateOf<LocalLinkGraph?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var exportConfirm by remember { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<ByteArray?>(null) }
@@ -195,7 +198,87 @@ private fun NotebookScreen(store: NotebookStore) {
         }
     }
 
+    // Graph queries can scan a substantial local library. Never block the
+    // Compose UI thread, and invalidate a result when note selection changes.
+    LaunchedEffect(selected?.id, selected?.version, showTrash) {
+        val current=selected
+        localLinks=null
+        if(current!=null && !current.deleted && !showTrash) {
+            localLinks=withContext(Dispatchers.IO) { store.linkGraph(current.id) }
+        }
+    }
+    fun followLinkedNote(targetId:String) {
+        val linked=store.getNote(targetId)
+        if(linked==null || linked.deleted) {
+            status="Linked note is unavailable or in Trash"
+            return
+        }
+        activeNotebook=linked.notebookId
+        showTrash=false
+        search=""
+        resetPaging()
+        select(linked)
+        linksVisible=false
+    }
+    fun requestLinkedNote(targetId:String) {
+        linksVisible=false
+        if(dirty) pendingLinkedTarget=targetId
+        else followLinkedNote(targetId)
+    }
     BackHandler(enabled=editing){goBack()}
+    if(pendingLinkedTarget!=null) AlertDialog(
+        onDismissRequest={pendingLinkedTarget=null},
+        title={Text("Discard edits and follow link?")},
+        text={Text("This note has unsaved changes. Following the link will discard them.")},
+        confirmButton={TextButton(onClick={
+            val next=pendingLinkedTarget
+            pendingLinkedTarget=null
+            if(next!=null)followLinkedNote(next)
+        }) { Text("Discard and open") }},
+        dismissButton={TextButton(onClick={pendingLinkedTarget=null}) {
+            Text("Keep editing")
+        }}
+    )
+    if(linksVisible && selected!=null && selected?.deleted!=true) AlertDialog(
+        onDismissRequest={linksVisible=false},
+        title={Text("Local linked notes")},
+        text={
+            LazyColumn(modifier=Modifier.heightIn(max=350.dp)) {
+                item {
+                    Text("Outgoing references",style=MaterialTheme.typography.titleSmall)
+                }
+                items(localLinks?.outgoing.orEmpty(),key={"out-"+it.id}) { linked ->
+                    TextButton(onClick={requestLinkedNote(linked.id)}) {
+                        Text("Open: "+linked.title,maxLines=2)
+                    }
+                }
+                if(localLinks==null) {
+                    item { Text("Loading local references…") }
+                } else if(localLinks?.outgoing.isNullOrEmpty()) {
+                    item { Text("No resolved outgoing references") }
+                }
+                if(localLinks?.moreOutgoing==true) {
+                    item { Text("More outgoing references exist (first 30 shown)") }
+                }
+                item {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Incoming references",style=MaterialTheme.typography.titleSmall)
+                }
+                items(localLinks?.incoming.orEmpty(),key={"in-"+it.id}) { linked ->
+                    TextButton(onClick={requestLinkedNote(linked.id)}) {
+                        Text("Open: "+linked.title,maxLines=2)
+                    }
+                }
+                if(localLinks?.incoming.isNullOrEmpty()) {
+                    item { Text("No resolved incoming references") }
+                }
+                if(localLinks?.moreIncoming==true) {
+                    item { Text("More incoming references exist (first 30 shown)") }
+                }
+            }
+        },
+        confirmButton={TextButton(onClick={linksVisible=false}){Text("Close")}}
+    )
     if(confirmDiscard) AlertDialog(
         onDismissRequest={confirmDiscard=false},
         title={Text("Discard unsaved changes?")},
@@ -337,6 +420,7 @@ private fun NotebookScreen(store: NotebookStore) {
                             }){Text("Restore")}
                         } else if(current!=null) {
                             TextButton(onClick={historyVisible=true}){Text("History")}
+                            TextButton(onClick={linksVisible=true}){Text("Links")}
                             TextButton(onClick={addChildNote()}){Text("Add child")}
                             IconButton(onClick={save()}){
                                 Icon(Icons.Default.Save,"Save note")
