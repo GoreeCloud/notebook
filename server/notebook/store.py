@@ -228,8 +228,8 @@ class Store:
         # Native sidebar lists need only a small text preview, not the
         # potentially 1 MiB Markdown body for each note in a large library.
         columns = ("id,notebook_id,parent_id,title,"
-                   "substr(body,1,160) AS preview,pinned,deleted_at,"
-                   "version,updated_at") if summary_only else "*"
+                   "substr(body,1,160) AS preview,tags,pinned,deleted_at,"
+                   "version,created_at,updated_at") if summary_only else "*"
         with self.connection() as db:
             rows = db.execute(
                 "SELECT " + columns + " FROM notes" + where +
@@ -237,7 +237,8 @@ class Store:
                 (*args, limit, offset),
             ).fetchall()
         if summary_only:
-            return [dict(row) for row in rows]
+            return [{**dict(row), "tags": json.loads(row["tags"]),
+                     "pinned": bool(row["pinned"])} for row in rows]
         return [self.note(row) for row in rows]
 
     def list_notes_page(self, notebook_id=None, q="", include_deleted=False,

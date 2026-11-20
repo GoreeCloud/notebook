@@ -3,7 +3,7 @@ import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus
   Hash,Link2,Menu,MoreHorizontal,PanelLeftClose,Pin,Plus,Search,Settings2,Trash2, X} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {apiClient,ApiError,type Note,type Notebook,type Revision,type NoteLinkGraph} from "./api";
+import {apiClient,ApiError,type Note,type NoteSummary,type Notebook,type Revision,type NoteLinkGraph} from "./api";
 import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
 import {plaintextJsonExportWarning,importUnsavedDraftWarning} from "./privacy";
 import {isLocalNotebookEndpoint} from "./endpoint";
@@ -24,6 +24,12 @@ function ThemeControls({theme,accent,onTheme,onAccent}:{
       </select>
     </label>
   </div>;
+}
+
+// List-only records deliberately carry truncated preview text, never
+// writable full Markdown. The editor hydrates the full selected note first.
+function toPreviewNote(summary:NoteSummary):Note {
+  return {...summary,body:summary.preview,preview_only:true};
 }
 
 function sortTree(notes:Note[]) {
@@ -94,10 +100,13 @@ export default function App(){
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [revisions,setRevisions]=useState<Revision[]>([]);
   const [linkGraph,setLinkGraph]=useState<NoteLinkGraph|null>(null);
+  const [hydrateFailure,setHydrateFailure]=useState("");
+  const [hydrateRetry,setHydrateRetry]=useState(0);
   const api=useMemo(()=>apiClient(endpoint,key),[endpoint,key]);
   const fileInput=useRef<HTMLInputElement>(null);
   const chosen=notes.find(n=>n.id===selected);
-  const dirty=Boolean(chosen&&(draft.title!==chosen.title||draft.body!==chosen.body||
+  const dirty=Boolean(chosen&&!chosen.preview_only&&
+    (draft.title!==chosen.title||draft.body!==chosen.body||
     draft.tags!==chosen.tags.join(", ")));
   const ranked=Boolean(query.trim()&&!trash&&searchResults!==null);
   const visible=(ranked?searchResults||[]:notes).filter(n=>
@@ -107,8 +116,8 @@ export default function App(){
   const selectedBook=notebooks.find(n=>n.id===activeBook);
 
   const load=useCallback(async (preferSelected?:string)=>{
-    const [books,page]=await Promise.all([api.notebooks(),api.notesPage("",true,500,0)]);
-    const items=page.results;
+    const [books,page]=await Promise.all([api.notebooks(),api.notesPageSummary("",true,500,0)]);
+    const items=page.results.map(toPreviewNote);
     setNotebooks(books);setNotes(items);
     setNoteNextOffset(page.next_offset);
     setNoteHasMore(page.has_more);
@@ -128,10 +137,10 @@ export default function App(){
     if(loadingMoreNotes||!noteHasMore)return;
     setLoadingMoreNotes(true);setError("");
     try{
-      const page=await api.notesPage("",true,500,noteNextOffset);
+      const page=await api.notesPageSummary("",true,500,noteNextOffset);
       setNotes(existing=>{
         const seen=new Set(existing.map(item=>item.id));
-        return [...existing,...page.results.filter(item=>!seen.has(item.id))];
+        return [...existing,...page.results.filter(item=>!seen.has(item.id)).map(toPreviewNote)];
       });
       setNoteNextOffset(page.next_offset);
       setNoteHasMore(page.has_more);
@@ -166,11 +175,26 @@ export default function App(){
     return()=>{current=false;clearTimeout(timeout);};
   },[api,connected,query,trash,activeBook,searchEpoch]);
 
+  // Never allow an abbreviated sidebar preview to become an editable body.
+  // A full authenticated detail GET must complete before mounting the editor.
   useEffect(()=>{
-    if(!chosen){setDraft({title:"",body:"",tags:""});setRevisions([]);return;}
+    if(!connected||!chosen?.preview_only)return;
+    let current=true;
+    setHydrateFailure("");
+    api.getNote(chosen.id,Boolean(chosen.deleted_at)).then(detail=>{
+      if(!current)return;
+      setNotes(existing=>existing.map(item=>item.id===detail.id?detail:item));
+    }).catch(e=>{
+      if(current)setHydrateFailure("Could not load full note: "+String(e));
+    });
+    return()=>{current=false;};
+  },[api,connected,chosen?.id,chosen?.preview_only,hydrateRetry]);
+
+  useEffect(()=>{
+    if(!chosen||chosen.preview_only){setDraft({title:"",body:"",tags:""});setRevisions([]);return;}
     setDraft({title:chosen.title,body:chosen.body,tags:chosen.tags.join(", ")});
     setRevisions([]);
-  },[selected,chosen?.version,chosen?.id]);
+  },[selected,chosen?.version,chosen?.id,chosen?.preview_only]);
 
   useEffect(()=>{
     if(!connected||!chosen||chosen.deleted_at){setLinkGraph(null);return;}
@@ -183,12 +207,13 @@ export default function App(){
 
   const openLinkedNote=(target:Note)=>{
     if(dirty&&!confirm("Discard unsaved edits before following this note link?"))return;
-    setNotes(items=>items.some(n=>n.id===target.id)?items:[...items,target]);
+    setNotes(items=>items.some(n=>n.id===target.id)?
+      items.map(item=>item.id===target.id?target:item):[...items,target]);
     setActiveBook(target.notebook_id);
     setQuery("");setTrash(false);setPreview(false);setSelected(target.id);
   };
 
-  const selectedNote=chosen;
+  const selectedNote=chosen?.preview_only?undefined:chosen;
   const save=async()=>{
     if(!selectedNote||!dirty||saving)return;
     setSaving(true);setError("");
@@ -439,7 +464,11 @@ export default function App(){
             {linkGraph[direction].has_more&&<p>More results exist beyond the first {linkGraph.limit} links.</p>}
           </div>)}
         </section>}
-      </div></div></>:<div className="no-selection"><div className="blank-logo"><BookOpen size={34}/></div>
+      </div></div></>:chosen?.preview_only?<div className="no-selection" role="status">
+        <h2>{hydrateFailure?"Could not load the full note":"Loading full note…"}</h2>
+        <p>{hydrateFailure||"The editor stays locked until all Markdown is retrieved."}</p>
+        {hydrateFailure&&<button className="button" onClick={()=>setHydrateRetry(v=>v+1)}>Retry loading</button>}
+      </div>:<div className="no-selection"><div className="blank-logo"><BookOpen size={34}/></div>
         <h2>Your space to think.</h2><p>Select a note to read or edit, or start a new idea.</p>
         <button className="button primary" disabled={trash} onClick={()=>addNote()}><Plus size={18}/> Create a note</button></div>}
     </main>

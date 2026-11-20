@@ -130,10 +130,12 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
                    q: str = Query(default="", max_length=200),
                    include_deleted: bool = False,
                    limit: int = Query(default=200, ge=1, le=500),
-                   offset: int = Query(default=0, ge=0, le=100000)):
+                   offset: int = Query(default=0, ge=0, le=100000),
+                   summary: bool = False):
         return store.list_notes_page(notebook_id=notebook_id, q=q,
                                      include_deleted=include_deleted,
-                                     limit=limit, offset=offset)
+                                     limit=limit, offset=offset,
+                                     summary_only=summary)
 
     @api.post("/notes", status_code=201)
     def new_note(payload: NoteCreate):
@@ -141,8 +143,10 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
                     payload.body, payload.parent_id, payload.tags)
 
     @api.get("/notes/{note_id}")
-    def get_note(note_id: str):
-        return safe(store.get, note_id)
+    def get_note(note_id: str, include_deleted: bool = False):
+        # Trash can be inspected only when explicitly requested.
+        # Existing callers still hide deleted notes by default.
+        return safe(store.get, note_id, include_deleted=include_deleted)
 
     @api.patch("/notes/{note_id}")
     def update_note(note_id: str, payload: NotePatch):
