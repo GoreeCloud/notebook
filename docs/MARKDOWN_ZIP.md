@@ -22,3 +22,12 @@ Each note file includes a short HTML comment containing a reversible encoded tit
 Limits remain a maximum of 8 MiB compressed, 8 MiB of original Markdown content, 2,000 active notes and bounded path nesting. An empty set of active notes returns 422 instead of an empty, misleading backup. All exports are protected by the temporary local API bearer token and `Cache-Control: no-store`.
 
 **Use JSON v2 or the local SQLite snapshot for recovery.** Markdown ZIP export is designed for readable migration, not a lossless backup or secure encrypted export. Preserve your original archives and test the receiving application before discarding any data.
+
+
+**Consistent multi-table source read:** Export captures the notebook list and
+active-note rows in one explicit SQLite read transaction. A concurrent SQLite
+writer does not make a later note appear in the archive after the notebook
+metadata was already read. A deterministic WAL-mode test interleaves an
+independent writer between the two queries. The resulting ZIP remains a
+**plaintext, metadata-losing** portability format, not a replacement for
+authenticated JSON/SQLite disaster recovery.
