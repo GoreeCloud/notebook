@@ -89,7 +89,42 @@ class NotebookImportInstrumentation:Instrumentation() {
             check(rolledBack)
             check(store.notebooks().size==2 && store.list().size==4)
 
-            report.putString("result","PASS: append-only JSON roundtrip, hierarchy, revisions, dry-run, malformed-archive refusal and atomic rollback")
+            // Test a library well beyond the legacy 500-record Android list
+            // limit. All records exist ONLY in this temporary test database.
+            val bulkDb=store.writableDatabase
+            bulkDb.beginTransaction()
+            try {
+                for(i in 0 until 535) {
+                    val id=UUID.randomUUID().toString()
+                    bulkDb.execSQL(
+                        """INSERT INTO notes
+                           (id,notebook_id,title,body,version,created_at,updated_at,tags,pinned,deleted)
+                           VALUES(?,?,?,?,?,?,?,?,?,?)""".trimIndent(),
+                        arrayOf<Any>(id,book,"Synthetic paged "+i,
+                            "x".repeat(400),1,1000L,1000L,"",0,0)
+                    )
+                }
+                bulkDb.setTransactionSuccessful()
+            } finally {bulkDb.endTransaction()}
+            val first=store.listPreviews(notebookId=book,limit=200,offset=0)
+            val second=store.listPreviews(notebookId=book,limit=200,offset=200)
+            val third=store.listPreviews(notebookId=book,limit=200,offset=400)
+            check(first.hasMore && second.hasMore && !third.hasMore)
+            val all=first.results+second.results+third.results
+            check(all.size==537 && all.map{it.id}.toSet().size==537)
+            val bulk=all.first{it.title.startsWith("Synthetic paged ")}
+            check(bulk.excerpt.length==160)
+            check(store.getNote(bulk.id)?.body?.length==400)
+            val trashed=store.create(book)
+            check(store.trash(trashed))
+            val deleted=store.listPreviews(trash=true,notebookId=book)
+            check(deleted.results.map{it.id}==listOf(trashed.id) && !deleted.hasMore)
+            var invalid=false
+            try {store.listPreviews(notebookId=book,limit=201)}
+            catch (_:IllegalArgumentException){invalid=true}
+            check(invalid)
+
+            report.putString("result","PASS: append-only JSON roundtrip, rollback, native preview paging beyond 500 and isolated Trash visibility")
         } catch (error:Throwable) {
             report.putString("result","FAIL: "+error.javaClass.simpleName+": "+(error.message?:"unknown test error"))
             exitStatus=Activity.RESULT_CANCELED

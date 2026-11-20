@@ -59,7 +59,10 @@ private fun NotebookScreen(store: NotebookStore) {
     var showNotebookMenu by remember { mutableStateOf(false) }
     var createNotebookDialog by remember { mutableStateOf(false) }
     var newNotebookName by rememberSaveable { mutableStateOf("") }
-    var notes by remember { mutableStateOf(store.list(notebookId=activeNotebook)) }
+    val firstPage = remember { store.listPreviews(notebookId=activeNotebook) }
+    var notes by remember { mutableStateOf(firstPage.results) }
+    var hasMorePages by remember { mutableStateOf(firstPage.hasMore) }
+    var notesWindow by remember { mutableIntStateOf(200) }
     var selected by remember { mutableStateOf<NoteRecord?>(null) }
     var title by rememberSaveable { mutableStateOf("") }
     var body by rememberSaveable { mutableStateOf("") }
@@ -132,7 +135,33 @@ private fun NotebookScreen(store: NotebookStore) {
         title != it.title || body != it.body || tags != it.tags || pinned != it.pinned
     } ?: false
 
-    fun refresh() { notes = store.list(search,showTrash,activeNotebook) }
+    fun refresh() {
+        val visible = mutableListOf<NotePreview>()
+        var offset = 0
+        var hasMore = false
+        // Bounded 200-note SQL pages and a hard 2,000-summary display cap.
+        // Full bodies never enter list records; selected notes use getNote().
+        while(offset < notesWindow) {
+            val size = minOf(200, notesWindow-offset)
+            val page = store.listPreviews(search,showTrash,activeNotebook,size,offset)
+            visible.addAll(page.results)
+            offset += page.results.size
+            hasMore = page.hasMore
+            if(!hasMore || page.results.size < size)break
+        }
+        notes = visible
+        hasMorePages = hasMore
+    }
+    fun resetPaging() {
+        notesWindow = 200
+        refresh()
+    }
+    fun loadMore() {
+        if(hasMorePages && notesWindow<2000) {
+            notesWindow = minOf(2000,notesWindow+200)
+            refresh()
+        }
+    }
     fun select(note:NoteRecord) {
         selected=note
         title=note.title; body=note.body
@@ -198,7 +227,7 @@ private fun NotebookScreen(store: NotebookStore) {
                         activeNotebook=result.firstImportedNotebookId ?: activeNotebook
                         selected=null
                         showTrash=false
-                        refresh()
+                        resetPaging()
                         status="Imported ${result.notes} notes into new notebooks"
                     }catch(e:Exception) {
                         status="Import failed; SQLite rolled back: ${e.message ?: "invalid data"}"
@@ -336,7 +365,7 @@ private fun NotebookScreen(store: NotebookStore) {
                 Row(modifier=Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                     Text(if(showTrash)"Recently deleted" else "Your thinking space",
                         fontSize=24.sp,fontWeight=FontWeight.Bold)
-                    TextButton(onClick={showTrash=!showTrash;refresh()}){
+                    TextButton(onClick={showTrash=!showTrash;resetPaging()}){
                         Text(if(showTrash)"All notes" else "Trash")
                     }
                 }
@@ -355,7 +384,7 @@ private fun NotebookScreen(store: NotebookStore) {
                                     activeNotebook=notebook.id
                                     showNotebookMenu=false
                                     selected=null
-                                    refresh()
+                                    resetPaging()
                                 })
                             }
                             DropdownMenuItem(text={Text("Create new notebook")},onClick={
@@ -367,16 +396,21 @@ private fun NotebookScreen(store: NotebookStore) {
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                OutlinedTextField(value=search,onValueChange={search=it;refresh()},
+                OutlinedTextField(value=search,onValueChange={search=it;resetPaging()},
                     modifier=Modifier.fillMaxWidth(),placeholder={Text("Search notes and tags")},
                     leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,
                     shape=RoundedCornerShape(18.dp))
                 Spacer(Modifier.height(16.dp))
-                Text("${notes.size} notes",color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Showing " + notes.size + (if(hasMorePages) "+" else "") + " notes",
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){
                     items(notes,key={it.id}){note->
-                        ElevatedCard(onClick={select(note)},modifier=Modifier.fillMaxWidth()){
+                        ElevatedCard(onClick={
+                            val full = store.getNote(note.id)
+                            if(full!=null) select(full)
+                            else {status="Note unavailable; refresh the list";refresh()}
+                        },modifier=Modifier.fillMaxWidth()){
                             Column(Modifier.fillMaxWidth().padding(18.dp)){
                                 Text((if(note.parentId!=null)"↳ " else "")+
                                     (if(note.pinned)"★ " else "")+note.title,
@@ -389,7 +423,7 @@ private fun NotebookScreen(store: NotebookStore) {
                                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Spacer(Modifier.height(7.dp))
-                                Text(note.body.ifBlank{"Start writing..."},
+                                Text(note.excerpt.ifBlank{"Start writing..."},
                                     fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 if(note.tags.isNotBlank()){
@@ -398,6 +432,21 @@ private fun NotebookScreen(store: NotebookStore) {
                                         color=MaterialTheme.colorScheme.primary)
                                 }
                             }
+                        }
+                    }
+                    if(hasMorePages && notesWindow<2000) {
+                        item {
+                            TextButton(onClick={loadMore()},
+                                modifier=Modifier.fillMaxWidth()) {
+                                Text("Load 200 more notes")
+                            }
+                        }
+                    }
+                    if(hasMorePages && notesWindow>=2000) {
+                        item {
+                            Text("2,000-note display cap reached. Narrow your notebook or search.",
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier=Modifier.padding(14.dp))
                         }
                     }
                 }
