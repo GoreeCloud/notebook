@@ -26,3 +26,7 @@ The JSON v2 export includes all notebooks, notes (including Trash), and saved re
 ## Incremental local events
 
 SQLite triggers capture note mutations in a monotonic `note_change_events` table. An authorized local `GET /api/v1/changes` endpoint paginates event metadata for future Mesh design. This is not a trusted remote replication channel and does not enforce GoreeShield/Identity sharing, Wardveil network checks or conflict resolution. See [Local Changefeed](LOCAL_CHANGEFEED.md).
+
+## Search index
+
+The SQLite service database has a derived local `notes_fts` virtual table with SQL triggers on note insert/update/delete. The authenticated `GET /api/v1/search` endpoint performs prefix-token matching and weighted ranking without accepting raw FTS query operators. It excludes soft-deleted notes; first run backfills existing active notes. SQLite builds lacking FTS5 fall back to a capped LIKE search. Index data is plaintext and never leaves the local service by default. See [Indexed Local Search](SEARCH.md).

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -109,6 +110,40 @@ class Store:
                             strftime('%Y-%m-%dT%H:%M:%fZ','now'));
                 END;
             """)
+            self.fts_enabled = False
+            try:
+                db.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING
+                    fts5(title, body, tags, tokenize='unicode61 remove_diacritics 2')
+                """)
+            except sqlite3.OperationalError as exc:
+                if "no such module: fts5" not in str(exc):
+                    raise
+            else:
+                self.fts_enabled = True
+                # One-time reindex for existing notes. The virtual table
+                # only contains ACTIVE note content; Trash is not indexed.
+                if not db.execute("SELECT 1 FROM notes_fts LIMIT 1").fetchone():
+                    db.execute("""INSERT INTO notes_fts(rowid,title,body,tags)
+                        SELECT rowid,title,body,tags FROM notes
+                        WHERE deleted_at IS NULL""")
+                db.executescript("""
+                    CREATE TRIGGER IF NOT EXISTS notebook_fts_added
+                    AFTER INSERT ON notes WHEN NEW.deleted_at IS NULL BEGIN
+                        INSERT INTO notes_fts(rowid,title,body,tags)
+                        VALUES (NEW.rowid,NEW.title,NEW.body,NEW.tags);
+                    END;
+                    CREATE TRIGGER IF NOT EXISTS notebook_fts_updated
+                    AFTER UPDATE ON notes BEGIN
+                        DELETE FROM notes_fts WHERE rowid=OLD.rowid;
+                        INSERT INTO notes_fts(rowid,title,body,tags)
+                        SELECT NEW.rowid,NEW.title,NEW.body,NEW.tags
+                        WHERE NEW.deleted_at IS NULL;
+                    END;
+                    CREATE TRIGGER IF NOT EXISTS notebook_fts_removed
+                    AFTER DELETE ON notes BEGIN
+                        DELETE FROM notes_fts WHERE rowid=OLD.rowid;
+                    END;
+                """)
             if not db.execute("SELECT 1 FROM notebooks LIMIT 1").fetchone():
                 db.execute(
                     "INSERT INTO notebooks VALUES (?, ?, ?)",
@@ -263,6 +298,35 @@ class Store:
         needle = "[[" + target["title"].casefold() + "]]"
         return [note for note in self.list_notes() if
                 note["id"] != note_id and needle in note["body"].casefold()]
+
+    def search_ranked(self, phrase, limit=50, offset=0):
+        # Prefix-token syntax is constructed, never accepted raw from client.
+        # Prevent arbitrary FTS5 operators and SQL-like injection strings.
+        terms = re.findall(r"\w+", phrase, flags=re.UNICODE)
+        if not terms:
+            return {"backend": "fts5" if self.fts_enabled else "like",
+                    "results": [], "has_more": False, "limit": limit,
+                    "offset": offset}
+        terms = terms[:12]
+        if not self.fts_enabled:
+            # Explicit fallback on SQLite builds without FTS5 support;
+            # LIKE retains existing API semantics but caps at 500 items.
+            matches = self.list_notes(q=" ".join(terms))
+            return {"backend": "like", "results": matches[offset:offset+limit],
+                    "has_more": len(matches) > offset+limit,
+                    "limit": limit, "offset": offset}
+        expression = " AND ".join('"' + term + '"*' for term in terms)
+        with self.connection() as db:
+            rows = db.execute("""
+                SELECT notes.* FROM notes_fts
+                JOIN notes ON notes.rowid=notes_fts.rowid
+                WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL
+                ORDER BY bm25(notes_fts, 6.0, 1.0, 2.0), notes.updated_at DESC
+                LIMIT ? OFFSET ?
+            """, (expression, limit + 1, offset)).fetchall()
+        shown=rows[:limit]
+        return {"backend":"fts5","results":[self.note(row) for row in shown],
+                "has_more":len(rows)>limit,"limit":limit,"offset":offset}
 
     def changes(self, after_cursor=0, limit=100):
         # Monotonic local SQLite cursors, not per-device Mesh sync.
