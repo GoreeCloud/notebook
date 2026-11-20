@@ -37,6 +37,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y libegl1 libxkbcommon-x11-0
       - run: python -m pip install -r linux/requirements.txt
       - run: QT_QPA_PLATFORM=offscreen GC_NOTEBOOK_SMOKE=1 python linux/main.py
+      - run: QT_QPA_PLATFORM=offscreen python -m unittest discover -s linux/tests -v
   android:
     name: Android debug build
     runs-on: ubuntu-latest
