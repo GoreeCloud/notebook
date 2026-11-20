@@ -5,3 +5,8 @@ export const plaintextJsonExportWarning =
 
 export const importUnsavedDraftWarning =
   "You have unsaved note edits. Importing may reload the note list and discard your draft. Continue without saving your edits?";
+
+
+export const unsavedNavigationWarning =
+  "You have unsaved note edits. Changing the current note or workspace will " +
+  "discard your draft. Save your edits first, or explicitly confirm to discard them.";
