@@ -22,3 +22,7 @@ Future synchronization should use signed, encrypted note change logs with explic
 ## Local data portability
 
 The JSON v2 export includes all notebooks, notes (including Trash), and saved revisions, unlike the older v1 export. An authenticated v1/v2 importer validates type, size, UUID references, parent cycles, tags, timestamps and revision version ranges before writing in one SQLite transaction. Dry-run does not change storage. Imports append only and assign new UUIDs to prevent collisions and overwrite. Binary attachments, user account ACLs and encrypted backup are not part of the format. See [JSON Recovery](RECOVERY.md).
+
+## Incremental local events
+
+SQLite triggers capture note mutations in a monotonic `note_change_events` table. An authorized local `GET /api/v1/changes` endpoint paginates event metadata for future Mesh design. This is not a trusted remote replication channel and does not enforce GoreeShield/Identity sharing, Wardveil network checks or conflict resolution. See [Local Changefeed](LOCAL_CHANGEFEED.md).
