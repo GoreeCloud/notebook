@@ -153,6 +153,11 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     def backlinks(note_id: str):
         return safe(store.backlinks, note_id)
 
+    @api.get("/changes")
+    def local_changes(after_cursor: int = Query(default=0, ge=0),
+                      limit: int = Query(default=100, ge=1, le=200)):
+        return store.changes(after_cursor, limit)
+
     @api.get("/export")
     def export():
         return safe(export_all, store)

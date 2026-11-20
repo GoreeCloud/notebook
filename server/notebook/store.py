@@ -69,6 +69,46 @@ class Store:
                 CREATE INDEX IF NOT EXISTS notes_by_parent
                     ON notes(parent_id);
             """)
+            # Append-only local mutation cursors for an eventual Mesh protocol.
+            # Triggers also cover direct writes from the JSON/ENEX import paths.
+            db.executescript("""
+                CREATE TABLE IF NOT EXISTS note_change_events (
+                    cursor INTEGER PRIMARY KEY AUTOINCREMENT,
+                    note_id TEXT NOT NULL,
+                    notebook_id TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    deleted_at TEXT,
+                    recorded_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS note_changes_by_notebook
+                    ON note_change_events(notebook_id, cursor);
+            """)
+            # Existing databases have no event history. Seed their current
+            # states exactly once before enabling triggers; old revisions are
+            # intentionally not reconstructed.
+            if not db.execute("SELECT 1 FROM note_change_events LIMIT 1").fetchone():
+                db.execute("""
+                    INSERT INTO note_change_events
+                    (note_id, notebook_id, version, deleted_at, recorded_at)
+                    SELECT id, notebook_id, version, deleted_at, updated_at FROM notes
+                    ORDER BY updated_at, id
+                """)
+            db.executescript("""
+                CREATE TRIGGER IF NOT EXISTS notebook_note_added
+                AFTER INSERT ON notes BEGIN
+                    INSERT INTO note_change_events
+                    (note_id, notebook_id, version, deleted_at, recorded_at)
+                    VALUES (NEW.id,NEW.notebook_id,NEW.version,NEW.deleted_at,
+                            strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                END;
+                CREATE TRIGGER IF NOT EXISTS notebook_note_updated
+                AFTER UPDATE ON notes BEGIN
+                    INSERT INTO note_change_events
+                    (note_id, notebook_id, version, deleted_at, recorded_at)
+                    VALUES (NEW.id,NEW.notebook_id,NEW.version,NEW.deleted_at,
+                            strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                END;
+            """)
             if not db.execute("SELECT 1 FROM notebooks LIMIT 1").fetchone():
                 db.execute(
                     "INSERT INTO notebooks VALUES (?, ?, ?)",
@@ -223,6 +263,27 @@ class Store:
         needle = "[[" + target["title"].casefold() + "]]"
         return [note for note in self.list_notes() if
                 note["id"] != note_id and needle in note["body"].casefold()]
+
+    def changes(self, after_cursor=0, limit=100):
+        # Monotonic local SQLite cursors, not per-device Mesh sync.
+        with self.connection() as db:
+            records = [dict(row) for row in db.execute(
+                """SELECT cursor,note_id,notebook_id,version,deleted_at,recorded_at
+                   FROM note_change_events WHERE cursor>?
+                   ORDER BY cursor LIMIT ?""",
+                (after_cursor, limit + 1))]
+            last = db.execute(
+                "SELECT COALESCE(MAX(cursor),0) AS latest FROM note_change_events"
+            ).fetchone()["latest"]
+        visible = records[:limit]
+        return {
+            "events": visible,
+            "after_cursor": after_cursor,
+            "next_cursor": visible[-1]["cursor"] if visible else after_cursor,
+            "latest_cursor": last,
+            "has_more": len(records) > limit,
+            "scope": "local-notebook-metadata-only"
+        }
 
     def export(self):
         return {"format": "goreecloud-notebook-v1", "notebooks": self.notebooks(),

@@ -21,6 +21,7 @@
 - [ ] Versioned schema migrations and safe import quarantine
 
 ## Synchronization and release
+- [x] Local SQLite note-mutation event cursor with pagination and migration baseline
 - [ ] Mesh-owned offline sync with authenticated device cursors and conflict policy
 - [ ] Optional Yjs collaboration after security/licensing review
 - [ ] Signed APK, native Linux packaging and verified upgrade/recovery
