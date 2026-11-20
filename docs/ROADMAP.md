@@ -32,6 +32,7 @@
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration
 - [x] Optional encrypted local SQLite snapshot with Argon2id/AES-GCM and synthetic restoration tests
 - [x] Explicit encrypted-archive in-memory verification with no plaintext output file (not an independent off-device restore rehearsal)
+- [x] Linux Qt verify-only encrypted archive picker/password flow with synthetic no-write tests (manual dialog acceptance pending)
 - [x] Optional native Linux encrypted snapshot export UI (CLI restore only; source venv PyCA, package dependency/AT acceptance pending)
 - [x] Read-only local SQLite/file-sidecar mode and ownership audit (operator-run; no automatic changes)
 - [ ] Encrypted live note store, protected browser exports, off-device backup and independent restoration rehearsal
