@@ -44,6 +44,7 @@ ApplicationWindow {
         else if (action === "newNotebook") newNotebookDialog.open()
         else if (action === "importJson") jsonOpenDialog.open()
         else if (action === "exportJson") plaintextExportWarning.open()
+        else if (action === "encryptedBackup") encryptedBackupWarning.open()
         else if (action === "trash") backend.deleteNote(active.id, active.version)
         else if (action === "showTrash") backend.setTrashView(true)
         else if (action === "showNotes") backend.setTrashView(false)
@@ -107,6 +108,99 @@ ApplicationWindow {
         nameFilters: ["Notebook JSON (*.json)"]
         defaultSuffix: "json"
         onAccepted: backend.exportJsonFile(selectedFile.toString())
+    }
+    Dialog {
+        id: encryptedBackupWarning
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 40, 500)
+        modal: true
+        title: "Save an encrypted SQLite backup?"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        Label {
+            width: encryptedBackupWarning.availableWidth
+            wrapMode: Text.Wrap
+            text: "This creates a new, AES-GCM encrypted backup of ALL local " +
+                  "Notebook data, including Trash and history. Your live database " +
+                  "remains UNENCRYPTED. Keep the passphrase separately; it cannot " +
+                  "be recovered. Never choose a shared or untrusted destination."
+        }
+        onAccepted: encryptedBackupPasswordDialog.open()
+    }
+    Dialog {
+        id: encryptedBackupPasswordDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 40, 500)
+        modal: true
+        title: "Set backup passphrase"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ColumnLayout {
+            width: encryptedBackupPasswordDialog.availableWidth
+            spacing: 10
+            Label {
+                Layout.fillWidth: true
+                text: "Minimum 16 characters. No online password recovery or escrow."
+                wrapMode: Text.Wrap
+            }
+            TextField {
+                id: encryptedBackupSecret
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhSensitiveData
+                maximumLength: 1024
+                Accessible.name: "New encrypted backup passphrase"
+            }
+            TextField {
+                id: encryptedBackupRepeat
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhSensitiveData
+                maximumLength: 1024
+                Accessible.name: "Confirm encrypted backup passphrase"
+            }
+            Label {
+                id: encryptedBackupInputError
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: "#B3261E"
+            }
+        }
+        onAccepted: {
+            if (encryptedBackupSecret.text.length < 16 ||
+                encryptedBackupSecret.text !== encryptedBackupRepeat.text) {
+                encryptedBackupInputError.text = "Passphrases must match and contain at least 16 characters."
+                encryptedBackupSecret.text = ""
+                encryptedBackupRepeat.text = ""
+                Qt.callLater(function() { encryptedBackupPasswordDialog.open() })
+            } else {
+                encryptedBackupInputError.text = ""
+                encryptedBackupSaveDialog.open()
+            }
+        }
+        onRejected: {
+            encryptedBackupSecret.text = ""
+            encryptedBackupRepeat.text = ""
+            encryptedBackupInputError.text = ""
+        }
+    }
+    PlatformDialogs.FileDialog {
+        id: encryptedBackupSaveDialog
+        title: "Save a NEW encrypted Notebook SQLite backup"
+        fileMode: PlatformDialogs.FileDialog.SaveFile
+        nameFilters: ["Encrypted GoreeCloud Notebook (*.gcnb)"]
+        defaultSuffix: "gcnb"
+        onAccepted: {
+            var passphrase = encryptedBackupSecret.text
+            encryptedBackupSecret.text = ""
+            encryptedBackupRepeat.text = ""
+            backend.exportEncryptedBackup(selectedFile.toString(), passphrase)
+            passphrase = ""
+        }
+        onRejected: {
+            encryptedBackupSecret.text = ""
+            encryptedBackupRepeat.text = ""
+        }
     }
     Dialog {
         id: newNotebookDialog
@@ -335,6 +429,21 @@ ApplicationWindow {
                     text: "Export JSON (plaintext)"
                     Accessible.name: "Export unencrypted Notebook JSON"
                     onClicked: window.runAction("exportJson", "")
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Encrypted SQLite backup (offline)"
+                    Accessible.name: "Export a passphrase-encrypted SQLite backup"
+                    enabled: backend.encryptedBackupAvailable
+                    onClicked: window.runAction("encryptedBackup", "")
+                }
+                Label {
+                    visible: !backend.encryptedBackupAvailable
+                    Layout.fillWidth: true
+                    text: "Encrypted backup requires optional vetted PyCA cryptography in the Python runtime."
+                    color: "#68758C"
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 11
                 }
                 Label { text: backend.status; wrapMode: Text.Wrap; font.pixelSize: 11; color: "#68758C" }
             }
