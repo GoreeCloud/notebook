@@ -22,6 +22,7 @@ ApplicationWindow {
     property var pendingImportReport: ({})
     property string pendingAction: ""
     property string pendingId: ""
+    property string pendingEncryptedVerifyFile: ""
     property bool allowClose: false
     function runAction(action, noteId) {
         if (hasEdits) {
@@ -200,6 +201,61 @@ ApplicationWindow {
         onRejected: {
             encryptedBackupSecret.text = ""
             encryptedBackupRepeat.text = ""
+        }
+    }
+    PlatformDialogs.FileDialog {
+        id: encryptedBackupVerifyPicker
+        title: "Choose an existing encrypted Notebook backup to verify"
+        fileMode: PlatformDialogs.FileDialog.OpenFile
+        nameFilters: ["Encrypted GoreeCloud Notebook (*.gcnb)"]
+        onAccepted: {
+            window.pendingEncryptedVerifyFile = selectedFile.toString()
+            encryptedBackupVerifyPassword.open()
+        }
+        onRejected: {
+            window.pendingEncryptedVerifyFile = ""
+            encryptedBackupVerifySecret.text = ""
+        }
+    }
+    Dialog {
+        id: encryptedBackupVerifyPassword
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 40, 500)
+        modal: true
+        title: "Authenticate existing encrypted backup"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ColumnLayout {
+            width: encryptedBackupVerifyPassword.availableWidth
+            spacing: 10
+            Label {
+                Layout.fillWidth: true
+                text: "This checks the archive's authentication tag and SQLite " +
+                      "integrity in RAM without creating a plaintext restore file. " +
+                      "It does not replace a separate recovery drill."
+                wrapMode: Text.Wrap
+            }
+            TextField {
+                id: encryptedBackupVerifySecret
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhSensitiveData
+                maximumLength: 1024
+                Accessible.name: "Encrypted backup verification passphrase"
+            }
+        }
+        onAccepted: {
+            var passphrase = encryptedBackupVerifySecret.text
+            encryptedBackupVerifySecret.text = ""
+            var localFile = window.pendingEncryptedVerifyFile
+            window.pendingEncryptedVerifyFile = ""
+            backend.verifyEncryptedBackup(localFile, passphrase)
+            passphrase = ""
+            localFile = ""
+        }
+        onRejected: {
+            encryptedBackupVerifySecret.text = ""
+            window.pendingEncryptedVerifyFile = ""
         }
     }
     Dialog {
@@ -438,6 +494,13 @@ ApplicationWindow {
                     Accessible.name: "Export a passphrase-encrypted SQLite backup"
                     enabled: backend.encryptedBackupAvailable
                     onClicked: window.runAction("encryptedBackup", "")
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Verify encrypted backup (no restore)"
+                    Accessible.name: "Authenticate an existing encrypted backup without restoring"
+                    enabled: backend.encryptedBackupAvailable
+                    onClicked: encryptedBackupVerifyPicker.open()
                 }
                 Label {
                     visible: !backend.encryptedBackupAvailable

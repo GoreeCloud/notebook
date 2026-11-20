@@ -152,6 +152,27 @@ class Bridge(QObject):
                           " (check passphrase, optional crypto or new destination)")
             return False
 
+    @Slot(str, str, result=bool)
+    def verifyEncryptedBackup(self, file_url: str, passphrase: str) -> bool:
+        """Check an opt-in encrypted archive in RAM; never restore into live DB."""
+        try:
+            from notebook.encrypted_backup import verify_encrypted_backup
+            source = self._local_document_path(file_url)
+            report = verify_encrypted_backup(source, passphrase)
+            self._message(
+                "Encrypted backup VALID (notebooks={}, notes={}); "
+                "no plaintext output written".format(
+                    report["notebooks"], report["notes"]
+                )
+            )
+            return True
+        except (ImportError, OSError, ValueError, PortableJsonError, SnapshotError) as exc:
+            self._message(
+                "Encrypted backup verification refused: " + type(exc).__name__ +
+                " (invalid archive, passphrase, source or optional crypto)"
+            )
+            return False
+
     @Property(str, notify=statusChanged)
     def status(self):
         return self._status

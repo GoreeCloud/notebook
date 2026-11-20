@@ -44,3 +44,21 @@ local encrypted-backup CLI verify action with a source path. This
 authenticates and checks an in-memory SQLite image, without replacing
 the Qt application's live store or writing a plaintext restore file.
 This does not replace independent recovery drills.
+
+## Native verify-only encrypted archive flow
+
+Qt Quick now exposes a separate "Verify encrypted backup (no restore)"
+control when optional cryptography is available. Choose an **existing**
+local encrypted archive in the native open-file dialog, enter its
+passphrase in a password-masked field and confirm. The native bridge
+calls the same bounded V1 archive authentication and SQLite in-memory
+integrity check used by the command-line verify action; it reports
+only notebook/note counts and never writes a plaintext file or replaces
+live data. Invalid archives, remote paths, wrong passphrases or tampering
+are refused. Canceling or completing the dialog clears its password field.
+
+The archive and passphrase still reside temporarily in process memory,
+and GUI passphrase fields do not guarantee secure RAM zeroization.
+The native dialog has source-level and headless synthetic tests,
+but awaits manual file-picker, accessibility, failure recovery and
+independent off-device restore rehearsal acceptance.
