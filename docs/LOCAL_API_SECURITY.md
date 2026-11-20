@@ -13,3 +13,7 @@ Implemented controls:
 The server's documented launch command must still bind to **127.0.0.1**. The origin validator is not a firewall; it cannot prevent inbound requests made directly by other processes, malicious local users, or exposure through a reverse proxy. No rate limiting, user authorization, Identity sessions, application-layer encryption, production TLS, external network audit, authenticated Mesh device pairing or comprehensive threat defense is implemented. Do not use untrusted public ingress.
 
 Run `PYTHONPATH=server .venv/bin/pytest -q server/tests/test_http_boundary.py` for stream-size, CORS, secrets, no-cache header and file-mode checks.
+
+## Browser bearer-token destination validation
+
+The React client validates a Notebook service endpoint before sending any authorization headers: only HTTP(S) URLs are accepted; HTTP is allowed **only** for loopback localhost/127.0.0.1/[::1]. Userinfo credentials, paths, URL queries and fragments are rejected, and remote HTTPS origins require an explicit user-facing confirmation about the shared token and missing Identity/production security gates. This does not prove a remote endpoint is trusted; network/proxy/TLS configuration still requires separate review. Node-based regression tests cover URL parsing and unsafe schemes.

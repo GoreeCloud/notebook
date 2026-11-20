@@ -4,6 +4,7 @@ import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {apiClient,ApiError,type Note,type Notebook,type Revision} from "./api";
+import {isLocalNotebookEndpoint} from "./endpoint";
 
 function sortTree(notes:Note[]) {
   const groups=new Map<string,Note[]>();
@@ -229,7 +230,14 @@ export default function App(){
       <h1>Every thought has a place.</h1>
       <p className="muted">Connect to your self-hosted Notebook service. The API token stays in this browser tab's memory.</p>
       <form onSubmit={async e=>{e.preventDefault();setError("");
-        try{const client=apiClient(endpoint,key);await client.notebooks();setConnected(true);}
+        try{
+          if(!isLocalNotebookEndpoint(endpoint)&&!confirm(
+            "You are connecting to a REMOTE HTTPS Notebook endpoint. Your access token will be sent to this server. " +
+            "Only continue if you personally trust its operator and its TLS configuration. " +
+            "The preview API has no per-user Identity authorization or production remote security review."
+          ))return;
+          const client=apiClient(endpoint,key);await client.notebooks();setConnected(true);
+        }
         catch(e){setError("Connection failed: "+String(e));}}}>
         <label htmlFor="endpoint">Service URL</label>
         <input id="endpoint" value={endpoint} onChange={e=>setEndpoint(e.target.value)} required/>

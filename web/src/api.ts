@@ -1,3 +1,4 @@
+import {normalizeNotebookEndpoint} from "./endpoint";
 export type Notebook = {id:string; name:string; created_at?:string};
 export type Note = {id:string; notebook_id:string; parent_id:string|null; title:string;
   body:string; tags:string[]; pinned:boolean; deleted_at:string|null;
@@ -9,7 +10,7 @@ export class ApiError extends Error {
 }
 export function apiClient(baseUrl:string,token:string) {
   async function request<T>(path:string, options:RequestInit={}):Promise<T> {
-    const response = await fetch(baseUrl.replace(/\/$/,"")+"/api/v1"+path, {
+    const response = await fetch(normalizeNotebookEndpoint(baseUrl)+"/api/v1"+path, {
       ...options,
       headers: {"Authorization": "Bearer "+token,
         "Content-Type":"application/json", ...options.headers}
@@ -42,7 +43,7 @@ export function apiClient(baseUrl:string,token:string) {
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
     exportMarkdownZip:async()=>{
-      const response=await fetch(baseUrl.replace(/\/$/,"")+"/api/v1/export/markdown-zip",{
+      const response=await fetch(normalizeNotebookEndpoint(baseUrl)+"/api/v1/export/markdown-zip",{
         headers:{"Authorization":"Bearer "+token}
       });
       if(!response.ok){
