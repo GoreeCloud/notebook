@@ -10,6 +10,7 @@ No application source was copied from Evernote, Trilium Notes or AFFiNE. Origina
 | TypeScript | Web typecheck | Apache-2.0 — https://github.com/microsoft/TypeScript |
 | react-markdown, remark-gfm | Safe Markdown preview | MIT — https://github.com/remarkjs/react-markdown |
 | Lucide | Browser icons | ISC — https://github.com/lucide-icons/lucide |
+| PyCA cryptography 50.0.2 (optional) | Offline authenticated encrypted SQLite backups | Apache-2.0 OR BSD-3-Clause — https://github.com/pyca/cryptography |
 | PySide6 / Qt 6.12 | Native Linux UI | LGPL/GPL/commercial options; review Qt redistribution compliance — https://www.qt.io/qt-for-python |
 | Kotlin, AndroidX / Compose Material 3 Expressive | Native Android | Apache-2.0 — https://github.com/JetBrains/kotlin ; https://android.googlesource.com/platform/frameworks/support |
 | Gradle | Android builds | Apache-2.0 — https://github.com/gradle/gradle |

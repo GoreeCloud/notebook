@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: python -m pip install -r server/requirements-dev.txt
+      - run: python -m pip install -r server/requirements-crypto.txt
       - run: PYTHONPATH=server pytest -q server/tests
   web:
     name: React build
