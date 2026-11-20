@@ -45,3 +45,27 @@ This archive format has not been externally reviewed. It deliberately uses stand
 The service remains SQLite plaintext. A local attacker with access to the original note database may read unencrypted content regardless of the encrypted backup. The existing JSON/Markdown export endpoints still produce plaintext content.
 
 Tests in `server/tests/test_encrypted_backup.py` cover WAL snapshot preservation, note revisions, authenticated restore, wrong passphrases, tampering, truncated input, path collisions, permissions and refusal of symlinked sources. The CI job installs optional crypto dependencies to run these tests; this dependency is not required for ordinary web, Linux or Android application startup.
+
+## In-memory authentication verification (no restore file)
+
+The optional CLI now supports a third command which authenticates an
+existing .gcnb archive and checks the decrypted SQLite image **in RAM**
+without creating a plaintext database or another output file:
+
+    PYTHONPATH=server .venv/bin/python -m notebook.encrypted_backup verify \
+      --source ~/private-recovery/notebook.gcnb
+
+The terminal prompts for the passphrase with no echo. Success displays only
+a valid/authenticated result with notebook and note counts. Incorrect
+passphrases, truncated archives, content tampering, suspicious file types,
+symlinked sources and oversized images fail. The reader uses an OS-level
+no-follow descriptor and verifies the opened file is regular, to avoid
+following a final-component symlink substituted after path validation.
+The V1 archive format remains unchanged.
+
+**Limitations:** This is an operator-directed verification step, not
+a full independent restore drill, off-device copy, an external crypto
+audit, secure memory erasure or a promise of future recoverability.
+Plaintext SQLite and the key exist transiently in process memory. Retain
+a separate copy of the archive and test an actual restore on independent
+authorized storage before treating a backup as disaster-ready.

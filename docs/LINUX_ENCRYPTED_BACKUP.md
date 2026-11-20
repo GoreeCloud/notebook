@@ -38,3 +38,9 @@ requirements used by the backend crypto tests, so the native encrypted-export
 bridge is exercised. This test installation is independent of package contents:
 the extracted unsigned Debian package continues to use the system runtime and
 does not contain compiled cryptography wheels.
+
+**Archive validation without plaintext output:** Developers may run the
+local encrypted-backup CLI verify action with a source path. This
+authenticates and checks an in-memory SQLite image, without replacing
+the Qt application's live store or writing a plaintext restore file.
+This does not replace independent recovery drills.
