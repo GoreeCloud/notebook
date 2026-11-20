@@ -16,12 +16,12 @@ An original, MIT-licensed, open-source **self-hosted note and personal knowledge
 | JSON export and append-only restore | Web / API | Via local API | Not yet |
 | Offline editing without server | No | Yes | Yes |
 
-Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** ENEX/Trilium migration, attachments, OCR, encryption, collaboration and full platform parity are not implemented.
+Android stores notes in its own private SQLite DB; Linux and the local API can access the same on-device SQLite file. **They do not synchronize across devices.** Trilium ZIP migration, ENEX attachments and full rich-text fidelity, OCR, encryption, collaboration and full platform parity are not implemented.
 
 ## Repository structure
 
 - `server/`: FastAPI + Pydantic + SQLite, bearer authentication, revision history, optimistic concurrency, note hierarchy and tests; authenticated dry-run JSON restore.
-- `web/`: React + Vite, Markdown editor and react-markdown preview, search, tree, tags, trash, revision restore, JSON export and validated append-only JSON import.
+- `web/`: React + Vite, Markdown editor and react-markdown preview, search, tree, tags, trash, revision restore, JSON export and validated append-only JSON import plus opt-in ENEX text migration.
 - `linux/`: native Qt Quick **6.12.0** graphical client using PySide6 and local SQLite.
 - `android/`: native Kotlin + Jetpack Compose **Material 3 Expressive** client with app-private SQLite.
 - `docs/`: API, architecture, provenance, privacy/security limitations and milestones.
