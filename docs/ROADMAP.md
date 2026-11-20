@@ -10,7 +10,8 @@
 ## Knowledge features
 - [ ] Complete tree/attachments/tags/revisions parity across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
-- [ ] ENEX, Markdown folder and Trilium import plus round-trip tests
+- [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
+- [ ] Full ENEX/ENML fidelity, attachments, Markdown folder and Trilium ZIP import plus round-trip tests
 - [ ] Rich text (evaluate MIT Tiptap/ProseMirror), web clipping and OCR
 - [ ] Backlink graph, full-text indexing and keyboard accessibility E2E tests
 

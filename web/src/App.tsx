@@ -121,12 +121,31 @@ export default function App(){
     setError("");
     if(file.size>8*1024*1024){setError("Archive exceeds the 8 MiB import limit.");return;}
     try{
-      const document:unknown=JSON.parse(await file.text());
-      const report=await api.importArchive(document,true);
-      if(!confirm(`Validated ${report.notes} notes, ${report.notebooks} notebooks and ${report.revisions} revisions. Import as new records without overwriting existing notes?`)) return;
-      const result=await api.importArchive(document,false);
-      await load();
-      setToast(`Imported ${result.notes} notes into new notebooks`);
+      const content=await file.text();
+      const isEnex=/\.enex$/i.test(file.name);
+      if(isEnex){
+        let skipResources=false;
+        let report;
+        try{report=await api.importEnex(content,true,false);}
+        catch(error){
+          if(!(error instanceof ApiError&&error.status===422&&
+               error.message.includes("skip_resources")))throw error;
+          if(!confirm("This ENEX has attachments or embedded media. GoreeCloud cannot import those files. Import text only and OMIT all media?"))return;
+          skipResources=true;
+          report=await api.importEnex(content,true,true);
+        }
+        if(!confirm(`Review: ${report.notes} notes. ${report.warnings.join(" ")} Import as NEW notes?`))return;
+        const result=await api.importEnex(content,false,skipResources);
+        await load();
+        setToast(`Imported ${result.notes} ENEX text notes`);
+      }else{
+        const document:unknown=JSON.parse(content);
+        const report=await api.importArchive(document,true);
+        if(!confirm(`Validated ${report.notes} notes, ${report.notebooks} notebooks and ${report.revisions} revisions. Import as new records without overwriting existing notes?`))return;
+        const result=await api.importArchive(document,false);
+        await load();
+        setToast(`Imported ${result.notes} notes into new notebooks`);
+      }
     }catch(e){setError("Import failed; no changes were applied: "+String(e));}
   };
   useEffect(()=>{
@@ -175,11 +194,11 @@ export default function App(){
         <div className="nav-heading lower">LIBRARY</div>
         <button className={"nav-item "+(trash?"active":"")} onClick={()=>{setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
         <div className="sidebar-bottom">
-          <input ref={fileInput} type="file" accept=".json,application/json" hidden
-            aria-label="Select Notebook JSON archive"
+          <input ref={fileInput} type="file" accept=".json,.enex,application/json,text/xml,application/xml" hidden
+            aria-label="Select Notebook JSON or ENEX archive"
             onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file);e.currentTarget.value="";}}/>
           <button className="nav-item" onClick={()=>fileInput.current?.click()}>
-            <ArchiveRestore size={18}/> Import JSON</button>
+            <ArchiveRestore size={18}/> Import JSON / ENEX</button>
           <button className="nav-item" onClick={download}><Download size={18}/> Export JSON</button>
           <button className="nav-item" onClick={()=>{setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
         </div>

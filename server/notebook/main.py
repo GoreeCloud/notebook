@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from .store import Conflict, NotFound, Store, now
 from .transfer import InvalidArchive, export_all, import_archive
+from .enex import parse_enex
 
 
 class NotebookCreate(BaseModel):
@@ -34,6 +35,12 @@ class NotePatch(BaseModel):
     body: str | None = Field(default=None, max_length=1_000_000)
     tags: list[str] | None = Field(default=None, max_length=20)
     pinned: bool | None = None
+
+
+class EnexImportRequest(BaseModel):
+    xml: str = Field(min_length=1, max_length=8 * 1024 * 1024)
+    dry_run: bool = True
+    skip_resources: bool = False
 
 
 class ImportRequest(BaseModel):
@@ -136,6 +143,14 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     @api.post("/import")
     def import_notes(payload: ImportRequest):
         return safe(import_archive, store, payload.document, payload.dry_run)
+
+    @api.post("/import/enex")
+    def import_enex(payload: EnexImportRequest):
+        document, warnings = safe(parse_enex, payload.xml,
+                                  skip_resources=payload.skip_resources)
+        result = safe(import_archive, store, document, payload.dry_run)
+        result["warnings"].extend(warnings)
+        return result
 
     app.include_router(api)
     return app
