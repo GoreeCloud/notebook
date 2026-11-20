@@ -11,7 +11,8 @@ An original, MIT-licensed, open-source **self-hosted note and personal knowledge
 | Local notes and search | Yes | Yes | Yes |
 | Markdown note editing | Yes, safe preview | Plain-text editor | Plain-text editor |
 | Notebooks and nested notes | Yes | Shared SQLite data model | Yes, local schema v3 |
-| Tags and revision history | Yes | Yes | Yes; historical export metadata has limitations |\n| Wiki-link/backlink navigation | Yes, authenticated local graph | Yes, local graph, first 30 per direction | Not yet |
+| Tags and revision history | Yes | Yes | Yes; historical export metadata has limitations |
+| Wiki-link/backlink navigation | Yes, authenticated local graph | Yes, local graph, first 30 per direction | Yes, offline local graph, first 30 per direction |
 | Soft delete and restore | Yes | Soft delete | Soft delete |
 | JSON v2 export and append-only import | Web / API with explicit consent | Native offline file picker, confirmation and private plaintext export | Explicit Storage Access Framework import/export |
 | Offline editing without server | No | Yes | Yes |
@@ -22,8 +23,8 @@ Android stores notes in its own private SQLite DB; Linux and the local API can a
 
 - `server/`: FastAPI + Pydantic + SQLite, bearer authentication, revision history, optimistic concurrency, note hierarchy and tests; authenticated dry-run JSON restore.
 - `web/`: React + Vite, Markdown editor and safe preview, indexed local full-text search, tree, tags, trash, revision restore, JSON export and append-only JSON, ENEX text and Markdown ZIP import. System/light/dark and Iris/Lagoon/Ember/Moss appearance controls use pinned GoreeCloud UI tokens (visual acceptance remains open).
-- `linux/`: native Qt Quick **6.12.0** graphical client using PySide6 and local SQLite.
-- `android/`: native Kotlin + Jetpack Compose **Material 3 Expressive** client with app-private SQLite.
+- `linux/`: native Qt Quick **6.12.0** graphical client using PySide6 and local SQLite, with native pinned-note editor, wiki links, optional encrypted snapshot export and JSON v2 recovery.
+- `android/`: native Kotlin + Jetpack Compose **Material 3 Expressive** client with app-private SQLite, bounded note previews, JSON v2 recovery and offline wiki-link navigation.
 - `docs/`: API, architecture, provenance, privacy/security limitations and milestones.
 - `design/`: snapshot of authoritative [GoreeCloud UI](https://github.com/GoreeCloud/gc-ui) alpha tokens.
 - `.github/workflows/`: CI checks.
@@ -47,11 +48,13 @@ In another terminal, `cd notebook/web && npm ci && npm run dev`, then browse to 
 
 With the Python venv created above, run `.venv/bin/pip install -r linux/requirements.txt && ./linux/run.sh`. Requires a working Linux desktop session and Qt 6.12 libraries. The default SQLite path is `~/.local/share/goreecloud/notebook/notes.sqlite3` (or `$XDG_DATA_HOME/goreecloud/notebook/notes.sqlite3`). No server or login is needed.
 
+For optional native **encrypted SQLite export**, install the pinned extra crypto requirements with `.venv/bin/pip install -r server/requirements-crypto.txt`. The live database remains plaintext; independent restore and secure off-device backup are not production-accepted. See [Native Linux Encrypted Backup](docs/LINUX_ENCRYPTED_BACKUP.md).
+
 The repository also includes an **experimental unsigned x86_64 .deb builder** in `scripts/build_linux_deb.py`. It bundles Qt 6.12.0 dynamic libraries and is not a production release or verified installation. See [Linux Packaging](docs/LINUX_PACKAGING.md) and its explicit redistribution review gate.
 
 ## Native Android
 
-Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It supports explicit plaintext JSON v2 import/export through Android Storage Access Framework, but no remote sync, automatic backups, app-at-rest encryption or full cross-platform parity. See [Android Data](docs/ANDROID_DATA.md) and [Android JSON Import](docs/ANDROID_JSON_IMPORT.md). Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed or device-validated release).
+Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It supports explicit plaintext JSON v2 import/export through Android Storage Access Framework, but no remote sync, automatic backups, app-at-rest encryption or full cross-platform parity. See [Android Data](docs/ANDROID_DATA.md) and [Android JSON Import](docs/ANDROID_JSON_IMPORT.md). Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed release). An isolated OnePlus N200 instrumentation run passed synthetic recovery, 535-note paging and local wiki-link cases; human UI accessibility and application upgrade acceptance remain outstanding. See [Physical-device evidence](docs/evidence/android-physical-regression-2026-11-20.md).
 
 ## Validation
 
@@ -78,7 +81,8 @@ Linux: the native Qt Quick client supports notebook filtering/creation, nested-n
 
 Linux Qt Quick now exposes [offline portable JSON v2 recovery](docs/LINUX_JSON_RECOVERY.md), with explicit import preview/confirmation and private, **unencrypted** export. User-facing file-picker accessibility and manual validation remain outstanding.
 
-Web and Linux can resolve local links via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
+Web, Linux and Android can resolve local links within their respective local stores via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
 
-Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md) and an explicit web **Load more notes** control. A native Linux paged-summary sidebar is being validated separately. Paging is offset-based and not a stable snapshot under concurrent edits.
-\nFor a source-grounded, per-client acceptance matrix, see [Platform Capabilities](docs/PLATFORM_CAPABILITIES.md).\n
+Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md), body-minimized web preview browsing, and explicit web/Linux/Android **Load more notes** controls. Paging is offset-based and not a stable snapshot under concurrent edits.
+
+For a source-grounded, per-client acceptance matrix, see [Platform Capabilities](docs/PLATFORM_CAPABILITIES.md).
