@@ -266,7 +266,8 @@ ApplicationWindow {
     }
     property bool hasEdits: !!active.id && (noteTitle.text !== active.title ||
         noteBody.text !== active.body ||
-        JSON.stringify(editTags(noteTags.text)) !== JSON.stringify(active.tags || []))
+        JSON.stringify(editTags(noteTags.text)) !== JSON.stringify(active.tags || []) ||
+        notePinned.checked !== Boolean(active.pinned))
     Component.onCompleted: {
         var firstPage = JSON.parse(backend.notesPageJson)
         notes = firstPage.results
@@ -293,6 +294,7 @@ ApplicationWindow {
             noteTitle.text = window.active.title || ""
             noteBody.text = window.active.body || ""
             noteTags.text = (window.active.tags || []).join(", ")
+            notePinned.checked = Boolean(window.active.pinned)
         }
     }
     onClosing: function(close) {
@@ -486,8 +488,8 @@ ApplicationWindow {
                         Button {
                             text: hasEdits ? "Save changes" : "Saved"
                             enabled: !!window.active.id && hasEdits && !backend.trashView
-                            onClicked: backend.saveNoteWithTags(window.active.id, noteTitle.text, noteBody.text,
-                                noteTags.text, window.active.version)
+                            onClicked: backend.saveNoteWithTagsPinned(window.active.id, noteTitle.text, noteBody.text,
+                                noteTags.text, notePinned.checked, window.active.version)
                         }
                     }
                 }
@@ -529,6 +531,14 @@ ApplicationWindow {
                             enabled: !!window.active.id && !backend.trashView
                             maximumLength: 500
                             text: (window.active.tags || []).join(", ")
+                        }
+                        CheckBox {
+                            id: notePinned
+                            Layout.leftMargin: 44
+                            text: "Pin note to the top"
+                            Accessible.name: "Pin note to the top"
+                            enabled: !!window.active.id && !backend.trashView
+                            checked: false
                         }
                         Rectangle { Layout.fillWidth: true; Layout.leftMargin: 44; Layout.rightMargin: 44; height: 1; color: "#EEF0F7" }
                         TextArea {

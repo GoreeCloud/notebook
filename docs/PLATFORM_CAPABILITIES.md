@@ -12,7 +12,7 @@ GoreeCloud UI design-system authority remains external to Notebook.
 | Offline app without Notebook server | No | Yes | Yes |
 | Notebook organization and nested note creation | Yes | Yes | Yes |
 | Tags and note revisions/restore | Yes | Yes | Yes |
-| Pinned note editing | Yes | Stored model; native control pending | Yes |
+| Pinned note editing | Yes | Yes, native checkbox with versioned save | Yes |
 | Local wiki-link navigation and backlinks | Yes, bounded graph | Yes, first 30 per direction | Not implemented |
 | JSON v2 full export and append-only import | Yes, local bearer-auth service and explicit browser consent | Yes, native file picker, preview and confirmation | Yes, Android Storage Access Framework with preview |
 | ENEX import | Text/tags/timestamps only; resources opt-out | Not implemented in native picker | Not implemented |
