@@ -9,6 +9,7 @@
 
 ## Knowledge features
 - [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
+- [x] Synthetic Android v1→v3 and v2→v3 physical-device SQLite migration acceptance; real user data untouched
 - [ ] Complete tree/attachments/tags/revisions parity and authenticated import across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
 - [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
