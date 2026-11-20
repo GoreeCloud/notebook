@@ -2,7 +2,7 @@
 
 The Android development preview is a genuine local-first Compose app, not a WebView. Version 2 of the private SQLite schema adds tags, pinned notes and per-note revision history while migrating existing version 1 notes in place. Notes can now be searched by tag, pinned, moved to Trash and restored; earlier text revisions can be restored as new revisions. Edit conflict checks reject stale writes.
 
-Android's app-private database is **independent** from the web/Linux database. No network permission, cloud sync, end-to-end encryption, file attachments, cross-platform restore format, background sync or production authentication are implemented.
+Android's app-private database is **independent** from the web/Linux database. No network permission, cloud sync, end-to-end encryption, file attachments, background sync or production authentication are implemented. The Android app now offers explicit user-approved plaintext JSON v2 export and a validated, append-only import compatible with the service-side recovery format, subject to lossy historical metadata and independent SQLite databases.
 
 ## Validation
 
