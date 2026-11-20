@@ -15,6 +15,7 @@ from .store import Conflict, NotFound, Store, now
 from .transfer import InvalidArchive, export_all, import_archive
 from .enex import parse_enex
 from .http_boundary import LocalApiBoundary
+from .markdown_zip import parse_markdown_zip
 
 
 class NotebookCreate(BaseModel):
@@ -37,6 +38,12 @@ class NotePatch(BaseModel):
     body: str | None = Field(default=None, max_length=1_000_000)
     tags: list[str] | None = Field(default=None, max_length=20)
     pinned: bool | None = None
+
+
+class MarkdownZipRequest(BaseModel):
+    archive_base64: str = Field(min_length=1, max_length=11_200_000)
+    dry_run: bool = True
+    skip_unsupported: bool = False
 
 
 class EnexImportRequest(BaseModel):
@@ -170,6 +177,14 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     def import_enex(payload: EnexImportRequest):
         document, warnings = safe(parse_enex, payload.xml,
                                   skip_resources=payload.skip_resources)
+        result = safe(import_archive, store, document, payload.dry_run)
+        result["warnings"].extend(warnings)
+        return result
+
+    @api.post("/import/markdown-zip")
+    def import_markdown_zip(payload: MarkdownZipRequest):
+        document, warnings = safe(parse_markdown_zip, payload.archive_base64,
+                                  skip_unsupported=payload.skip_unsupported)
         result = safe(import_archive, store, document, payload.dry_run)
         result["warnings"].extend(warnings)
         return result
