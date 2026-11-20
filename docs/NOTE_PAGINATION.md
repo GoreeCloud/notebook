@@ -21,3 +21,24 @@ The React notes list initially loads its existing **500-note** batch and now exp
 **Security/privacy:** No new untrusted SQL expression is evaluated; the literal LIKE escaping and parameter binding are reused. Pages are capped at 500 rows and offset 100000. No automatic cloud transfer, background telemetry, account sharing or secrets are introduced. The route remains within the existing local authenticated API boundary.
 
 **Test evidence:** Synthetic test data with 535 notes exercises the legacy 500 cap, two paging requests, unique identifiers, exhausted pages, authentication, notebook filters, Trash, literal `%`/`_` pattern matching, and rejection of out-of-range paging arguments. React TypeScript/Vite and web contract tests run in CI. Manual 600+ item UI, accessibility and long-lived concurrent mutation acceptance are not yet completed.
+
+## Body-minimized web pages and explicit full-text hydration
+
+The opt-in summary=true mode of GET /api/v1/notes/page returns bounded
+160-character previews instead of full Markdown bodies, while preserving
+note ID, title, notebook, hierarchy, tags, pin, Trash and version metadata.
+The default page and legacy array endpoints remain unchanged.
+
+The React sidebar uses summary mode for its initial and Load More batches,
+then fetches the complete selected note by ID BEFORE mounting any editable
+Markdown fields. A summary-only stub is never passed into updateNote or
+another save path, preventing a 160-character preview from overwriting
+a longer note. Failed hydration keeps the editor locked and offers retry.
+The detail route accepts optional include_deleted=true (default false)
+so Trash previews can be opened and restored without broadly enabling
+deleted-note reads. All endpoints still require the local bearer token.
+
+This is response minimization and browser-memory improvement, not encrypted
+client storage, GoreeShield consent enforcement or a virtualized list.
+Search-ranked results still transfer full bodies; local preview filtering
+may temporarily be incomplete while ranked search is pending.
