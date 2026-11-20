@@ -162,6 +162,43 @@ class LinuxBridgeTest(unittest.TestCase):
             bridge.setQuery("Note 0534")
             self.assertEqual(len(json.loads(bridge.notesPageJson)["results"]), 1)
 
+    def test_native_pinned_edit_and_legacy_tag_save_preserves_pin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = Bridge(str(Path(directory) / "notes.sqlite3"))
+            bridge.newNote()
+            note = json.loads(bridge.selectedJson)
+            bridge.saveNoteWithTagsPinned(
+                note["id"], "Pinned", "Content", "alpha, beta", True, 1
+            )
+            updated = json.loads(bridge.selectedJson)
+            self.assertEqual(updated["version"], 2)
+            self.assertTrue(updated["pinned"])
+            self.assertEqual(updated["tags"], ["alpha", "beta"])
+            bridge.saveNote(note["id"], "Legacy", "Next content", 2)
+            legacy = json.loads(bridge.selectedJson)
+            self.assertTrue(legacy["pinned"])
+            self.assertEqual(legacy["tags"], ["alpha", "beta"])
+            bridge.saveNoteWithTagsPinned(
+                note["id"], "Unpinned", "More", "alpha, beta", False, 3
+            )
+            current = json.loads(bridge.selectedJson)
+            self.assertFalse(current["pinned"])
+            self.assertEqual(current["version"], 4)
+            # Wrong optimistic revision may neither change text nor pin.
+            bridge.saveNoteWithTagsPinned(
+                note["id"], "Wrong", "Overwrite", "bad", True, 3
+            )
+            final = json.loads(bridge.selectedJson)
+            self.assertFalse(final["pinned"])
+            self.assertEqual(final["title"], "Unpinned")
+            self.assertEqual(final["version"], 4)
+
+    def test_qml_pin_is_a_draft_field_with_safe_save_slot(self):
+        qml=(ROOT/"linux/qml/Main.qml").read_text()
+        self.assertIn("notePinned.checked !== Boolean(active.pinned)",qml)
+        self.assertIn("backend.saveNoteWithTagsPinned",qml)
+        self.assertIn("Accessible.name: \"Pin note to the top\"",qml)
+
     def test_smoke_uses_only_ephemeral_database(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "normal-user-database"

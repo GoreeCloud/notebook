@@ -339,6 +339,18 @@ class Bridge(QObject):
 
     @Slot(str, str, str, str, int)
     def saveNoteWithTags(self, note_id, title, body, tags_text, version):
+        # Preserve the stored pin for older desktop clients and tests.
+        try:
+            current = self.store.get(note_id, include_deleted=True)
+        except NotFound as exc:
+            self._message(str(exc))
+            return
+        return self.saveNoteWithTagsPinned(
+            note_id, title, body, tags_text, current["pinned"], version
+        )
+
+    @Slot(str, str, str, str, bool, int)
+    def saveNoteWithTagsPinned(self, note_id, title, body, tags_text, pinned, version):
         if len(title) > 200 or len(body) > 1_000_000 or len(tags_text) > 500:
             self._message("Title, body or tags exceed Notebook's local size limits")
             return
@@ -351,7 +363,7 @@ class Bridge(QObject):
             self.store.update(
                 note_id,
                 {"title": title.strip() or "Untitled note", "body": body,
-                 "tags": tags},
+                 "tags": tags, "pinned": bool(pinned)},
                 version,
             )
             self.notesChanged.emit()
