@@ -1,6 +1,7 @@
 import QtQuick 6.12
 import QtQuick.Controls 6.12
 import QtQuick.Layouts 6.12
+import QtQuick.Dialogs 6.12 as PlatformDialogs
 
 ApplicationWindow {
     id: window
@@ -15,6 +16,7 @@ ApplicationWindow {
     property var notebooks: []
     property var active: ({})
     property var revisions: []
+    property var pendingImportReport: ({})
     property string pendingAction: ""
     property string pendingId: ""
     property bool allowClose: false
@@ -33,11 +35,71 @@ ApplicationWindow {
         else if (action === "child") backend.newChildNote(noteId)
         else if (action === "notebook") backend.setNotebook(noteId)
         else if (action === "newNotebook") newNotebookDialog.open()
+        else if (action === "importJson") jsonOpenDialog.open()
+        else if (action === "exportJson") plaintextExportWarning.open()
         else if (action === "trash") backend.deleteNote(active.id, active.version)
         else if (action === "showTrash") backend.setTrashView(true)
         else if (action === "showNotes") backend.setTrashView(false)
         else if (action === "restore") backend.restoreNote(active.id, active.version)
         else if (action === "close") { window.allowClose = true; Qt.quit() }
+    }
+    PlatformDialogs.FileDialog {
+        id: jsonOpenDialog
+        title: "Select a GoreeCloud Notebook JSON archive"
+        fileMode: PlatformDialogs.FileDialog.OpenFile
+        nameFilters: ["Notebook JSON (*.json)"]
+        onAccepted: {
+            var response = backend.previewJsonImport(selectedFile.toString())
+            if (response.length > 0) {
+                window.pendingImportReport = JSON.parse(response)
+                importJsonConfirm.open()
+            }
+        }
+    }
+    Dialog {
+        id: importJsonConfirm
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 40, 500)
+        modal: true
+        title: "Import as new notes?"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        Label {
+            width: importJsonConfirm.availableWidth
+            wrapMode: Text.Wrap
+            text: "Validated " + (window.pendingImportReport.notebooks || 0) +
+                  " notebooks, " + (window.pendingImportReport.notes || 0) +
+                  " notes, and " + (window.pendingImportReport.revisions || 0) +
+                  " revisions. This adds NEW IDs and does not overwrite existing notes. " +
+                  "This operation is local; the source JSON is plaintext."
+        }
+        onAccepted: backend.applyJsonImport()
+        onRejected: backend.cancelJsonImport()
+    }
+    Dialog {
+        id: plaintextExportWarning
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(window.width - 40, 500)
+        modal: true
+        title: "Export unencrypted notes?"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        Label {
+            width: plaintextExportWarning.availableWidth
+            wrapMode: Text.Wrap
+            text: "This JSON will contain ALL notebooks, notes (including Trash), " +
+                  "revisions, and note text without encryption. Choose a trusted " +
+                  "private location. An existing file will never be overwritten."
+        }
+        onAccepted: jsonSaveDialog.open()
+    }
+    PlatformDialogs.FileDialog {
+        id: jsonSaveDialog
+        title: "Save unencrypted Notebook JSON archive"
+        fileMode: PlatformDialogs.FileDialog.SaveFile
+        nameFilters: ["Notebook JSON (*.json)"]
+        defaultSuffix: "json"
+        onAccepted: backend.exportJsonFile(selectedFile.toString())
     }
     Dialog {
         id: newNotebookDialog
@@ -226,6 +288,18 @@ ApplicationWindow {
                         MouseArea { anchors.fill: parent; onClicked: window.runAction("select", modelData.id) }
                     }
                     ScrollBar.vertical: ScrollBar {}
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Import JSON (offline)"
+                    Accessible.name: "Import portable Notebook JSON"
+                    onClicked: window.runAction("importJson", "")
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Export JSON (plaintext)"
+                    Accessible.name: "Export unencrypted Notebook JSON"
+                    onClicked: window.runAction("exportJson", "")
                 }
                 Label { text: backend.status; wrapMode: Text.Wrap; font.pixelSize: 11; color: "#68758C" }
             }

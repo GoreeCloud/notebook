@@ -196,6 +196,9 @@ def import_archive(store, document, dry_run=True):
 
 def export_all(store):
     with store.connection() as db:
+        # One SQLite read transaction gives consistent notebook/note/revision
+        # rows, including when a separate writer updates content concurrently.
+        db.execute("BEGIN")
         books=[dict(row) for row in db.execute("SELECT * FROM notebooks ORDER BY id")]
         notes=[store.note(row) for row in db.execute("SELECT * FROM notes ORDER BY id")]
         revisions=[dict(row) for row in db.execute(
