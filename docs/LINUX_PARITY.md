@@ -19,3 +19,17 @@ This development-stage update adds:
 **Package smoke regression:** The Debian extraction smoke script now explicitly asserts that `XDG_DATA_HOME` remains absent after the temporary Qt smoke finishes. This replaces the earlier assertion that an on-disk user-profile database should have been created. The previous assertion failed because the new isolation behavior was working. Source and extracted-package smoke must both avoid user-data writes.
 
 **Portable local recovery:** The Linux sidebar now offers manually chosen JSON v2 export/import with validation, dry-run, confirmation and 0600 exclusive export. See [Linux JSON Recovery](LINUX_JSON_RECOVERY.md); no actual sync or encryption of live storage is implied.
+
+## Local wiki-link navigation — development preview
+
+Qt Quick Linux now displays the first 30 resolved incoming and outgoing
+references for a selected active note, based on the local SQLite link graph.
+Buttons navigate to the target note, automatically scope its notebook (including
+cross-notebook UUID links), clear a conflicting search filter and use the existing
+unsaved-draft discard confirmation before navigation. Trash targets and invalid
+IDs are refused; no network requests or background scanning are introduced.
+The graph refreshes when the selected note or local note collection changes.
+
+Long link lists currently show a truncation indicator rather than an additional
+page control. Headless Qt and synthetic bridge tests confirm behavior but do
+not establish real-device keyboard/screen-reader accessibility acceptance.

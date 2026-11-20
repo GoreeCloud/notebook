@@ -16,6 +16,7 @@ ApplicationWindow {
     property var notebooks: []
     property var active: ({})
     property var revisions: []
+    property var linked: ({incoming:{results:[],has_more:false},outgoing:{results:[],has_more:false}})
     property var pendingImportReport: ({})
     property string pendingAction: ""
     property string pendingId: ""
@@ -31,6 +32,10 @@ ApplicationWindow {
     }
     function performAction(action, noteId) {
         if (action === "select") backend.selectNote(noteId)
+        else if (action === "linked") {
+            search.text = ""
+            backend.navigateLinkedNote(noteId)
+        }
         else if (action === "new") backend.newNote()
         else if (action === "child") backend.newChildNote(noteId)
         else if (action === "notebook") backend.setNotebook(noteId)
@@ -171,12 +176,14 @@ ApplicationWindow {
         notebooks = JSON.parse(backend.notebooksJson)
         active = JSON.parse(backend.selectedJson)
         revisions = JSON.parse(backend.revisionsJson)
+        linked = JSON.parse(backend.linksJson)
     }
     Connections {
         target: backend
         function onNotesChanged() { window.notes = JSON.parse(backend.notesJson) }
         function onNotebooksChanged() { window.notebooks = JSON.parse(backend.notebooksJson) }
         function onRevisionsChanged() { window.revisions = JSON.parse(backend.revisionsJson) }
+        function onLinksChanged() { window.linked = JSON.parse(backend.linksJson) }
         function onSelectedChanged() {
             window.active = JSON.parse(backend.selectedJson)
             noteTitle.text = window.active.title || ""
@@ -401,6 +408,77 @@ ApplicationWindow {
                             selectByMouse: true
                             enabled: !!window.active.id && !backend.trashView
                             background: Item {}
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 44
+                            Layout.rightMargin: 44
+                            Layout.bottomMargin: 24
+                            spacing: 10
+                            visible: !!window.active.id && !backend.trashView
+                            Label {
+                                text: "LINKED NOTES"
+                                font.pixelSize: 12
+                                font.bold: true
+                                color: "#68758C"
+                            }
+                            Label {
+                                text: "Outgoing · references from this note"
+                                font.bold: true
+                                Accessible.name: "Outgoing note links"
+                            }
+                            Repeater {
+                                model: window.linked.outgoing ? window.linked.outgoing.results : []
+                                delegate: Button {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    text: "↗ " + modelData.title
+                                    Accessible.name: "Open linked note " + modelData.title
+                                    onClicked: window.runAction("linked", modelData.id)
+                                }
+                            }
+                            Label {
+                                visible: !!window.linked.outgoing && window.linked.outgoing.results.length === 0
+                                text: "No resolved outgoing references"
+                                color: "#68758C"
+                            }
+                            Label {
+                                visible: !!window.linked.outgoing && window.linked.outgoing.has_more
+                                text: "More outgoing notes exist; first 30 shown."
+                                color: "#68758C"
+                            }
+                            Label {
+                                text: "Incoming · notes that refer here"
+                                font.bold: true
+                                Accessible.name: "Incoming note links"
+                            }
+                            Repeater {
+                                model: window.linked.incoming ? window.linked.incoming.results : []
+                                delegate: Button {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    text: "↙ " + modelData.title
+                                    Accessible.name: "Open referring note " + modelData.title
+                                    onClicked: window.runAction("linked", modelData.id)
+                                }
+                            }
+                            Label {
+                                visible: !!window.linked.incoming && window.linked.incoming.results.length === 0
+                                text: "No resolved incoming references"
+                                color: "#68758C"
+                            }
+                            Label {
+                                visible: !!window.linked.incoming && window.linked.incoming.has_more
+                                text: "More referring notes exist; first 30 shown."
+                                color: "#68758C"
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: "Title links resolve only when unique in this notebook. [[note:UUID]] links can cross notebooks."
+                                color: "#68758C"
+                                font.pixelSize: 12
+                            }
                         }
                     }
                 }
