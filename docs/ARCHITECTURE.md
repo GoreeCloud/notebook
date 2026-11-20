@@ -42,3 +42,7 @@ The Qt Quick bridge maps existing service SQLite notebook IDs and optional paren
 ## Linux portable recovery
 
 The native Qt client imports/export portable JSON v2 through local operator-selected file paths, reusing canonical SQLite transfer validation and transactions. A single read transaction establishes a consistent export snapshot. See [Linux JSON Recovery](LINUX_JSON_RECOVERY.md). This remains manual, unencrypted transport, not GoreeCloud Mesh synchronization.
+
+## Read-only local wiki-link graph
+
+The authenticated note-link graph scans active records in one local SQLite connection, indexes note ID and unique same-notebook titles, resolves explicit `note:UUID` references, and provides bounded incoming/outgoing pages. No remote URL crawling, new database schema, tracked external links, or identity sharing system is involved. See [Local Wiki Links](LINKS.md).

@@ -309,11 +309,13 @@ class Store:
                 raise NotFound("Revision not found")
         return self.update(note_id, {"title": row["title"], "body": row["body"]}, expected_version)
 
-    def backlinks(self, note_id):
-        target = self.get(note_id)
-        needle = "[[" + target["title"].casefold() + "]]"
-        return [note for note in self.list_notes() if
-                note["id"] != note_id and needle in note["body"].casefold()]
+    def link_graph(self, note_id, limit=50, offset=0):
+        from .links import link_graph
+        return link_graph(self, note_id, limit=limit, offset=offset)
+
+    def backlinks(self, note_id, limit=100, offset=0):
+        # Retain legacy array shape, but scan the entire active corpus.
+        return self.link_graph(note_id, limit, offset)["incoming"]["results"]
 
     def search_ranked(self, phrase, limit=50, offset=0, notebook_id=None):
         # Prefix-token syntax is constructed, never accepted raw from client.

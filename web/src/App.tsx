@@ -3,7 +3,7 @@ import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus
   Hash,Link2,Menu,MoreHorizontal,PanelLeftClose,Pin,Plus,Search,Settings2,Trash2, X} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {apiClient,ApiError,type Note,type Notebook,type Revision} from "./api";
+import {apiClient,ApiError,type Note,type Notebook,type Revision,type NoteLinkGraph} from "./api";
 import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
 import {isLocalNotebookEndpoint} from "./endpoint";
 
@@ -89,6 +89,7 @@ export default function App(){
   const [collapsed,setCollapsed]=useState(false);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [revisions,setRevisions]=useState<Revision[]>([]);
+  const [linkGraph,setLinkGraph]=useState<NoteLinkGraph|null>(null);
   const api=useMemo(()=>apiClient(endpoint,key),[endpoint,key]);
   const fileInput=useRef<HTMLInputElement>(null);
   const chosen=notes.find(n=>n.id===selected);
@@ -146,6 +147,22 @@ export default function App(){
     setDraft({title:chosen.title,body:chosen.body,tags:chosen.tags.join(", ")});
     setRevisions([]);
   },[selected,chosen?.version,chosen?.id]);
+
+  useEffect(()=>{
+    if(!connected||!chosen||chosen.deleted_at){setLinkGraph(null);return;}
+    let current=true;
+    setLinkGraph(null);
+    api.noteLinks(chosen.id).then(graph=>{if(current)setLinkGraph(graph);})
+      .catch(()=>{if(current)setLinkGraph(null);});
+    return()=>{current=false;};
+  },[connected,api,chosen?.id,chosen?.version,chosen?.deleted_at,searchEpoch]);
+
+  const openLinkedNote=(target:Note)=>{
+    if(dirty&&!confirm("Discard unsaved edits before following this note link?"))return;
+    setNotes(items=>items.some(n=>n.id===target.id)?items:[...items,target]);
+    setActiveBook(target.notebook_id);
+    setQuery("");setTrash(false);setPreview(false);setSelected(target.id);
+  };
 
   const selectedNote=chosen;
   const save=async()=>{
@@ -380,6 +397,18 @@ export default function App(){
           <button className="icon-only" aria-label="Close version history" onClick={()=>setRevisions([])}><X size={18}/></button></div>
           {revisions.map(r=><div className="history-row" key={r.version}><div>Revision {r.version}<small>{new Date(r.saved_at).toLocaleString()}</small></div>
             <button className="button subtle" onClick={()=>restoreVersion(r.version)}>Restore</button></div>)}</section>}
+        {linkGraph&&<section className="history link-graph" aria-label="Note links">
+          <div className="history-title"><h3><Link2 size={17} aria-hidden="true"/> Linked notes</h3>
+            <small>Title links match unique notes in the same notebook; ID links can cross notebooks.</small></div>
+          {(["outgoing","incoming"] as const).map(direction=><div key={direction} className="link-group">
+            <h4>{direction==="outgoing"?"References in this note":"Notes referencing this note"}</h4>
+            {linkGraph[direction].results.length===0&&<p>No resolved links</p>}
+            {linkGraph[direction].results.map(target=><button key={target.id}
+              className="button subtle link-target" onClick={()=>openLinkedNote(target)}
+              title={target.title}>{target.title}</button>)}
+            {linkGraph[direction].has_more&&<p>More results exist beyond the first {linkGraph.limit} links.</p>}
+          </div>)}
+        </section>}
       </div></div></>:<div className="no-selection"><div className="blank-logo"><BookOpen size={34}/></div>
         <h2>Your space to think.</h2><p>Select a note to read or edit, or start a new idea.</p>
         <button className="button primary" disabled={trash} onClick={()=>addNote()}><Plus size={18}/> Create a note</button></div>}

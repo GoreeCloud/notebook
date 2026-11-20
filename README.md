@@ -77,3 +77,5 @@ Optional local privacy audit: [read-only SQLite file/sidecar permission inspecti
 Linux: the native Qt Quick client supports per-notebook filters, notebook creation, nested-note creation and comma-separated tag editing, with user-data-isolated Qt smoke tests. Full hierarchy, parity and packaging acceptance remain open. See [Linux Parity](docs/LINUX_PARITY.md).
 
 Linux Qt Quick now exposes [offline portable JSON v2 recovery](docs/LINUX_JSON_RECOVERY.md), with explicit import preview/confirmation and private, **unencrypted** export. User-facing file-picker accessibility and manual validation remain outstanding.
+
+Notes can resolve local links via unique same-notebook `[[Title]]` notation or stable `[[note:UUID|label]]` links. Authenticated link-graph API and web linked-note navigation are documented in [Local Wiki Links](docs/LINKS.md).
