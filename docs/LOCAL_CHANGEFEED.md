@@ -7,7 +7,7 @@ GET /api/v1/changes?after_cursor=0&limit=100
 Authorization: Bearer <local-development-token>
 ```
 
-Returns an ordered array of `cursor`, `note_id`, `notebook_id`, `version`, `deleted_at`, and `recorded_at`, plus `next_cursor`, `latest_cursor`, `has_more`, and an explicit local scope marker. Clients paginate using `next_cursor`, not local timestamps. The endpoint does not send note bodies or access history. Query results are subject to the same development bearer token as all other notebook API endpoints.
+Returns an ordered array of `cursor`, `note_id`, `notebook_id`, `version`, `deleted_at`, and `recorded_at`, plus `next_cursor`, `latest_cursor`, `has_more`, and an explicit local scope marker. Clients paginate using `next_cursor`, not local timestamps. Each response obtains `latest_cursor` and its event page in one explicit SQLite read transaction; concurrent writes cannot slip into the same response after that high-water mark. This mark is local and per-response, not a cross-request snapshot, persistent remote cursor, or event-retention guarantee. The endpoint does not send note bodies or access history. Query results are subject to the same development bearer token as all other notebook API endpoints.
 
 When upgrading an older SQLite database without the event table, Notebook seeds one current-state event for each existing note, **not** a reconstruction of every historical change. The table and triggers are additive; existing notes remain unchanged. The event log grows until future retention rules are implemented.
 

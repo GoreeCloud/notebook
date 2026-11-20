@@ -402,16 +402,19 @@ class Store:
                 "has_more":len(rows)>limit,"limit":limit,"offset":offset}
 
     def changes(self, after_cursor=0, limit=100):
-        # Monotonic local SQLite cursors, not per-device Mesh sync.
+        # A single explicit SQLite read transaction pins the event ceiling
+        # and page to one database snapshot, even as other connections write.
+        # This is local metadata only; it does not implement Mesh replication.
         with self.connection() as db:
-            records = [dict(row) for row in db.execute(
-                """SELECT cursor,note_id,notebook_id,version,deleted_at,recorded_at
-                   FROM note_change_events WHERE cursor>?
-                   ORDER BY cursor LIMIT ?""",
-                (after_cursor, limit + 1))]
+            db.execute("BEGIN")
             last = db.execute(
                 "SELECT COALESCE(MAX(cursor),0) AS latest FROM note_change_events"
             ).fetchone()["latest"]
+            records = [dict(row) for row in db.execute(
+                """SELECT cursor,note_id,notebook_id,version,deleted_at,recorded_at
+                   FROM note_change_events WHERE cursor>? AND cursor<=?
+                   ORDER BY cursor LIMIT ?""",
+                (after_cursor, last, limit + 1))]
         visible = records[:limit]
         return {
             "events": visible,
