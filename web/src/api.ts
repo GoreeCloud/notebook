@@ -40,6 +40,16 @@ export function apiClient(baseUrl:string,token:string) {
     restoreRevision:(note:Note,version:number)=>request<Note>(
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
+    exportMarkdownZip:async()=>{
+      const response=await fetch(baseUrl.replace(/\/$/,"")+"/api/v1/export/markdown-zip",{
+        headers:{"Authorization":"Bearer "+token}
+      });
+      if(!response.ok){
+        const detail=await response.json().catch(()=>null);
+        throw new ApiError(response.status,detail?.detail||"Markdown export failed");
+      }
+      return response.blob();
+    },
     export:()=>request<{format:string;notebooks:Notebook[];notes:Note[];revisions?:Revision[]}>("/export"),
     importMarkdownZip:(archive_base64:string,dry_run:boolean,skip_unsupported:boolean)=>request<{
       mode:string;dry_run:boolean;notebooks:number;notes:number;revisions:number;warnings:string[]

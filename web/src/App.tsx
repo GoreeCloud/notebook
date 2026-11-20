@@ -150,6 +150,14 @@ export default function App(){
     const anchor=document.createElement("a");anchor.href=objectUrl;anchor.download="goreecloud-notebook-export.json";
     anchor.click();URL.revokeObjectURL(objectUrl);setToast("Export downloaded");
   }catch(e){setError(String(e));}};
+  const downloadMarkdownZip=async()=>{try{
+    if(!confirm("Download active notes as a PLAINTEXT Markdown ZIP? Tags, revisions, Trash and attachment metadata are NOT included. Use JSON for full recovery."))return;
+    const blob=await api.exportMarkdownZip();
+    const objectUrl=URL.createObjectURL(blob);
+    const anchor=document.createElement("a");anchor.href=objectUrl;
+    anchor.download="goreecloud-notebook-markdown.zip";anchor.click();
+    URL.revokeObjectURL(objectUrl);setToast("Plaintext Markdown ZIP downloaded");
+  }catch(e){setError(String(e));}};
   const importFile=async (file:File)=>{
     setError("");
     if(file.size>8*1024*1024){setError("Archive exceeds the 8 MiB import limit.");return;}
@@ -257,6 +265,8 @@ export default function App(){
           <button className="nav-item" onClick={()=>fileInput.current?.click()}>
             <ArchiveRestore size={18}/> Import JSON / ENEX / ZIP</button>
           <button className="nav-item" onClick={download}><Download size={18}/> Export JSON</button>
+          <button className="nav-item" onClick={downloadMarkdownZip}>
+            <Download size={18}/> Export Markdown ZIP</button>
           <button className="nav-item" onClick={()=>{setConnected(false);setKey("");}}><Settings2 size={18}/> Disconnect</button>
         </div>
       </div>
