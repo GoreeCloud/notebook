@@ -22,3 +22,7 @@ All `/api/v1/*` paths require a bearer token in the Authorization header. `GET /
 PATCH/DELETE/restore require `expected_version`; out-of-date edits return HTTP 409. All changes are transactional. Use `dry_run=true` before `dry_run=false`; imports remap all record IDs, preserve parent links, and never overwrite existing data. Supports v1 and v2 archive formats with a maximum serialized size of 8 MiB. Treat export content as private.
 
 The local API enforces a 12 MiB streamed HTTP request limit and adds no-store headers on notebook endpoints. Browser origins default to loopback and remote origins require an explicit unsafe development opt-in; see [Local API Security](LOCAL_API_SECURITY.md).
+
+## Hierarchy and input integrity
+
+Changing a parent's `notebook_id` returns HTTP 409 while that note still has any child records, including trashed children. Move the children individually or remove their parent links before moving the parent; this prevents silent cross-notebook references. A note in Trash must be restored before its title/body/tags/pin can be modified. Existing behavior of trashing a parent without cascading deletion of its children is retained. Changes are guarded by `expected_version` and SQLite version checks. Tag items must be 1-64 characters after trimming (maximum 20 tags).

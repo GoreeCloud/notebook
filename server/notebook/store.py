@@ -259,7 +259,21 @@ class Store:
             data = dict(old)
             data.update(changes)
             self.ensure_notebook(db, data["notebook_id"])
+            # Moving a parent without its descendants would silently create
+            # cross-notebook links. Reject until atomic subtree move exists.
+            if data["notebook_id"] != old["notebook_id"]:
+                child = db.execute(
+                    "SELECT id FROM notes WHERE parent_id=? LIMIT 1", (note_id,)
+                ).fetchone()
+                if child:
+                    raise Conflict(
+                        "Move child notes first; parent cannot leave descendants in another notebook"
+                    )
             self.ensure_parent(db, data["parent_id"], data["notebook_id"], note_id)
+            if old["deleted_at"] and not (
+                set(changes) == {"deleted_at"} and changes["deleted_at"] is None
+            ):
+                raise Conflict("Restore a note from Trash before editing it")
             if "tags" in changes:
                 data["tags"] = json.dumps(data["tags"])
             if "pinned" in changes:
@@ -268,13 +282,15 @@ class Store:
                 """INSERT INTO note_revisions (note_id,version,title,body,saved_at)
                    VALUES (?,?,?,?,?)""",
                 (note_id, old["version"], old["title"], old["body"], now()))
-            db.execute(
+            updated = db.execute(
                 """UPDATE notes SET notebook_id=?, parent_id=?, title=?, body=?,
                    tags=?, pinned=?, deleted_at=?, version=version+1, updated_at=?
                    WHERE id=? AND version=?""",
                 (data["notebook_id"], data["parent_id"], data["title"], data["body"],
                  data["tags"], data["pinned"], data["deleted_at"], now(),
                  note_id, expected_version))
+            if updated.rowcount != 1:
+                raise Conflict("Out-of-date version; reload before saving")
         return self.get(note_id, include_deleted=True)
 
     def revisions(self, note_id):
