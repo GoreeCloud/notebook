@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import secrets
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 from .store import Conflict, NotFound, Store, now
 from .transfer import InvalidArchive, export_all, import_archive
 from .enex import parse_enex
+from .http_boundary import LocalApiBoundary
 
 
 class NotebookCreate(BaseModel):
@@ -62,8 +64,23 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     app = FastAPI(title="GoreeCloud Notebook", version="0.1.0", docs_url=None, redoc_url=None)
     origins = [o.strip() for o in os.environ.get(
         "GC_NOTEBOOK_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if o.strip()]
+    # A bearer token is temporary local-development auth, not Identity.
+    # Prevent accidental wildcard or remote browser origins by default.
+    for origin in origins:
+        parsed = urlsplit(origin)
+        if not parsed.scheme in ("http", "https") or not parsed.hostname or (
+            parsed.path not in ("", "/") or parsed.username or parsed.password or
+            parsed.query or parsed.fragment or parsed.netloc != parsed.netloc.strip()
+        ):
+            raise RuntimeError("Invalid GC_NOTEBOOK_ORIGINS entry")
+        if (parsed.hostname not in ("localhost", "127.0.0.1", "::1") and
+                os.environ.get("GC_NOTEBOOK_ALLOW_REMOTE_ORIGINS") != "1"):
+            raise RuntimeError(
+                "Remote CORS origins require explicit GC_NOTEBOOK_ALLOW_REMOTE_ORIGINS=1"
+            )
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET","POST","PATCH","DELETE"],
                        allow_headers=["Authorization","Content-Type"], allow_credentials=False)
+    app.add_middleware(LocalApiBoundary)
 
     def authorize(authorization: Annotated[str | None, Header()] = None):
         if not authorization or not authorization.startswith("Bearer ") or not secrets.compare_digest(

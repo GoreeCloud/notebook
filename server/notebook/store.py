@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -24,7 +25,22 @@ def now() -> str:
 class Store:
     def __init__(self, filename: str):
         self.filename = str(Path(filename).expanduser())
-        Path(self.filename).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.filename).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        database = Path(self.filename)
+        if database.is_symlink():
+            raise ValueError("Refusing a symlinked Notebook database")
+        if not database.exists():
+            # Preserve existing file modes, but create new databases as
+            # private 0600 even when the process umask is permissive.
+            try:
+                flags = os.O_CREAT | os.O_EXCL | os.O_RDWR
+                flags |= getattr(os, "O_NOFOLLOW", 0)
+                fd = os.open(self.filename, flags, 0o600)
+                os.close(fd)
+            except FileExistsError:
+                pass
+        if database.is_symlink():
+            raise ValueError("Refusing a symlinked Notebook database")
         with self.connection() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS notebooks (
