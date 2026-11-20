@@ -13,6 +13,8 @@ from PySide6.QtGui import QGuiApplication
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 from notebook.store import Store, Conflict, NotFound
+from notebook.transfer import InvalidArchive
+from recovery import PortableJsonError, PortableJsonRecovery
 
 
 def default_database() -> str:
@@ -36,6 +38,7 @@ class Bridge(QObject):
         self._selected = ""
         self._show_trash = False
         self._status = "All changes stored on this device"
+        self.recovery = PortableJsonRecovery()
 
     @Property(str, notify=notesChanged)
     def notesJson(self):
@@ -85,6 +88,65 @@ class Bridge(QObject):
     def _message(self, status):
         self._status = status
         self.statusChanged.emit()
+
+    @staticmethod
+    def _local_document_path(file_url: str) -> Path:
+        selected = QUrl(file_url)
+        if (not selected.isValid() or not selected.isLocalFile()
+                or selected.host() not in ("", "localhost")):
+            raise PortableJsonError("Choose a local file using the system picker")
+        path = Path(selected.toLocalFile())
+        if not path.is_absolute():
+            raise PortableJsonError("An absolute local path is required")
+        return path
+
+    @Slot(str, result=str)
+    def previewJsonImport(self, file_url: str) -> str:
+        self.recovery.cancel()
+        try:
+            report = self.recovery.preview(self.store, self._local_document_path(file_url))
+            self._message("JSON preview ready; no data has been imported")
+            return json.dumps(report)
+        except (OSError, InvalidArchive, PortableJsonError, RecursionError) as exc:
+            self._message("JSON import refused: " + type(exc).__name__ +
+                          " (invalid file, size, format or location)")
+            return ""
+
+    @Slot(result=bool)
+    def applyJsonImport(self) -> bool:
+        try:
+            report = self.recovery.apply(self.store)
+            self._active_notebook = ""
+            self._selected = ""
+            self._query = ""
+            self._show_trash = False
+            self.notebooksChanged.emit()
+            self.notesChanged.emit()
+            self.selectedChanged.emit()
+            self.revisionsChanged.emit()
+            self.trashViewChanged.emit()
+            self._message(f"Imported {report['notes']} notes into new notebooks")
+            return True
+        except (OSError, InvalidArchive, PortableJsonError, ValueError) as exc:
+            self._message("JSON import failed: " + type(exc).__name__ +
+                          " (no existing notes overwritten)")
+            return False
+
+    @Slot()
+    def cancelJsonImport(self):
+        self.recovery.cancel()
+        self._message("JSON import canceled; no data changed")
+
+    @Slot(str, result=bool)
+    def exportJsonFile(self, file_url: str) -> bool:
+        try:
+            size = self.recovery.export(self.store, self._local_document_path(file_url))
+            self._message(f"Unencrypted JSON saved ({size} bytes, private file mode)")
+            return True
+        except (OSError, InvalidArchive, PortableJsonError, ValueError) as exc:
+            self._message("JSON export refused: " + type(exc).__name__ +
+                          " (destination must be new and under size limit)")
+            return False
 
     @Slot(str)
     def setQuery(self, query):

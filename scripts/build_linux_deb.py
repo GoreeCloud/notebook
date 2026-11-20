@@ -78,10 +78,11 @@ def build(output: Path):
         app = staging / APP_ROOT
         (app/"vendor").mkdir(parents=True)
         (app/"linux").mkdir(exist_ok=True)
-        shutil.copy2(ROOT/"linux/main.py",app/"linux/main.py")
+        for filename in ("main.py", "recovery.py"):
+            shutil.copy2(ROOT/"linux"/filename,app/"linux"/filename)
         shutil.copytree(ROOT/"linux/qml",app/"linux/qml",ignore=IGNORE)
         (app/"server/notebook").mkdir(parents=True)
-        for name in ("store.py","__init__.py"):
+        for name in ("store.py","transfer.py","__init__.py"):
             shutil.copy2(ROOT/"server/notebook"/name,app/"server/notebook"/name)
         shutil.copytree(qtsrc,app/"vendor/PySide6",ignore=IGNORE,symlinks=True)
         shutil.copytree(shibokensrc,app/"vendor/shiboken6",ignore=IGNORE,symlinks=True)

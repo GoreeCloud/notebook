@@ -75,3 +75,5 @@ Original first-party code uses [MIT](LICENSE). Dependencies retain their own ups
 Optional local privacy audit: [read-only SQLite file/sidecar permission inspection](docs/LOCAL_FILE_PERMISSIONS.md). No automatic permission changes or note-content access.
 
 Linux: the native Qt Quick client supports per-notebook filters, notebook creation, nested-note creation and comma-separated tag editing, with user-data-isolated Qt smoke tests. Full hierarchy, parity and packaging acceptance remain open. See [Linux Parity](docs/LINUX_PARITY.md).
+
+Linux Qt Quick now exposes [offline portable JSON v2 recovery](docs/LINUX_JSON_RECOVERY.md), with explicit import preview/confirmation and private, **unencrypted** export. User-facing file-picker accessibility and manual validation remain outstanding.

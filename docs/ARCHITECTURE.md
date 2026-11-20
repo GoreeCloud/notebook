@@ -38,3 +38,7 @@ Android schema v3 stores stable notebook IDs, optional parent relationships, not
 ## Linux native notebook scope
 
 The Qt Quick bridge maps existing service SQLite notebook IDs and optional parent-note references to native notebook selection, notebook creation, child-note creation and tag edits. No additional Linux database format or network transport was introduced. Qt smoke mode uses disposable SQLite exclusively. See [Linux Parity](LINUX_PARITY.md).
+
+## Linux portable recovery
+
+The native Qt client imports/export portable JSON v2 through local operator-selected file paths, reusing canonical SQLite transfer validation and transactions. A single read transaction establishes a consistent export snapshot. See [Linux JSON Recovery](LINUX_JSON_RECOVERY.md). This remains manual, unencrypted transport, not GoreeCloud Mesh synchronization.

@@ -12,6 +12,8 @@ dpkg-deb --extract "$PACKAGE" "$STAGE"
 APP="$STAGE/opt/goreecloud/notebook"
 test -f "$APP/vendor/PySide6/QtCore.abi3.so"
 test -f "$APP/server/notebook/store.py"
+test -f "$APP/server/notebook/transfer.py"
+test -f "$APP/linux/recovery.py"
 test -x "$STAGE/usr/bin/goreecloud-notebook"
 # Isolate test data in a disposable temp tree, never user production notes.
 QT_QPA_PLATFORM=offscreen GC_NOTEBOOK_SMOKE=1 \
