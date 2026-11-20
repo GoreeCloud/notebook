@@ -9,6 +9,7 @@
 
 ## Knowledge features
 - [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
+- [x] Android native SQL-paginated 160-character note previews with Load More beyond 500 records (physical-device paging acceptance pending)
 - [x] Synthetic Android v1→v3 and v2→v3 physical-device SQLite migration acceptance; real user data untouched
 - [x] Android JSON v2 import with safe dry-run, new-ID append and physical-device isolated instrumentation/rollback acceptance
 - [x] Linux Qt notebook selector, nested-note creation, tags and disposable smoke verification

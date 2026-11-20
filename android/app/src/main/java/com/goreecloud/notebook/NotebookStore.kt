@@ -24,6 +24,15 @@ data class NoteRevision(
     val tags: String, val pinned: Boolean, val savedAt: Long
 )
 
+/** List-only data; a preview must never be used as a save/edit record. */
+data class NotePreview(
+    val id: String, val notebookId: String, val title: String,
+    val excerpt: String, val tags: String, val pinned: Boolean,
+    val parentId: String?, val updatedAt: Long
+)
+data class NotePreviewPage(val results: List<NotePreview>, val hasMore: Boolean)
+
+
 /** Private on-device SQLite. No background sync, network or app-layer encryption. */
 class NotebookStore(context: Context, databaseName:String="notebook.db") :
     SQLiteOpenHelper(context, databaseName, null, 3) {
@@ -150,6 +159,45 @@ class NotebookStore(context: Context, databaseName:String="notebook.db") :
         }
         return results
     }
+
+    /** SQL-paginated list metadata with a bounded body preview. Never send
+     * previews into the editor or save() path; opening uses getNote(). */
+    fun listPreviews(query:String="", trash:Boolean=false, notebookId:String?=null,
+                     limit:Int=200, offset:Int=0): NotePreviewPage {
+        require(limit in 1..200 && offset in 0..100_000) {
+            "Invalid Notebook preview page"
+        }
+        val conditions=mutableListOf(if(trash)"deleted=1" else "deleted=0")
+        val args=mutableListOf<String>()
+        if(notebookId!=null){conditions+="notebook_id=?";args+=notebookId}
+        if(query.isNotBlank()) {
+            val escaped=query.trim().replace("\\","\\\\").replace("%","\\%").replace("_","\\_")
+            conditions+="(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')"
+            repeat(3){args+="%"+escaped+"%"}
+        }
+        val previews=mutableListOf<NotePreview>()
+        val fields=arrayOf(
+            "id","notebook_id","title","substr(body,1,160) AS excerpt",
+            "tags","pinned","parent_id","updated_at"
+        )
+        var hasMore=false
+        readableDatabase.query("notes",fields,conditions.joinToString(" AND "),
+            args.toTypedArray(),null,null,"pinned DESC,updated_at DESC,id",
+            (limit+1).toString()+" OFFSET "+offset).use { c ->
+            while(c.moveToNext()) {
+                if(previews.size>=limit) {hasMore=true;break}
+                previews+=NotePreview(
+                    id=c.getString(0),notebookId=c.getString(1),title=c.getString(2),
+                    excerpt=c.getString(3),tags=c.getString(4),pinned=c.getInt(5)!=0,
+                    parentId=if(c.isNull(6))null else c.getString(6),
+                    updatedAt=c.getLong(7)
+                )
+            }
+        }
+        return NotePreviewPage(previews,hasMore)
+    }
+
+    fun getNote(id:String):NoteRecord? = find(readableDatabase,id)
 
     fun create(notebookId:String=defaultNotebookId(),parentId:String?=null): NoteRecord {
         require(notebookId.isNotBlank())

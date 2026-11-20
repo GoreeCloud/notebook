@@ -25,3 +25,22 @@ An optional **read-only** developer verification script, `scripts/verify_android
 **JSON v2 import acceptance (November 20, 2026):** The isolated native instrumentation on the same OnePlus N200 passed append-only JSON import/export, dry-run, new UUID note hierarchy, revision history, malformed-reference refusal, and synthetic SQLite rollback, leaving the normal app database unchanged. See [Android JSON Import](ANDROID_JSON_IMPORT.md). This is test-code acceptance, not a manual document-picker usability test.
 
 CI assembles the Android debug APK and test APK; full physical note editing, Android Storage Access Framework document-picker export/import interactions, real-world restore rehearsals, and human/assistive-technology accessibility should still be tested independently. Native Android is not considered a full parity release until human interaction tests, assistive-technology testing, protected backups/imports and cross-device Mesh security are complete.
+
+## Bounded native browse view
+
+The Kotlin/Compose notebook list now fetches 200 SQLite-paginated
+note previews at a time, with at most 160 characters of body text per item.
+A user-operated **Load 200 more notes** control grows the displayed window to
+a 2,000-summary cap; search/notebook/Trash switches reset the window. The
+selected editor loads the full note through an independent ID-based query
+rather than treating the truncated preview as writable content. Trash rows are
+filtered before paging, and stable order includes the note ID as a tie-breaker.
+
+The legacy NotebookStore.list() method remains a bounded 500-full-note
+compatibility interface; large libraries should use listPreviews.
+Offset pages are not a snapshot under concurrent writes and large-library
+responsive/assistive-tech behavior still needs physical-device acceptance.
+An isolated Android instrumentation fixture inserts 535 synthetic notes,
+checks three pages and full-body selection, and verifies Trash visibility.
+GitHub Android CI builds this instrumentation APK but does not execute device
+tests automatically.
