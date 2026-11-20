@@ -1,0 +1,4 @@
+# Normalize scripts in git, restore platform line endings on checkout
+* text=auto
+*.sh text eol=lf
+*.bat text eol=crlf
