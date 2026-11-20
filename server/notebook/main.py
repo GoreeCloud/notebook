@@ -9,7 +9,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from .store import Conflict, NotFound, Store, now
 from .transfer import InvalidArchive, export_all, import_archive
@@ -28,7 +28,7 @@ class NoteCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=1_000_000)
     parent_id: str | None = None
-    tags: list[str] = Field(default_factory=list, max_length=20)
+    tags: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]] = Field(default_factory=list, max_length=20)
 
 
 class NotePatch(BaseModel):
@@ -37,7 +37,7 @@ class NotePatch(BaseModel):
     parent_id: str | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     body: str | None = Field(default=None, max_length=1_000_000)
-    tags: list[str] | None = Field(default=None, max_length=20)
+    tags: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]] | None = Field(default=None, max_length=20)
     pinned: bool | None = None
 
 

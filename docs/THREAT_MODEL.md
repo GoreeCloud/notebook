@@ -16,3 +16,5 @@ Assets: private note text, tags, hierarchy, revisions, bearer token, SQLite stor
 GoreeShield governs privacy policies and user consent; Wardveil governs cybersecurity. Neither is technically integrated yet. Do not send notebook data to outside services by default.
 
 Additional local API controls, unresolved remote exposure risks, and test evidence are in [Local API Security](LOCAL_API_SECURITY.md).
+
+Hierarchical data-integrity protection now rejects a parent move into another notebook if descendants would retain invalid references. Service create/update endpoints validate tag element size and reject empty tags, and trashed notes cannot be edited without restoration. These are local storage safeguards, not Identity ACLs or cross-device conflict resolution.
