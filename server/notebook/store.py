@@ -299,7 +299,7 @@ class Store:
         return [note for note in self.list_notes() if
                 note["id"] != note_id and needle in note["body"].casefold()]
 
-    def search_ranked(self, phrase, limit=50, offset=0):
+    def search_ranked(self, phrase, limit=50, offset=0, notebook_id=None):
         # Prefix-token syntax is constructed, never accepted raw from client.
         # Prevent arbitrary FTS5 operators and SQL-like injection strings.
         terms = re.findall(r"\w+", phrase, flags=re.UNICODE)
@@ -311,7 +311,7 @@ class Store:
         if not self.fts_enabled:
             # Explicit fallback on SQLite builds without FTS5 support;
             # LIKE retains existing API semantics but caps at 500 items.
-            matches = self.list_notes(q=" ".join(terms))
+            matches = self.list_notes(notebook_id=notebook_id, q=" ".join(terms))
             return {"backend": "like", "results": matches[offset:offset+limit],
                     "has_more": len(matches) > offset+limit,
                     "limit": limit, "offset": offset}
@@ -321,9 +321,10 @@ class Store:
                 SELECT notes.* FROM notes_fts
                 JOIN notes ON notes.rowid=notes_fts.rowid
                 WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL
+                AND (? IS NULL OR notes.notebook_id=?)
                 ORDER BY bm25(notes_fts, 6.0, 1.0, 2.0), notes.updated_at DESC
                 LIMIT ? OFFSET ?
-            """, (expression, limit + 1, offset)).fetchall()
+            """, (expression, notebook_id, notebook_id, limit + 1, offset)).fetchall()
         shown=rows[:limit]
         return {"backend":"fts5","results":[self.note(row) for row in shown],
                 "has_more":len(rows)>limit,"limit":limit,"offset":offset}

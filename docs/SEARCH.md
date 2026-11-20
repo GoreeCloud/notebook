@@ -14,3 +14,7 @@ The `notes_fts` virtual table is created only if the embedded SQLite build suppo
 On first launch against an older service SQLite file the index is populated from current active notes. Future edits/imports are tracked via SQL triggers, preserving existing stored note content. The FTS index is **derived local data and is not encrypted**; the index and SQLite database must have device access controls. Full-text ranking may lag behind a newly typed unsaved draft. Trash content is excluded from FTS results but stays in the normal Trash UI. Export and repair/index rebuild tooling, large-corpus benchmarks and language-sensitive stemming remain unimplemented.
 
 This is local search indexing, **not** GoreeCloud public web Search, Mesh synchronization, Identity, or cross-device indexing. Test evidence is in `server/tests/test_search_fts.py`.
+
+## Notebook-aware search scope
+
+An optional `notebook_id` parameter constrains FTS matching **before** applying ranking, limit and offset. The web app uses the selected notebook filter when querying the API, ensuring a large collection in another notebook cannot use up the first 200 ranked search results. Omitting the parameter searches all notebooks. This is user-selected query scoping, **not** an Identity authorization boundary; the shared development bearer token still has access to the complete local SQLite service database.
