@@ -3,6 +3,8 @@ package com.goreecloud.notebook
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Save
@@ -18,6 +21,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,7 +53,12 @@ class MainActivity : ComponentActivity() {
 private fun NotebookScreen(store: NotebookStore) {
     var search by rememberSaveable { mutableStateOf("") }
     var showTrash by rememberSaveable { mutableStateOf(false) }
-    var notes by remember { mutableStateOf(store.list()) }
+    var notebooks by remember { mutableStateOf(store.notebooks()) }
+    var activeNotebook by rememberSaveable { mutableStateOf(store.defaultNotebookId()) }
+    var showNotebookMenu by remember { mutableStateOf(false) }
+    var createNotebookDialog by remember { mutableStateOf(false) }
+    var newNotebookName by rememberSaveable { mutableStateOf("") }
+    var notes by remember { mutableStateOf(store.list(notebookId=activeNotebook)) }
     var selected by remember { mutableStateOf<NoteRecord?>(null) }
     var title by rememberSaveable { mutableStateOf("") }
     var body by rememberSaveable { mutableStateOf("") }
@@ -55,12 +67,35 @@ private fun NotebookScreen(store: NotebookStore) {
     var status by remember { mutableStateOf("Local · offline") }
     var historyVisible by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
+    var exportConfirm by remember { mutableStateOf(false) }
+    val context=LocalContext.current
+    val exportScope=rememberCoroutineScope()
+    val exportLauncher=rememberLauncherForActivityResult(
+        contract=ActivityResultContracts.CreateDocument("application/json")
+    ){ uri ->
+        if(uri!=null) {
+            exportScope.launch {
+                val outcome=withContext(Dispatchers.IO) {
+                    try {
+                        val bytes=store.exportJsonV2()
+                        val stream=context.contentResolver.openOutputStream(uri,"w")
+                            ?: error("Document provider cannot open output")
+                        stream.use { it.write(bytes) }
+                        "Exported local notes to your chosen document"
+                    } catch (e:Exception) {
+                        "Export failed: ${e.message ?: e.javaClass.simpleName}"
+                    }
+                }
+                status=outcome
+            }
+        } else status="Export cancelled"
+    }
     val editing = selected != null
     val dirty = selected?.let {
         title != it.title || body != it.body || tags != it.tags || pinned != it.pinned
     } ?: false
 
-    fun refresh() { notes = store.list(search,showTrash) }
+    fun refresh() { notes = store.list(search,showTrash,activeNotebook) }
     fun select(note:NoteRecord) {
         selected=note
         title=note.title; body=note.body
@@ -69,6 +104,19 @@ private fun NotebookScreen(store: NotebookStore) {
     }
     fun goBack() {
         if(dirty) confirmDiscard=true else { selected=null; refresh() }
+    }
+    fun addChildNote() {
+        val parent=selected?:return
+        if(parent.deleted || dirty) {
+            status="Save your edits before creating a nested note"
+            return
+        }
+        try {
+            select(store.create(parent.notebookId,parent.id))
+            refresh()
+        } catch (_:IllegalArgumentException) {
+            status="Cannot create child: restore the parent note first"
+        }
     }
     fun save() {
         val old=selected?:return
@@ -90,6 +138,40 @@ private fun NotebookScreen(store: NotebookStore) {
             confirmDiscard=false; selected=null;refresh()
         }){Text("Discard")}},
         dismissButton={TextButton(onClick={confirmDiscard=false}){Text("Keep editing")}}
+    )
+    if(exportConfirm) AlertDialog(
+        onDismissRequest={exportConfirm=false},
+        title={Text("Export plaintext Notebook JSON?")},
+        text={Text("The export includes all notebooks, notes, Trash, tags and note text history. " +
+            "It is NOT encrypted, and your selected document provider may upload it to a cloud. " +
+            "Historical Android revision tags and pin state are not preserved in JSON v2. " +
+            "Choose a protected local destination and retain a separate backup.")},
+        confirmButton={TextButton(onClick={
+            exportConfirm=false
+            exportLauncher.launch("goreecloud-notebook-android-export.json")
+        }){Text("Choose destination")}},
+        dismissButton={TextButton(onClick={exportConfirm=false}){Text("Cancel")}}
+    )
+    if(createNotebookDialog) AlertDialog(
+        onDismissRequest={createNotebookDialog=false},
+        title={Text("New notebook")},
+        text={
+            OutlinedTextField(value=newNotebookName,
+                onValueChange={newNotebookName=it.take(120)},
+                label={Text("Notebook name")},singleLine=true)
+        },
+        confirmButton={TextButton(onClick={
+            try {
+                val book=store.createNotebook(newNotebookName)
+                notebooks=store.notebooks();activeNotebook=book.id
+                selected=null;refresh()
+                status="Created notebook: ${book.name}"
+                newNotebookName="";createNotebookDialog=false
+            }catch (_:IllegalArgumentException){
+                status="Notebook name is required (maximum 120 characters)"
+            }
+        }){Text("Create")}},
+        dismissButton={TextButton(onClick={createNotebookDialog=false}){Text("Cancel")}}
     )
     if(historyVisible && selected!=null) {
         val history=remember(selected?.id,selected?.version){store.revisions(selected!!.id)}
@@ -139,6 +221,9 @@ private fun NotebookScreen(store: NotebookStore) {
                     }
                 },
                 actions={
+                    if(!editing) {
+                        TextButton(onClick={exportConfirm=true}) { Text("Export JSON") }
+                    }
                     if(editing){
                         val current=selected
                         if(current!=null && current.deleted){
@@ -149,6 +234,7 @@ private fun NotebookScreen(store: NotebookStore) {
                             }){Text("Restore")}
                         } else if(current!=null) {
                             TextButton(onClick={historyVisible=true}){Text("History")}
+                            TextButton(onClick={addChildNote()}){Text("Add child")}
                             IconButton(onClick={save()}){
                                 Icon(Icons.Default.Save,"Save note")
                             }
@@ -156,7 +242,7 @@ private fun NotebookScreen(store: NotebookStore) {
                                 if(dirty)status="Save or discard edits before moving to Trash"
                                 else if(store.trash(current)){
                                     selected=null;refresh();status="Moved to Trash"
-                                }else status="Could not move note; reopen it."
+                                }else status="Move failed: check child notes or reopen this note."
                             }){Icon(Icons.Default.DeleteOutline,"Move to Trash")}
                         }
                     }
@@ -166,7 +252,7 @@ private fun NotebookScreen(store: NotebookStore) {
         floatingActionButton={
             if(!editing && !showTrash)ExtendedFloatingActionButton(
                 text={Text("New note")},icon={Icon(Icons.Default.Add,null)},
-                onClick={select(store.create());refresh()}
+                onClick={select(store.create(activeNotebook));refresh()}
             )
         }
     ){padding->
@@ -180,7 +266,33 @@ private fun NotebookScreen(store: NotebookStore) {
                         Text(if(showTrash)"All notes" else "Trash")
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Box {
+                        TextButton(onClick={showNotebookMenu=true}) {
+                            Text(notebooks.firstOrNull{it.id==activeNotebook}?.name?:"My Notebook",
+                                maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Icon(Icons.Default.ArrowDropDown,"Choose notebook")
+                        }
+                        DropdownMenu(expanded=showNotebookMenu,
+                            onDismissRequest={showNotebookMenu=false}) {
+                            notebooks.forEach { notebook ->
+                                DropdownMenuItem(text={Text(notebook.name)},onClick={
+                                    activeNotebook=notebook.id
+                                    showNotebookMenu=false
+                                    selected=null
+                                    refresh()
+                                })
+                            }
+                            DropdownMenuItem(text={Text("Create new notebook")},onClick={
+                                showNotebookMenu=false
+                                newNotebookName=""
+                                createNotebookDialog=true
+                            })
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 OutlinedTextField(value=search,onValueChange={search=it;refresh()},
                     modifier=Modifier.fillMaxWidth(),placeholder={Text("Search notes and tags")},
                     leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true,
@@ -192,9 +304,16 @@ private fun NotebookScreen(store: NotebookStore) {
                     items(notes,key={it.id}){note->
                         ElevatedCard(onClick={select(note)},modifier=Modifier.fillMaxWidth()){
                             Column(Modifier.fillMaxWidth().padding(18.dp)){
-                                Text((if(note.pinned)"★ " else "")+note.title,
+                                Text((if(note.parentId!=null)"↳ " else "")+
+                                    (if(note.pinned)"★ " else "")+note.title,
                                     fontSize=17.sp,fontWeight=FontWeight.SemiBold,
                                     maxLines=1,overflow=TextOverflow.Ellipsis)
+                                if(note.parentId!=null) {
+                                    val parent=notes.firstOrNull{it.id==note.parentId}
+                                    Text("Nested under: ${parent?.title?:"parent note"}",
+                                        fontSize=11.sp,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Spacer(Modifier.height(7.dp))
                                 Text(note.body.ifBlank{"Start writing..."},
                                     fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis,

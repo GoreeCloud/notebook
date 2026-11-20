@@ -8,7 +8,8 @@
 - [ ] Passing GitHub CI and enforced protected-main PR flow
 
 ## Knowledge features
-- [ ] Complete tree/attachments/tags/revisions parity across all clients
+- [x] Native Android SQLite v3 notebooks, nested notes and explicit plaintext JSON v2 export
+- [ ] Complete tree/attachments/tags/revisions parity and authenticated import across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
 - [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
 - [x] Safe Markdown ZIP import/export of active note trees with path validation, basic round-trip tests and explicit metadata/media-loss acknowledgement
