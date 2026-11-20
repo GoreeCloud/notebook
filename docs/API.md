@@ -16,3 +16,5 @@ All `/api/v1/*` paths require a bearer token in the Authorization header. `GET /
 | `/api/v1/import/enex` | POST | ENEX text, dates and tags import; requires `{xml,dry_run,skip_resources}` JSON |
 
 PATCH/DELETE/restore require `expected_version`; out-of-date edits return HTTP 409. All changes are transactional. Use `dry_run=true` before `dry_run=false`; imports remap all record IDs, preserve parent links, and never overwrite existing data. Supports v1 and v2 archive formats with a maximum serialized size of 8 MiB. Treat export content as private.
+
+The local API enforces a 12 MiB streamed HTTP request limit and adds no-store headers on notebook endpoints. Browser origins default to loopback and remote origins require an explicit unsafe development opt-in; see [Local API Security](LOCAL_API_SECURITY.md).
