@@ -15,6 +15,11 @@ export type NoteLinkGraph = {
   limit:number;offset:number;resolution:string;
 };
 
+export type NoteLinkSummaryGraph = Omit<NoteLinkGraph,"incoming"|"outgoing"> & {
+  incoming:{results:NoteSummary[];has_more:boolean};
+  outgoing:{results:NoteSummary[];has_more:boolean};
+};
+
 export type NotePage = {
   results:Note[];has_more:boolean;offset:number;next_offset:number;limit:number;
 };
@@ -63,6 +68,8 @@ export function apiClient(baseUrl:string,token:string) {
     revisions:(id:string)=>request<Revision[]>("/notes/"+encode(id)+"/revisions"),
     noteLinks:(id:string,limit=50,offset=0)=>request<NoteLinkGraph>(
       "/notes/"+encode(id)+"/links?limit="+limit+"&offset="+offset),
+    noteLinksSummary:(id:string,limit=50,offset=0)=>request<NoteLinkSummaryGraph>(
+      "/notes/"+encode(id)+"/links?summary=true&limit="+limit+"&offset="+offset),
     restoreRevision:(note:Note,version:number)=>request<Note>(
       "/notes/"+encode(note.id)+"/revisions/"+version+"/restore",{
       method:"POST",body:JSON.stringify({expected_version:note.version})}),
