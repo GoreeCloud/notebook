@@ -4,7 +4,26 @@ import {ArchiveRestore,BookOpen,Check,ChevronDown,ChevronRight,Download,FilePlus
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {apiClient,ApiError,type Note,type Notebook,type Revision} from "./api";
+import {accentOptions,preference,resolveTheme,themeOptions,type Accent,type ThemeMode} from "./theme";
 import {isLocalNotebookEndpoint} from "./endpoint";
+
+function ThemeControls({theme,accent,onTheme,onAccent}:{
+  theme:ThemeMode;accent:Accent;
+  onTheme:(mode:ThemeMode)=>void;onAccent:(value:Accent)=>void;
+}){
+  return <div className="theme-controls" aria-label="GoreeCloud UI preferences">
+    <label>Appearance
+      <select aria-label="Color theme" value={theme} onChange={e=>onTheme(e.target.value as ThemeMode)}>
+        {themeOptions.map(value=><option key={value} value={value}>{value==="system"?"System":value==="dark"?"Dark":"Light"}</option>)}
+      </select>
+    </label>
+    <label>Accent
+      <select aria-label="Accent family" value={accent} onChange={e=>onAccent(e.target.value as Accent)}>
+        {accentOptions.map(value=><option key={value} value={value}>{value[0].toUpperCase()+value.slice(1)}</option>)}
+      </select>
+    </label>
+  </div>;
+}
 
 function sortTree(notes:Note[]) {
   const groups=new Map<string,Note[]>();
@@ -23,6 +42,33 @@ function sortTree(notes:Note[]) {
 }
 
 export default function App(){
+  // Only design preferences are saved locally; credentials and notes stay memory/API-bound.
+  const [themeMode,setThemeMode]=useState<ThemeMode>(()=>{
+    try{return preference(window.localStorage.getItem("gc-notebook-theme"),themeOptions,"system");}
+    catch{return "system";}
+  });
+  const [accent,setAccent]=useState<Accent>(()=>{
+    try{return preference(window.localStorage.getItem("gc-notebook-accent"),accentOptions,"iris");}
+    catch{return "iris";}
+  });
+  const [prefersDark,setPrefersDark]=useState(false);
+  useEffect(()=>{
+    const media=window.matchMedia("(prefers-color-scheme: dark)");
+    setPrefersDark(media.matches);
+    const update=(event:MediaQueryListEvent)=>setPrefersDark(event.matches);
+    media.addEventListener("change",update);
+    return()=>media.removeEventListener("change",update);
+  },[]);
+  useEffect(()=>{
+    const root=document.documentElement;
+    root.dataset.gcTheme=resolveTheme(themeMode,prefersDark);
+    root.dataset.gcAccent=accent;
+    root.style.colorScheme=resolveTheme(themeMode,prefersDark);
+    try{
+      window.localStorage.setItem("gc-notebook-theme",themeMode);
+      window.localStorage.setItem("gc-notebook-accent",accent);
+    }catch{/* Private browsing or restricted storage: keep in-memory selections. */}
+  },[themeMode,accent,prefersDark]);
   const [endpoint,setEndpoint]=useState("http://127.0.0.1:8000");
   const [key,setKey]=useState("");
   const [connected,setConnected]=useState(false);
@@ -247,6 +293,7 @@ export default function App(){
         {error&&<p role="alert" className="error">{error}</p>}
         <button className="button primary" type="submit">Open Notebook <ChevronRight size={18}/></button>
       </form>
+      <ThemeControls theme={themeMode} accent={accent} onTheme={setThemeMode} onAccent={setAccent}/>
       <p className="fineprint">Development preview · No cloud sync or account sign-in yet</p>
     </div>
   </main>;
@@ -267,6 +314,7 @@ export default function App(){
         <div className="nav-heading lower">LIBRARY</div>
         <button className={"nav-item "+(trash?"active":"")} onClick={()=>{setTrash(true);setSelected("");setSidebarOpen(false);}}><Trash2 size={18}/> Trash</button>
         <div className="sidebar-bottom">
+          <ThemeControls theme={themeMode} accent={accent} onTheme={setThemeMode} onAccent={setAccent}/>
           <input ref={fileInput} type="file" accept=".json,.enex,.zip,application/json,text/xml,application/xml,application/zip" hidden
             aria-label="Select Notebook JSON, ENEX or Markdown ZIP archive"
             onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file);e.currentTarget.value="";}}/>
