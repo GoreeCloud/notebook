@@ -44,3 +44,32 @@ An isolated Android instrumentation fixture inserts 535 synthetic notes,
 checks three pages and full-body selection, and verifies Trash visibility.
 GitHub Android CI builds this instrumentation APK but does not execute device
 tests automatically.
+
+## Offline local wiki-link graph — development preview
+
+The Android note editor offers a **Links** dialog for the first 30 incoming
+and outgoing local note references. It resolves unique case-folded
+same-notebook title references, and explicit [[note:UUID|label]] references
+across local notebooks, excluding ambiguous titles, self-links, missing
+targets and Trash. Reference scans run on a background IO dispatcher,
+with no Android INTERNET permission or remote resolver.
+
+Following a link opens the complete note via a local SQLite ID lookup,
+adjusts the notebook filter, and explicitly asks before discarding
+unsaved edits. It does not auto-save, auto-sync or rewrite the Markdown.
+A synthetic Android instrumentation fixture tests cross-notebook IDs,
+Unicode case folding, duplicates, Trash exclusions and bounded results;
+building its APK alone is not runtime acceptance. This is independent of
+the web/Linux implementation and of GoreeCloud Mesh.
+
+
+### Synthetic physical-device result
+
+The isolated OnePlus N200 API-37 instrumentation was executed on November 20,
+2026. It passed append-only JSON recovery, atomic rollback, 535-note paging,
+full-body lookup, Trash filtering, Unicode/stable-ID wiki links and ambiguous
+title/Trash rejection. Both temporary debug APKs were uninstalled and a final
+package inventory showed none remaining. See
+[Physical-device test evidence](evidence/android-physical-regression-2026-11-20.md).
+This does **not** establish human Compose dialog/TalkBack acceptance,
+production device security or a signed release.
