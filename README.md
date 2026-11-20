@@ -47,6 +47,8 @@ In another terminal, `cd notebook/web && npm ci && npm run dev`, then browse to 
 
 With the Python venv created above, run `.venv/bin/pip install -r linux/requirements.txt && ./linux/run.sh`. Requires a working Linux desktop session and Qt 6.12 libraries. The default SQLite path is `~/.local/share/goreecloud/notebook/notes.sqlite3` (or `$XDG_DATA_HOME/goreecloud/notebook/notes.sqlite3`). No server or login is needed.
 
+The repository also includes an **experimental unsigned x86_64 .deb builder** in `scripts/build_linux_deb.py`. It bundles Qt 6.12.0 dynamic libraries and is not a production release or verified installation. See [Linux Packaging](docs/LINUX_PACKAGING.md) and its explicit redistribution review gate.
+
 ## Native Android
 
 Open `android/` with Android Studio and JDK 21; build with `cd android && ./gradlew :app:assembleDebug`. The Android app requires **no INTERNET permission**, does not use a WebView, and stores notes in its own sandbox. It does not yet support backups, cross-device access or encryption at the application layer. Successful GitHub Android CI builds publish a **debug-only APK** as a short-lived Actions artifact (not a production-signed or device-validated release).

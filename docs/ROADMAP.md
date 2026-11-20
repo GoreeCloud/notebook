@@ -25,7 +25,7 @@
 - [x] Local SQLite note-mutation event cursor with pagination and migration baseline
 - [ ] Mesh-owned offline sync with authenticated device cursors and conflict policy
 - [ ] Optional Yjs collaboration after security/licensing review
-- [ ] Signed APK, native Linux packaging and verified upgrade/recovery
+- [ ] Signed APK, native Linux package and verified upgrade/recovery (experimental unsigned .deb builder added; full packaging release gates not met)
 - [ ] GoreeCloud Containers deployment when ready, documented Docker/Podman alternatives
 
 Unchecked items are not implemented or not yet independently verified.
