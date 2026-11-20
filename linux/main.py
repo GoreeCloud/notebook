@@ -35,6 +35,7 @@ class Bridge(QObject):
         super().__init__()
         self.store = Store(database)
         self._query = ""
+        self._notes_window = 500
         self._active_notebook = ""
         self._selected = ""
         self._show_trash = False
@@ -47,14 +48,42 @@ class Bridge(QObject):
 
     @Property(str, notify=notesChanged)
     def notesJson(self):
-        notes = self.store.list_notes(
+        """Legacy array property with full note objects, capped at 500."""
+        return json.dumps(self.store.list_notes(
             notebook_id=self._active_notebook or None,
-            q=self._query,
-            include_deleted=self._show_trash,
-        )
-        if self._show_trash:
-            notes = [n for n in notes if n["deleted_at"]]
-        return json.dumps(notes)
+            q=self._query, include_deleted=self._show_trash,
+            deleted_only=self._show_trash))
+
+    @Property(str, notify=notesChanged)
+    def notesPageJson(self):
+        """Bounded summaries; full body is fetched only for selectedJson."""
+        items = []
+        offset = 0
+        remaining = self._notes_window
+        has_more = False
+        while remaining:
+            take = min(500, remaining)
+            page = self.store.list_notes_page(
+                notebook_id=self._active_notebook or None, q=self._query,
+                include_deleted=self._show_trash, deleted_only=self._show_trash,
+                limit=take, offset=offset, summary_only=True)
+            items.extend(page["results"])
+            count = len(page["results"])
+            offset += count
+            remaining -= count
+            has_more = page["has_more"]
+            if not has_more or count < take:
+                break
+        capped = has_more and self._notes_window >= 5000
+        return json.dumps({"results": items, "has_more": has_more and not capped,
+                           "truncated": capped, "shown": len(items)})
+
+    @Slot()
+    def loadMoreNotes(self):
+        page = json.loads(self.notesPageJson)
+        if page["has_more"] and self._notes_window < 5000:
+            self._notes_window = min(5000, self._notes_window + 500)
+            self.notesChanged.emit()
 
     @Property(str, notify=notebooksChanged)
     def activeNotebook(self):
@@ -136,6 +165,7 @@ class Bridge(QObject):
             self._active_notebook = ""
             self._selected = ""
             self._query = ""
+            self._notes_window = 500
             self._show_trash = False
             self.notebooksChanged.emit()
             self.notesChanged.emit()
@@ -168,6 +198,7 @@ class Bridge(QObject):
     @Slot(str)
     def setQuery(self, query):
         self._query = query[:200]
+        self._notes_window = 500
         self.notesChanged.emit()
 
     @Slot(str)
@@ -177,6 +208,7 @@ class Bridge(QObject):
                 self._message("Notebook does not exist")
                 return
         self._active_notebook = notebook_id
+        self._notes_window = 500
         self._selected = ""
         self.notebooksChanged.emit()
         self.selectedChanged.emit()
@@ -235,6 +267,7 @@ class Bridge(QObject):
         self._selected = note["id"]
         self._active_notebook = note["notebook_id"]
         self._query = ""
+        self._notes_window = 500
         self._show_trash = False
         self.notebooksChanged.emit()
         self.trashViewChanged.emit()
@@ -246,6 +279,7 @@ class Bridge(QObject):
     @Slot(bool)
     def setTrashView(self, enabled):
         self._show_trash = enabled
+        self._notes_window = 500
         self._selected = ""
         self.selectedChanged.emit()
         self.revisionsChanged.emit()

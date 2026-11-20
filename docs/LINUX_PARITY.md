@@ -33,3 +33,18 @@ The graph refreshes when the selected note or local note collection changes.
 Long link lists currently show a truncation indicator rather than an additional
 page control. Headless Qt and synthetic bridge tests confirm behavior but do
 not establish real-device keyboard/screen-reader accessibility acceptance.
+
+## Large local collections and Trash — development preview
+
+The Qt sidebar requests SQL-paginated **160-character text previews** rather
+than transferring every full note body into the list. It loads 500 summaries
+initially, exposes an explicit Load 500 more button and caps the in-memory
+sidebar view at 5,000 notes with a visible narrowing hint. Opening a note
+still fetches its complete Markdown via the existing selected-note path.
+
+Trash is filtered in SQLite **before** page limits; deleted notes beyond the
+first 500 active entries are no longer silently hidden. Search and notebook
+filters also apply before SQL pagination. Changing the filter, notebook,
+Trash mode or following a cross-notebook link resets the page window.
+As with the web list, offset pages can move during concurrent writes; no
+cross-device snapshot or Mesh synchronization is provided.

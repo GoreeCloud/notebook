@@ -122,6 +122,46 @@ class LinuxBridgeTest(unittest.TestCase):
         self.assertIn('if (hasEdits)', qml)
         self.assertIn('backend.navigateLinkedNote(noteId)', qml)
 
+    def test_paged_sidebar_summaries_and_trash_beyond_active_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = Bridge(str(Path(directory) / "notes.sqlite3"))
+            book = bridge.store.notebooks()[0]["id"]
+            with bridge.store.connection() as db:
+                for i in range(535):
+                    db.execute(
+                        """INSERT INTO notes
+                        (id,notebook_id,title,body,tags,created_at,updated_at)
+                        VALUES (?,?,?,?,?,?,?)""",
+                        (f"list-{i:04}", book, f"Note {i:04}", "private" * 100,
+                         "[]", "2026-11-20T00:00:00Z",
+                         "2026-11-20T00:00:00Z"),
+                    )
+                db.execute(
+                    """INSERT INTO notes (id,notebook_id,title,body,tags,deleted_at,
+                    created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)""",
+                    ("deep-trash", book, "Old Trash", "not exported in sidebar",
+                     "[]", "2026-11-20T00:00:00Z", "2026-11-20T00:00:00Z",
+                     "2026-11-20T00:00:00Z"),
+                )
+            first = json.loads(bridge.notesPageJson)
+            self.assertEqual(len(first["results"]), 500)
+            self.assertTrue(first["has_more"])
+            self.assertNotIn("body", first["results"][0])
+            self.assertTrue(all(len(r["preview"]) <= 160 for r in first["results"]))
+            bridge.loadMoreNotes()
+            second = json.loads(bridge.notesPageJson)
+            self.assertEqual(len(second["results"]), 535)
+            self.assertFalse(second["has_more"])
+            self.assertEqual(len({r["id"] for r in second["results"]}), 535)
+            bridge.setTrashView(True)
+            trash = json.loads(bridge.notesPageJson)
+            self.assertEqual([r["id"] for r in trash["results"]], ["deep-trash"])
+            self.assertFalse(trash["has_more"])
+            bridge.setTrashView(False)
+            self.assertEqual(len(json.loads(bridge.notesPageJson)["results"]), 500)
+            bridge.setQuery("Note 0534")
+            self.assertEqual(len(json.loads(bridge.notesPageJson)["results"]), 1)
+
     def test_smoke_uses_only_ephemeral_database(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "normal-user-database"
