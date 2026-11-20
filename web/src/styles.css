@@ -40,3 +40,9 @@
 .link-group{padding:12px 0;border-top:1px solid var(--gc-outline-soft)}
 .link-group h4{font-size:12px;color:var(--gc-text);margin:0 0 10px}
 .link-target{margin:3px;max-width:100%;overflow-wrap:anywhere;text-align:left;white-space:normal}
+
+/* Explicit bounded pagination; no infinite scroll or background account sync. */
+.load-more-notes{display:block;width:calc(100% - 28px);min-height:44px;margin:15px 14px;
+  border-radius:var(--gc-radius-sm);background:var(--gc-surface-tonal);
+  color:var(--gc-text);border:1px solid var(--gc-outline-soft);font-weight:650}
+.load-more-notes:focus-visible{outline:3px solid var(--gc-focus-ring);outline-offset:2px}

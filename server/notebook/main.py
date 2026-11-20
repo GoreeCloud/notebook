@@ -125,6 +125,16 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
               include_deleted: bool = False):
         return store.list_notes(notebook_id, q, include_deleted)
 
+    @api.get("/notes/page")
+    def notes_page(notebook_id: str | None = None,
+                   q: str = Query(default="", max_length=200),
+                   include_deleted: bool = False,
+                   limit: int = Query(default=200, ge=1, le=500),
+                   offset: int = Query(default=0, ge=0, le=100000)):
+        return store.list_notes_page(notebook_id=notebook_id, q=q,
+                                     include_deleted=include_deleted,
+                                     limit=limit, offset=offset)
+
     @api.post("/notes", status_code=201)
     def new_note(payload: NoteCreate):
         return safe(store.create, payload.notebook_id, payload.title.strip(),
