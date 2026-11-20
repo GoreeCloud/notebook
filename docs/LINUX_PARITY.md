@@ -54,3 +54,13 @@ and save picker now expose the local encrypted-snapshot primitive only when
 optional cryptography is available. The unsigned Debian preview does not
 bundle compiled crypto and disables the control if absent.
 See [Linux Encrypted Backup](LINUX_ENCRYPTED_BACKUP.md).
+
+## Native pinned-note editing
+
+The Qt Quick editor now exposes an accessible pin checkbox backed by the
+shared SQLite pinned note field. Pin changes are included in the same
+optimistic-versioned Save action as note text and tags; unsaved pin edits
+are covered by the existing draft-discard confirmation. Older native
+save slots keep the existing pin state rather than silently unpinning.
+Synthetic Qt tests check pin/unpin, tag preservation and stale-version
+conflict refusal; manual keyboard/assistive-tech acceptance remains open.
