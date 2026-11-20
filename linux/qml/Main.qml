@@ -13,6 +13,8 @@ ApplicationWindow {
     title: "GoreeCloud Notebook"
     color: "#F6F7FB"
     property var notes: []
+    property bool hasMoreNotes: false
+    property bool noteListCapped: false
     property var notebooks: []
     property var active: ({})
     property var revisions: []
@@ -172,7 +174,10 @@ ApplicationWindow {
         noteBody.text !== active.body ||
         JSON.stringify(editTags(noteTags.text)) !== JSON.stringify(active.tags || []))
     Component.onCompleted: {
-        notes = JSON.parse(backend.notesJson)
+        var firstPage = JSON.parse(backend.notesPageJson)
+        notes = firstPage.results
+        hasMoreNotes = firstPage.has_more
+        noteListCapped = firstPage.truncated
         notebooks = JSON.parse(backend.notebooksJson)
         active = JSON.parse(backend.selectedJson)
         revisions = JSON.parse(backend.revisionsJson)
@@ -180,7 +185,12 @@ ApplicationWindow {
     }
     Connections {
         target: backend
-        function onNotesChanged() { window.notes = JSON.parse(backend.notesJson) }
+        function onNotesChanged() {
+            var page = JSON.parse(backend.notesPageJson)
+            window.notes = page.results
+            window.hasMoreNotes = page.has_more
+            window.noteListCapped = page.truncated
+        }
         function onNotebooksChanged() { window.notebooks = JSON.parse(backend.notebooksJson) }
         function onRevisionsChanged() { window.revisions = JSON.parse(backend.revisionsJson) }
         function onLinksChanged() { window.linked = JSON.parse(backend.linksJson) }
@@ -266,7 +276,11 @@ ApplicationWindow {
                     placeholderText: "Search notes"
                     onTextChanged: backend.setQuery(text)
                 }
-                Label { text: window.notes.length + " notes"; font.pixelSize: 12; color: "#68758C" }
+                Label {
+                    text: "Showing " + window.notes.length + (window.hasMoreNotes || window.noteListCapped ? "+" : "") + " notes"
+                    font.pixelSize: 12
+                    color: "#68758C"
+                }
                 ListView {
                     id: noteList
                     Layout.fillHeight: true
@@ -288,13 +302,27 @@ ApplicationWindow {
                             Text { text: (modelData.parent_id ? "↳ " : "") + modelData.title;
                                 font.bold: true; color: "#1B2030"; elide: Text.ElideRight; width: parent.width }
                             Text {
-                                text: modelData.body ? modelData.body.replace(/\n/g, " ").slice(0, 90) : "Start writing..."
+                                text: modelData.preview ? modelData.preview.replace(/\n/g, " ").slice(0, 90) : "Start writing..."
                                 font.pixelSize: 12; color: "#68758C"; elide: Text.ElideRight; width: parent.width
                             }
                         }
                         MouseArea { anchors.fill: parent; onClicked: window.runAction("select", modelData.id) }
                     }
                     ScrollBar.vertical: ScrollBar {}
+                }
+                Button {
+                    Layout.fillWidth: true
+                    visible: window.hasMoreNotes
+                    text: "Load 500 more notes"
+                    Accessible.name: "Load more stored notes"
+                    onClicked: backend.loadMoreNotes()
+                }
+                Label {
+                    Layout.fillWidth: true
+                    visible: window.noteListCapped
+                    text: "Local list display cap reached (5,000 notes). Narrow your notebook or search."
+                    wrapMode: Text.Wrap
+                    color: "#68758C"
                 }
                 Button {
                     Layout.fillWidth: true

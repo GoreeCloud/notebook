@@ -208,7 +208,7 @@ class Store:
             cursor = current["parent_id"] if current else None
 
     def list_notes(self, notebook_id=None, q="", include_deleted=False,
-                   limit=500, offset=0):
+                   limit=500, offset=0, deleted_only=False, summary_only=False):
         if not 1 <= limit <= 501 or not 0 <= offset <= 100_000:
             raise ValueError("Invalid note list bounds")
         predicates = []
@@ -216,23 +216,33 @@ class Store:
         if notebook_id:
             predicates.append("notebook_id=?")
             args.append(notebook_id)
-        if not include_deleted:
+        if deleted_only:
+            predicates.append("deleted_at IS NOT NULL")
+        elif not include_deleted:
             predicates.append("deleted_at IS NULL")
         if q:
             escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             predicates.append("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')")
             args.extend(["%" + escaped + "%"] * 2)
         where = " WHERE " + " AND ".join(predicates) if predicates else ""
+        # Native sidebar lists need only a small text preview, not the
+        # potentially 1 MiB Markdown body for each note in a large library.
+        columns = ("id,notebook_id,parent_id,title,"
+                   "substr(body,1,160) AS preview,pinned,deleted_at,"
+                   "version,updated_at") if summary_only else "*"
         with self.connection() as db:
             rows = db.execute(
-                "SELECT * FROM notes" + where +
+                "SELECT " + columns + " FROM notes" + where +
                 " ORDER BY pinned DESC, updated_at DESC, id LIMIT ? OFFSET ?",
                 (*args, limit, offset),
             ).fetchall()
+        if summary_only:
+            return [dict(row) for row in rows]
         return [self.note(row) for row in rows]
 
     def list_notes_page(self, notebook_id=None, q="", include_deleted=False,
-                        limit=200, offset=0):
+                        limit=200, offset=0, deleted_only=False,
+                        summary_only=False):
         """Bounded opt-in envelope; preserve the legacy array list_notes API.
 
         Pages use the shared filtered query with a limit+1 sentinel.
@@ -242,7 +252,9 @@ class Store:
             raise ValueError("Invalid note page bounds")
         rows = self.list_notes(notebook_id=notebook_id, q=q,
                                include_deleted=include_deleted,
-                               limit=limit+1, offset=offset)
+                               limit=limit+1, offset=offset,
+                               deleted_only=deleted_only,
+                               summary_only=summary_only)
         return {"results": rows[:limit], "has_more": len(rows)>limit,
                 "offset": offset, "next_offset": offset+min(limit,len(rows)),
                 "limit": limit}
