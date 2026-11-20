@@ -76,7 +76,7 @@ export default function App(){
     let current=true;
     setSearchResults(null);
     const timeout=setTimeout(()=>{
-      api.rankedSearch(query.trim()).then(result=>{
+      api.rankedSearch(query.trim(),200,activeBook).then(result=>{
         if(!current)return;
         setSearchResults(result.results);
         setSearchMore(result.has_more);
@@ -92,7 +92,7 @@ export default function App(){
       });
     },220);
     return()=>{current=false;clearTimeout(timeout);};
-  },[api,connected,query,trash,searchEpoch]);
+  },[api,connected,query,trash,activeBook,searchEpoch]);
 
   useEffect(()=>{
     if(!chosen){setDraft({title:"",body:"",tags:""});setRevisions([]);return;}

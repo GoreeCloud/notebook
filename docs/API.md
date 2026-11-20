@@ -11,7 +11,7 @@ All `/api/v1/*` paths require a bearer token in the Authorization header. `GET /
 | `/api/v1/notes/{id}/revisions` | GET | List previous versions |
 | `/api/v1/notes/{id}/revisions/{n}/restore` | POST | Restore prior body/title |
 | `/api/v1/notes/{id}/backlinks` | GET | Match [[Note Title]] links |
-| `/api/v1/search` | GET | Authenticated ranked title/body/tag FTS5 search with paginated prefix matches |
+| `/api/v1/search` | GET | Authenticated ranked title/body/tag FTS5 search, optional `notebook_id`, paginated prefix matches |
 | `/api/v1/changes` | GET | Authenticated local mutation cursor, `after_cursor`, `limit` pagination; **not** Mesh sync |
 | `/api/v1/export/markdown-zip` | GET | Authenticated, plaintext Markdown ZIP export of active note trees; **no** tags, revisions or Trash |
 | `/api/v1/export` | GET | Export portable v2 JSON with revisions |
