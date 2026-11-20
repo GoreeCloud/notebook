@@ -30,6 +30,9 @@ export default function App(){
   const [selected,setSelected]=useState("");
   const [activeBook,setActiveBook]=useState("");
   const [query,setQuery]=useState("");
+  const [searchResults,setSearchResults]=useState<Note[]|null>(null);
+  const [searchEpoch,setSearchEpoch]=useState(0);
+  const [searchMore,setSearchMore]=useState(false);
   const [draft,setDraft]=useState<{title:string;body:string;tags:string}>({title:"",body:"",tags:""});
   const [preview,setPreview]=useState(false);
   const [trash,setTrash]=useState(false);
@@ -44,10 +47,11 @@ export default function App(){
   const chosen=notes.find(n=>n.id===selected);
   const dirty=Boolean(chosen&&(draft.title!==chosen.title||draft.body!==chosen.body||
     draft.tags!==chosen.tags.join(", ")));
-  const visible=notes.filter(n=>(trash?!!n.deleted_at:!n.deleted_at)&&
-    (!activeBook||n.notebook_id===activeBook)&&
-    (!query||[n.title,n.body,n.tags.join(" ")].some(s=>s.toLowerCase().includes(query.toLowerCase()))));
-  const shown=sortTree(visible);
+  const ranked=Boolean(query.trim()&&!trash&&searchResults!==null);
+  const visible=(ranked?searchResults||[]:notes).filter(n=>
+    (trash?!!n.deleted_at:!n.deleted_at)&&(!activeBook||n.notebook_id===activeBook)&&
+    (ranked||!query||[n.title,n.body,n.tags.join(" ")].some(s=>s.toLowerCase().includes(query.toLowerCase()))));
+  const shown=ranked?visible.map(note=>({note,depth:0})):sortTree(visible);
   const selectedBook=notebooks.find(n=>n.id===activeBook);
 
   const load=useCallback(async (preferSelected?:string)=>{
@@ -62,6 +66,33 @@ export default function App(){
 
   useEffect(()=>{if(!connected)return;
     load().catch(e=>setError(String(e.message||e)));},[connected,load]);
+
+  // Debounced server-ranked FTS results; local filtering remains available
+  // until the request returns and for Trash, which is deliberately not indexed.
+  useEffect(()=>{
+    if(!connected||trash||!query.trim()){
+      setSearchResults(null);setSearchMore(false);return;
+    }
+    let current=true;
+    setSearchResults(null);
+    const timeout=setTimeout(()=>{
+      api.rankedSearch(query.trim()).then(result=>{
+        if(!current)return;
+        setSearchResults(result.results);
+        setSearchMore(result.has_more);
+        setNotes(existing=>{
+          const seen=new Set(existing.map(n=>n.id));
+          const newNotes=result.results.filter(n=>!seen.has(n.id));
+          return newNotes.length?[...existing,...newNotes]:existing;
+        });
+      }).catch(error=>{
+        if(!current)return;
+        setSearchResults(null);setSearchMore(false);
+        setError("Full-text search unavailable: "+String(error));
+      });
+    },220);
+    return()=>{current=false;clearTimeout(timeout);};
+  },[api,connected,query,trash,searchEpoch]);
 
   useEffect(()=>{
     if(!chosen){setDraft({title:"",body:"",tags:""});setRevisions([]);return;}
@@ -78,6 +109,8 @@ export default function App(){
         title:draft.title.trim()||"Untitled",body:draft.body,
         tags:draft.tags.split(",").map(t=>t.trim()).filter(Boolean).slice(0,20)});
       setNotes(items=>items.map(n=>n.id===updated.id?updated:n));
+      setSearchResults(items=>items?.map(n=>n.id===updated.id?updated:n)||null);
+      setSearchEpoch(value=>value+1);
       setToast("Saved · revision "+updated.version);
     }catch(e){setError(e instanceof ApiError&&e.status===409?
       "This note changed elsewhere. Copy your draft and reload before saving.":String(e));}
@@ -234,8 +267,8 @@ export default function App(){
         <button className="icon-only" aria-label="New note" title="New note" onClick={()=>addNote()} disabled={trash}><FilePlus2 size={21}/></button>
       </div>
       <label className="search"><Search size={18}/><input id="note-search" placeholder="Search your notes" value={query}
-        onChange={e=>setQuery(e.target.value)}/><kbd>⌘ K</kbd></label>
-      <div className="list-meta">{visible.length} {visible.length===1?"note":"notes"} <span>· Markdown workspace</span></div>
+        maxLength={200} onChange={e=>setQuery(e.target.value)}/><kbd>⌘ K</kbd></label>
+      <div className="list-meta">{visible.length} {visible.length===1?"note":"notes"} <span>· {ranked?"Ranked full-text results":"Markdown workspace"}{ranked&&searchMore?" · first 200 matches":""}</span></div>
       <div className="note-list">
         {shown.map(({note,depth})=><button key={note.id}
           className={"note-list-item "+(selected===note.id?"selected":"")}

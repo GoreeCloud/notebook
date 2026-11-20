@@ -21,7 +21,7 @@ Android stores notes in its own private SQLite DB; Linux and the local API can a
 ## Repository structure
 
 - `server/`: FastAPI + Pydantic + SQLite, bearer authentication, revision history, optimistic concurrency, note hierarchy and tests; authenticated dry-run JSON restore.
-- `web/`: React + Vite, Markdown editor and react-markdown preview, search, tree, tags, trash, revision restore, JSON export and validated append-only JSON import plus opt-in ENEX text migration and basic Markdown ZIP folder imports.
+- `web/`: React + Vite, Markdown editor and safe preview, indexed local full-text search, tree, tags, trash, revision restore, JSON export and append-only JSON, ENEX text and Markdown ZIP import.
 - `linux/`: native Qt Quick **6.12.0** graphical client using PySide6 and local SQLite.
 - `android/`: native Kotlin + Jetpack Compose **Material 3 Expressive** client with app-private SQLite.
 - `docs/`: API, architecture, provenance, privacy/security limitations and milestones.

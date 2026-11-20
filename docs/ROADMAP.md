@@ -14,7 +14,8 @@
 - [x] Safe Markdown ZIP subtree import with path validation and explicit metadata/media-loss acknowledgement
 - [ ] Full ENEX/ENML fidelity, attachments and full Trilium-specific ZIP metadata migration
 - [ ] Rich text (evaluate MIT Tiptap/ProseMirror), web clipping and OCR
-- [ ] Backlink graph, full-text indexing and keyboard accessibility E2E tests
+- [x] Indexed local FTS5 title/body/tag search, query sanitization and browser ranked results
+- [ ] Backlink graph, full corpus search benchmarks and keyboard accessibility E2E tests
 
 ## Privacy, security and recoverability
 - [ ] Identity authorization, GoreeShield consent and retention, Wardveil security integration

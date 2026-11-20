@@ -25,6 +25,9 @@ export function apiClient(baseUrl:string,token:string) {
     notebooks:()=>request<Notebook[]>("/notebooks"),
     createNotebook:(name:string)=>request<Notebook>("/notebooks",{method:"POST",body:JSON.stringify({name})}),
     notes:(query="",deleted=false)=>request<Note[]>("/notes?q="+encode(query)+"&include_deleted="+deleted),
+    rankedSearch:(q:string,limit=200)=>request<{
+      backend:"fts5"|"like";results:Note[];has_more:boolean;limit:number;offset:number
+    }>("/search?q="+encode(q)+"&limit="+limit),
     createNote:(notebook_id:string,title:string,parent_id:string|null=null)=>request<Note>(
       "/notes",{method:"POST",body:JSON.stringify({notebook_id,title,parent_id})}),
     updateNote:(note:Note, changes:Partial<Note>)=>request<Note>("/notes/"+encode(note.id),{
