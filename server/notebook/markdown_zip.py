@@ -13,7 +13,7 @@ import stat
 import unicodedata
 import zipfile
 from pathlib import PurePosixPath
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from .store import now
 from .transfer import InvalidArchive, MAX_BYTES, MAX_NOTES
@@ -21,6 +21,9 @@ from .transfer import InvalidArchive, MAX_BYTES, MAX_NOTES
 MAX_MEMBERS = 2400
 MAX_PATH = 512
 MAX_NAME = 200
+# First-party ZIP exports preserve original note titles in a plain Markdown
+# HTML comment. Non-GoreeCloud Markdown imports still use their file stem.
+TITLE_MARKER = re.compile(r"\A<!-- GoreeCloud-Notebook-ZIP-1:([A-Za-z0-9_\-=]{1,1100}) -->\n")
 
 
 def fail(message: str):
@@ -101,7 +104,14 @@ def parse_markdown_zip(archive_base64: str, *, skip_unsupported: bool = False):
         notebook_id = str(uuid4())
         notes = []
         folders = {}
+        # A note represented as Name.md and Name/child.md is its own parent,
+        # not a synthetic placeholder. This enables first-party Markdown
+        # subtree exports to retain note hierarchy while remaining plain ZIPs.
+        markdown_ids = {str(path.with_suffix("")):str(uuid4()) for path,_ in markdown}
         def folder_note(path):
+            key = str(path)
+            if key in markdown_ids:
+                return markdown_ids[key]
             name = path.name
             if not 1 <= len(name) <= MAX_NAME:
                 fail("Invalid folder name")
@@ -131,7 +141,17 @@ def parse_markdown_zip(archive_base64: str, *, skip_unsupported: bool = False):
                 body = raw.decode("utf-8-sig")
             except UnicodeDecodeError as exc:
                 raise InvalidArchive("Markdown notes must be UTF-8") from exc
-            notes.append({"id":str(uuid4()),"notebook_id":notebook_id,
+            header = TITLE_MARKER.match(body)
+            if header:
+                try:
+                    decoded = base64.urlsafe_b64decode(header.group(1).encode("ascii")).decode("utf-8")
+                except (UnicodeDecodeError, binascii.Error, ValueError) as exc:
+                    raise InvalidArchive("Invalid GoreeCloud note title marker") from exc
+                if not decoded.strip() or len(decoded) > MAX_NAME:
+                    fail("Invalid title in Markdown ZIP note marker")
+                title = decoded
+                body = body[header.end():]
+            notes.append({"id":markdown_ids[str(path.with_suffix(""))],"notebook_id":notebook_id,
                           "parent_id":parent,"title":title,"body":body,
                           "tags":[],"pinned":False,"deleted_at":None,
                           "version":1,"created_at":stamp,"updated_at":stamp})
@@ -139,7 +159,7 @@ def parse_markdown_zip(archive_base64: str, *, skip_unsupported: bool = False):
                 fail("Folder and note count exceeds 2000")
         warnings = [
             "Original filename, tags, links and Trilium note IDs are not tracked.",
-            "Folders become empty parent notes to preserve directory hierarchy.",
+            "Directories without matching Markdown note files become placeholder notes.",
             "Embedded links, media references, attachments and Trilium metadata are not rewritten."
         ]
         if ignored:

@@ -11,3 +11,9 @@
 ## Markdown ZIP portability
 
 Import a ZIP of UTF-8 Markdown files via the web interface or `POST /api/v1/import/markdown-zip`. The server creates empty folder notes and retains the ZIP directory hierarchy; no archive contents are extracted to disk. The ZIP's non-Markdown content, media, Trilium metadata, IDs and internal references are **not migrated**. Those entries cause rejection by default; explicit `skip_unsupported=true` allows text-only import after a separate warning/confirmation. This is compatible with basic Markdown ZIP exports from TriliumNext, not a lossless native Trilium archive restoration. Keep original exports untouched. See [Markdown ZIP Import](MARKDOWN_ZIP.md).
+
+## Explicit data-portability choices
+
+- **JSON v2** is the richer authenticated archive format with tags, note revision history, deleted-state metadata and notebook IDs (restored with new IDs).
+- **Markdown ZIP** is a deliberate plaintext active-note export that preserves basic text, titles and parent-note structure but omits history, tags, pinning, Trash and attachments. Never treat it as a complete backup.
+- **SQLite snapshot** is the local native database backup with all service metadata; secure the plaintext file off-device before relying on it for disaster recovery.

@@ -11,7 +11,7 @@
 - [ ] Complete tree/attachments/tags/revisions parity across all clients
 - [x] Validated JSON v1/v2 append-only import, dry-run and basic round-trip tests
 - [x] Conservative ENEX text, timestamp and tag importer with DTD/entity refusal and media opt-out tests
-- [x] Safe Markdown ZIP subtree import with path validation and explicit metadata/media-loss acknowledgement
+- [x] Safe Markdown ZIP import/export of active note trees with path validation, basic round-trip tests and explicit metadata/media-loss acknowledgement
 - [ ] Full ENEX/ENML fidelity, attachments and full Trilium-specific ZIP metadata migration
 - [ ] Rich text (evaluate MIT Tiptap/ProseMirror), web clipping and OCR
 - [x] Indexed local FTS5 title/body/tag search, query sanitization and browser ranked results

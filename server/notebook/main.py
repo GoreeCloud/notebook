@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -16,6 +16,7 @@ from .transfer import InvalidArchive, export_all, import_archive
 from .enex import parse_enex
 from .http_boundary import LocalApiBoundary
 from .markdown_zip import parse_markdown_zip
+from .markdown_export import make_markdown_zip
 
 
 class NotebookCreate(BaseModel):
@@ -170,6 +171,16 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     def local_changes(after_cursor: int = Query(default=0, ge=0),
                       limit: int = Query(default=100, ge=1, le=200)):
         return store.changes(after_cursor, limit)
+
+    @api.get("/export/markdown-zip")
+    def export_markdown_zip():
+        data = safe(make_markdown_zip, store)
+        return Response(
+            content=data,
+            media_type="application/zip",
+            headers={"Content-Disposition":
+                     'attachment; filename="goreecloud-notebook-markdown.zip"'},
+        )
 
     @api.get("/export")
     def export():
