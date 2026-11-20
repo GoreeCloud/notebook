@@ -1,0 +1,15 @@
+# Notebook — GoreeCloud UI browser semantic foundation
+
+**Status: PARTIAL source integration, not a complete consumer migration or approved design release.**
+
+Notebook retains its notes-oriented library sidebar, note tree/list, editor, preview and revision workflow. The web client now loads approved GoreeCloud UI semantic color roles before its existing product-specific CSS. Key text, focus, brand, canvas and surface selectors consume official variables, replacing copied hex values without changing server data, routes or storage.
+
+Source: [GoreeCloud/gc-ui](https://github.com/GoreeCloud/gc-ui) protected main `42965f8682c22973b4247d58238e68aa63d86523`, version `0.1.0-alpha.0`. The pinned MIT license and exact `tokens.css` bytes reside in `web/src/vendor/gc-ui/`, with a SHA-256 manifest and Node contract tests. This is a reviewed snapshot, not an automatic dependency update. No new network, tracking, account, API, database migration or sensitive permissions are introduced.
+
+**Intended preservation:** Current light Iris notes layout and functional controls remain; no claim of complete visual token migration. The application already has its own notes-tree and editor information architecture and should not adopt an interchangeable dashboard template.
+
+**Executed browser spot-check (2026-11-20):** Isolated local React connection page, no backend/account or token submitted. Actual Chromium, Firefox and WebKit browser engines each at 900px desktop and 390px mobile: all **6/6** load the expected form labels and heading; applied Iris `--gc-brand` resolves to `#5146C8`; primary button actually renders `rgb(81, 70, 200)`; no document-level horizontal overflow and no uncaught page errors. Review screenshots: [mobile Chromium](evidence/notebook-connect-chromium-mobile.png), [desktop WebKit](evidence/notebook-connect-webkit-desktop.png). Screenshots show only a development connection form and empty token field; do not mistake them for full Notebook editor acceptance or a browser-support policy.
+
+**Still OPEN:** true user-selectable dark/light and four accent families with product-level screenshot review; mobile, tablet, 200/400% zoom, RTL, longer translations, focus, contrast and physical touch; actual note CRUD/error/recovery; Android Kotlin and Qt Quick Linux design parity; human TalkBack/Orca/NVDA; founder visual signoff; release, consumer deployment and Stable designation. Browser CSS does not establish integration with GoreeShield, Wardveil, Mesh or GoreeCloud Identity.
+
+**Rollback:** revert this additive PR through a reviewable GitHub change. No data schema or account persistence changed.
