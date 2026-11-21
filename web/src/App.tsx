@@ -158,13 +158,14 @@ export default function App(){
     let current=true;
     setSearchResults(null);
     const timeout=setTimeout(()=>{
-      api.rankedSearch(query.trim(),200,activeBook).then(result=>{
+      api.rankedSearchSummary(query.trim(),200,activeBook).then(result=>{
         if(!current)return;
-        setSearchResults(result.results);
+        const previews=result.results.map(toPreviewNote);
+        setSearchResults(previews);
         setSearchMore(result.has_more);
         setNotes(existing=>{
           const seen=new Set(existing.map(n=>n.id));
-          const newNotes=result.results.filter(n=>!seen.has(n.id));
+          const newNotes=previews.filter(n=>!seen.has(n.id));
           return newNotes.length?[...existing,...newNotes]:existing;
         });
       }).catch(error=>{

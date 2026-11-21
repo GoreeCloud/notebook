@@ -47,3 +47,10 @@ which returns 160-character previews and note metadata in place of
 full incoming/outgoing note bodies, without changing the default response.
 The web app hydrates linked destinations through GET /notes/{id} before
 editing. See [Local Links](LINKS.md).
+
+The authenticated GET /api/v1/search endpoint supports optional
+summary=true for 160-character preview and metadata records rather
+than full Markdown bodies, with default results unchanged. Both FTS5
+and the SQLite LIKE fallback support the summary response. The web
+editor hydrates the selected note by ID before enabling changes.
+See [Local Search](SEARCH.md).

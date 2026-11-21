@@ -186,8 +186,9 @@ def create_app(db_path: str | None = None, token: str | None = None) -> FastAPI:
     def ranked_search(q: str = Query(min_length=1, max_length=200),
                       limit: int = Query(default=50, ge=1, le=200),
                       offset: int = Query(default=0, ge=0, le=5000),
-                      notebook_id: str | None = Query(default=None, max_length=60)):
-        return store.search_ranked(q, limit, offset, notebook_id)
+                      notebook_id: str | None = Query(default=None, max_length=60),
+                      summary: bool = False):
+        return store.search_ranked(q, limit, offset, notebook_id, summary)
 
     @api.get("/changes")
     def local_changes(after_cursor: int = Query(default=0, ge=0),

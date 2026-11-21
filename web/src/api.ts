@@ -20,6 +20,10 @@ export type NoteLinkSummaryGraph = Omit<NoteLinkGraph,"incoming"|"outgoing"> & {
   outgoing:{results:NoteSummary[];has_more:boolean};
 };
 
+export type RankedNoteSummaryPage = {
+  backend:"fts5"|"like";results:NoteSummary[];has_more:boolean;limit:number;offset:number;
+};
+
 export type NotePage = {
   results:Note[];has_more:boolean;offset:number;next_offset:number;limit:number;
 };
@@ -53,6 +57,9 @@ export function apiClient(baseUrl:string,token:string) {
       "&limit="+limit+"&offset="+offset),
     getNote:(id:string,includeDeleted=false)=>request<Note>(
       "/notes/"+encode(id)+"?include_deleted="+includeDeleted),
+    rankedSearchSummary:(q:string,limit=200,notebookId="")=>request<RankedNoteSummaryPage>(
+      "/search?summary=true&q="+encode(q)+"&limit="+limit+
+      (notebookId?"&notebook_id="+encode(notebookId):"")),
     rankedSearch:(q:string,limit=200,notebookId="")=>request<{
       backend:"fts5"|"like";results:Note[];has_more:boolean;limit:number;offset:number
     }>("/search?q="+encode(q)+"&limit="+limit+
