@@ -51,3 +51,8 @@ Unchecked items are not implemented or not yet independently verified.
 ## CI reliability follow-up
 
 Android main-push workflow intermittently failed the `packageDebug` task on 2026-11-20 while equivalent pull-request builds passed. `--stacktrace` is now enabled for the Android build so future failures expose the underlying error. No root cause or fix is claimed; GitHub issue tracks further qualification, test-repeatability and clean-run evidence.
+
+## Optional local container preview
+
+- [x] Source-controlled digest-pinned Linux amd64 Podman/Docker Containerfile, loopback-only Compose configuration and disposable synthetic rootless Podman smoke script (production deployment is NOT implemented)
+- [ ] Docker Compose provider acceptance, multiarch image, pinned transitive wheel hashes/SBOM scanning, signed publication, production Identity/Mesh/GoreeShield/Wardveil policies and off-device backup

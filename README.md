@@ -86,3 +86,10 @@ Web, Linux and Android can resolve local links within their respective local sto
 Large local libraries can load beyond the first 500 records through the [bounded local notes page API](docs/NOTE_PAGINATION.md), body-minimized web preview browsing, and explicit web/Linux/Android **Load more notes** controls. Paging is offset-based and not a stable snapshot under concurrent edits.
 
 For a source-grounded, per-client acceptance matrix, see [Platform Capabilities](docs/PLATFORM_CAPABILITIES.md).
+
+### Container preview (API only)
+
+An opt-in, non-root, loopback-only Linux amd64 API container development
+workflow is provided in [Local Containers](docs/LOCAL_CONTAINERS.md).
+Do not use it as a publicly reachable Notebook service or assume
+production Identity, GoreeShield, Wardveil or Mesh enforcement.
