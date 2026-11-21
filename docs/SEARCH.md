@@ -18,3 +18,24 @@ This is local search indexing, **not** GoreeCloud public web Search, Mesh synchr
 ## Notebook-aware search scope
 
 An optional `notebook_id` parameter constrains FTS matching **before** applying ranking, limit and offset. The web app uses the selected notebook filter when querying the API, ensuring a large collection in another notebook cannot use up the first 200 ranked search results. Omitting the parameter searches all notebooks. This is user-selected query scoping, **not** an Identity authorization boundary; the shared development bearer token still has access to the complete local SQLite service database.
+
+## Compact ranked results for the web editor
+
+An optional summary=true parameter on the authenticated ranked-search API
+returns 160-character note excerpts and list metadata, rather than
+complete Markdown bodies. Default requests preserve the original full
+note shape, ranking, notebook filter, pagination and Trash exclusions.
+Both FTS5 and the SQL LIKE fallback support this parameter.
+
+The React web search now uses summary responses, keeping its first
+200 ranked matches compact. Opening a result triggers an authenticated
+full-note detail request before editable fields are mounted; the editor
+cannot save a 160-character preview in place of the full Markdown body.
+This is a data-minimization measure, not E2EE, encrypted browser
+storage, Identity authorization or GoreeShield retention enforcement.
+Search query terms are still handled by the local service.
+
+The result list is not a snapshot across independent page requests.
+The 200-result display cap, user-language stemming, secure local DB
+permissions, human accessibility acceptance and full-corpus performance
+benchmarks remain outstanding.

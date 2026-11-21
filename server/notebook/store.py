@@ -351,7 +351,8 @@ class Store:
         # Retain legacy array shape, but scan the entire active corpus.
         return self.link_graph(note_id, limit, offset)["incoming"]["results"]
 
-    def search_ranked(self, phrase, limit=50, offset=0, notebook_id=None):
+    def search_ranked(self, phrase, limit=50, offset=0, notebook_id=None,
+                      summary_only=False):
         # Prefix-token syntax is constructed, never accepted raw from client.
         # Prevent arbitrary FTS5 operators and SQL-like injection strings.
         terms = re.findall(r"\w+", phrase, flags=re.UNICODE)
@@ -360,6 +361,25 @@ class Store:
                     "results": [], "has_more": False, "limit": limit,
                     "offset": offset}
         terms = terms[:12]
+        # Fixed SQL projections: no user-controlled identifier or expression.
+        # Summaries are for navigation only; GET /notes/{id} is the source
+        # for complete writable bodies.
+        plain_summary_columns = (
+            "id,notebook_id,parent_id,title,substr(body,1,160) AS preview,"
+            "tags,pinned,deleted_at,version,created_at,updated_at"
+        )
+        ranked_summary_columns = (
+            "notes.id,notes.notebook_id,notes.parent_id,notes.title,"
+            "substr(notes.body,1,160) AS preview,notes.tags,notes.pinned,"
+            "notes.deleted_at,notes.version,notes.created_at,notes.updated_at"
+        )
+        def normalize(row):
+            if not summary_only:
+                return self.note(row)
+            result=dict(row)
+            result["tags"]=json.loads(result["tags"])
+            result["pinned"]=bool(result["pinned"])
+            return result
         if not self.fts_enabled:
             # FTS5 is optional on SQLite distributions. Apply scope, all
             # sanitized terms, and pagination INSIDE SQLite instead of
@@ -381,26 +401,30 @@ class Store:
                 args.extend(["%" + escaped + "%"] * 3)
             with self.connection() as db:
                 rows = db.execute(
-                    "SELECT * FROM notes WHERE " + " AND ".join(predicates) +
+                    "SELECT " + (plain_summary_columns if summary_only else "*") +
+                    " FROM notes WHERE " + " AND ".join(predicates) +
                     " ORDER BY pinned DESC, updated_at DESC, id LIMIT ? OFFSET ?",
                     (*args, limit + 1, offset),
                 ).fetchall()
             return {"backend": "like",
-                    "results": [self.note(row) for row in rows[:limit]],
+                    "results": [normalize(row) for row in rows[:limit]],
                     "has_more": len(rows) > limit,
                     "limit": limit, "offset": offset}
         expression = " AND ".join('"' + term + '"*' for term in terms)
         with self.connection() as db:
-            rows = db.execute("""
-                SELECT notes.* FROM notes_fts
-                JOIN notes ON notes.rowid=notes_fts.rowid
-                WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL
-                AND (? IS NULL OR notes.notebook_id=?)
-                ORDER BY bm25(notes_fts, 6.0, 1.0, 2.0), notes.updated_at DESC
-                LIMIT ? OFFSET ?
-            """, (expression, notebook_id, notebook_id, limit + 1, offset)).fetchall()
+            query = (
+                "SELECT " + (ranked_summary_columns if summary_only else "notes.*") +
+                " FROM notes_fts JOIN notes ON notes.rowid=notes_fts.rowid"
+                " WHERE notes_fts MATCH ? AND notes.deleted_at IS NULL"
+                " AND (? IS NULL OR notes.notebook_id=?)"
+                " ORDER BY bm25(notes_fts, 6.0, 1.0, 2.0), notes.updated_at DESC"
+                " LIMIT ? OFFSET ?"
+            )
+            rows = db.execute(query, (
+                expression, notebook_id, notebook_id, limit + 1, offset
+            )).fetchall()
         shown=rows[:limit]
-        return {"backend":"fts5","results":[self.note(row) for row in shown],
+        return {"backend":"fts5","results":[normalize(row) for row in shown],
                 "has_more":len(rows)>limit,"limit":limit,"offset":offset}
 
     def changes(self, after_cursor=0, limit=100):

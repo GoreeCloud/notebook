@@ -22,6 +22,7 @@
 - [ ] Full ENEX/ENML fidelity, attachments and full Trilium-specific ZIP metadata migration
 - [ ] Rich text (evaluate MIT Tiptap/ProseMirror), web clipping and OCR
 - [x] Indexed local FTS5 title/body/tag search, query sanitization and browser ranked results
+- [x] Optional ranked-search summaries for web with selected-note full-body hydration, including SQLite LIKE fallback
 - [x] Optional paged local note list API with explicit browser Load More beyond 500 notes (snapshot paging pending)
 - [x] Authenticated local wiki-link/backlink graph across the full active corpus with stable note-ID references and bounded pagination
 - [x] Android offline wiki-link navigation with stable local ID references, Unicode title disambiguation and unsaved-edit guard (synthetic physical-device parser/SQLite test passed; manual UI acceptance pending)
